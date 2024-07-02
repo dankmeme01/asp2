@@ -10,7 +10,7 @@
 # define BSWAP32(val) _byteswap_ulong(val)
 # define BSWAP64(val) _byteswap_uint64(val)
 #else
-# define BSWAP16(val) ((val >> 8) | (val << 8))
+# define BSWAP16(val) (uint16_t)((val >> 8) | (val << 8))
 # define BSWAP32(val) __builtin_bswap32(val)
 # define BSWAP64(val) __builtin_bswap64(val)
 #endif
@@ -58,7 +58,8 @@ namespace asp::data {
         } else if constexpr (std::is_same_v<T, double>) {
             return bit_cast<double>(BSWAP64(bit_cast<uint64_t>(val)));
         } else if constexpr (std::is_same_v<T, int16_t>) {
-            return bit_cast<int16_t>(BSWAP16(bit_cast<uint16_t>(val)));
+            auto v = bit_cast<uint16_t>(val);
+            return bit_cast<int16_t>(BSWAP16(v));
         } else if constexpr (std::is_same_v<T, int32_t>) {
             return bit_cast<int32_t>(BSWAP32(bit_cast<uint32_t>(val)));
         } else if constexpr (std::is_same_v<T, int64_t>) {
