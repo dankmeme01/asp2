@@ -3,7 +3,9 @@
 namespace asp {
 
 class NumberCycle {
+public:
     NumberCycle(int from, int to);
+    NumberCycle(int val, int from, int to);
 
     operator int() const;
     int get() const;

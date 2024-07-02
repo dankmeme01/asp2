@@ -3,6 +3,7 @@
 namespace asp {
 
 NumberCycle::NumberCycle(int from, int to) : from(from), to(to), current(from) {}
+NumberCycle::NumberCycle(int val, int from, int to) : from(from), to(to), current(val) {}
 
 NumberCycle::operator int() const {
     return current;
