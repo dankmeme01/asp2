@@ -17,14 +17,14 @@ public:
     int get() const;
     void set(int val);
 
-    int operator++();
-    int operator--();
+    NumberCycle& operator++();
+    NumberCycle& operator--();
 
-    int increment();
-    int decrement();
+    void increment();
+    void decrement();
 
-    int operator+(int) const;
-    int operator-(int) const;
+    NumberCycle operator+(int) const;
+    NumberCycle operator-(int) const;
 
 private:
     int from, to, current;

@@ -18,34 +18,34 @@ void NumberCycle::set(int val) {
     current = (val > to) ? to : (val < from ? from : val);
 }
 
-int NumberCycle::operator++() {
-    return this->increment();
+NumberCycle& NumberCycle::operator++() {
+    this->increment();
+    return *this;
 }
 
-int NumberCycle::operator--() {
-    return this->decrement();
+NumberCycle& NumberCycle::operator--() {
+    this->decrement();
+    return *this;
 }
 
-int NumberCycle::increment() {
+void NumberCycle::increment() {
     current++;
     if (current > to) current = from;
-    return current;
 }
 
-int NumberCycle::decrement() {
+void NumberCycle::decrement() {
     current--;
     if (current < from) current = to;
-    return current;
 }
 
-int NumberCycle::operator+(int) const {
+NumberCycle NumberCycle::operator+(int) const {
     int n = current + 1;
-    return n > to ? from : n;
+    return NumberCycle(n > to ? from : n, from, to);
 }
 
-int NumberCycle::operator-(int) const {
+NumberCycle NumberCycle::operator-(int) const {
     int n = current - 1;
-    return n < from ? to : n;
+    return NumberCycle(n < from ? to : n, from, to);
 }
 
 }

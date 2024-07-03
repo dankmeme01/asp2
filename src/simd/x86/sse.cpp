@@ -1,5 +1,7 @@
 #include <asp/simd/sse.hpp>
 
+#ifdef ASP_IS_X86
+
 namespace asp::simd {
     float vec128sum(__m128 vec) {
 #ifdef __clang__
@@ -14,3 +16,5 @@ namespace asp::simd {
 #endif
     }
 }
+
+#endif
