@@ -4,7 +4,7 @@
 
 #include <asp/simd/CPUFeatures.hpp>
 static void cpuid(int info[4], int infoType) {
-#ifdef GEODE_IS_WINDOWS
+#ifdef ASP_IS_WIN
     __cpuid(info, infoType);
 #else
     __asm__ __volatile__(
