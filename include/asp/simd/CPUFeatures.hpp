@@ -1,4 +1,5 @@
 #pragma once
+#include "base.hpp"
 
 namespace asp::simd {
     struct CPUFeaturesX86 {
@@ -7,7 +8,7 @@ namespace asp::simd {
 
     struct CPUFeaturesArm {};
 
-#if defined(__x86__) || defined(__x86_64__)
+#ifdef ASP_IS_X86
     using CPUFeatures = CPUFeaturesX86;
 #else
     using CPUFeatures = CPUFeaturesArm;
