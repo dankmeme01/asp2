@@ -1,7 +1,7 @@
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_M_X64)
 # define ASP_IS_X86
 # define ASP_IS_X64
-#elif defined(__x86__)
+#elif defined(__x86__) || defined(__i386__) || defined(_M_IX86)
 # define ASP_IS_X86
 #else
 # define ASP_IS_ARM
