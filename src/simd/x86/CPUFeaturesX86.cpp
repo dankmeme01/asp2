@@ -3,6 +3,12 @@
 #ifdef ASP_IS_X86
 
 #include <asp/simd/CPUFeatures.hpp>
+
+
+#ifdef ASP_IS_WIN
+# include <intrin.h>
+#endif
+
 static void cpuid(int info[4], int infoType) {
 #ifdef ASP_IS_WIN
     __cpuid(info, infoType);
