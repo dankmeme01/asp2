@@ -13,7 +13,25 @@ namespace asp {
 
 template <typename... TFuncArgs>
 class Thread {
-    using TFunc = std::function<void (TFuncArgs...)>;
+    struct Storage;
+
+    // Stop token
+    class StopToken {
+    public:
+        StopToken(std::shared_ptr<Storage> p) : storage(std::move(p)) {}
+        StopToken(StopToken&&) = default;
+        StopToken& operator=(StopToken&&) = default;
+
+        // Stops the thread (not immediately, but the loop function will never be called again after it returns)
+        void stop() {
+            storage->_stopped.set();
+        }
+
+    private:
+        std::shared_ptr<Storage> storage;
+    };
+
+    using TFunc = std::function<void (StopToken&, TFuncArgs...)>;
 public:
     Thread() {
         _storage = std::make_shared<Storage>();
@@ -52,9 +70,11 @@ public:
                 _storage->onStart();
             }
 
+            StopToken stopToken(_storage);
+
             try {
                 while (!_storage->_stopped) {
-                    _storage->loopFunc(args...);
+                    _storage->loopFunc(stopToken, args...);
                 }
             } catch (const std::exception& e) {
                 if (_storage->onException) {

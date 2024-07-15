@@ -10,9 +10,11 @@ void Thread<>::start() {
             _storage->onStart();
         }
 
+        StopToken stopToken(_storage);
+
         try {
             while (!_storage->_stopped) {
-                _storage->loopFunc();
+                _storage->loopFunc(stopToken);
             }
         } catch (const std::exception& e) {
             if (_storage->onException) {
