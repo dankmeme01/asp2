@@ -32,7 +32,7 @@ public:
         std::shared_ptr<Storage> storage;
     };
 
-    using TFunc = std::function<void (StopToken&, TFuncArgs...)>;
+    using TFunc = std::function<void (TFuncArgs..., StopToken&)>;
 
     Thread() {
         _storage = std::make_shared<Storage>();
@@ -75,7 +75,7 @@ public:
 
             try {
                 while (!_storage->_stopped) {
-                    _storage->loopFunc(stopToken, args...);
+                    _storage->loopFunc(args..., stopToken);
                 }
             } catch (const std::exception& e) {
                 if (_storage->onException) {
