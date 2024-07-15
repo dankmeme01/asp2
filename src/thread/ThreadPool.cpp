@@ -6,7 +6,7 @@ namespace asp {
 ThreadPool::ThreadPool(size_t tc) {
     for (size_t i = 0; i < tc; i++) {
         Thread<> thread;
-        thread.setLoopFunction([this, i = i] {
+        thread.setLoopFunction([this, i = i](auto&) {
             auto& worker = this->workers.at(i);
 
             auto task = this->taskQueue.popTimeout(std::chrono::milliseconds(10));

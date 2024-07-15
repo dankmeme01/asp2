@@ -13,6 +13,7 @@ namespace asp {
 
 template <typename... TFuncArgs>
 class Thread {
+public:
     struct Storage;
 
     // Stop token
@@ -32,7 +33,7 @@ class Thread {
     };
 
     using TFunc = std::function<void (StopToken&, TFuncArgs...)>;
-public:
+
     Thread() {
         _storage = std::make_shared<Storage>();
     }
@@ -157,7 +158,6 @@ public:
         }
     }
 
-private:
     struct Storage {
         AtomicFlag _stopped;
         TFunc loopFunc;
@@ -166,6 +166,7 @@ private:
         std::function<void(const std::exception&)> onException;
     };
 
+private:
     std::thread _handle;
     std::shared_ptr<Storage> _storage = nullptr;
     bool movedFrom = false;
@@ -173,5 +174,8 @@ private:
 
 template <>
 void Thread<>::start();
+
+template <typename... Args>
+using StopToken = Thread<Args...>::StopToken;
 
 }
