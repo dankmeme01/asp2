@@ -64,7 +64,7 @@ public:
         _storage->loopFunc = std::move(func);
     }
 
-    void start(TFuncArgs&&... args) {
+    void start(TFuncArgs&&... args) requires (sizeof...(TFuncArgs) > 0) {
         _storage->_stopped.clear();
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
             if (_storage->onStart) {
@@ -90,6 +90,34 @@ public:
                 _storage->onTermination();
             }
         }, std::forward<TFuncArgs>(args)...);
+    }
+
+    void start(const TFuncArgs&... args) {
+        _storage->_stopped.clear();
+        _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
+            if (_storage->onStart) {
+                _storage->onStart();
+            }
+
+            StopToken stopToken(_storage);
+
+            try {
+                while (!_storage->_stopped) {
+                    _storage->loopFunc(args..., stopToken);
+                }
+            } catch (const std::exception& e) {
+                if (_storage->onException) {
+                    _storage->onException(e);
+                } else {
+                    asp::log(LogLevel::Error, std::string("unhandled exception from a Thread: ") + e.what());
+                    throw;
+                }
+            }
+
+            if (_storage->onTermination) {
+                _storage->onTermination();
+            }
+        }, args...);
     }
 
     // Request the thread to be stopped as soon as possible
@@ -171,9 +199,6 @@ private:
     std::shared_ptr<Storage> _storage = nullptr;
     bool movedFrom = false;
 };
-
-template <>
-void Thread<>::start();
 
 template <typename... Args>
 using StopToken = Thread<Args...>::StopToken;
