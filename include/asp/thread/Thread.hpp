@@ -180,6 +180,10 @@ public:
         _storage->onTermination = f;
     }
 
+    bool isStopped() {
+        return !_storage || _storage->_stopped;
+    }
+
     ~Thread() {
         if (!movedFrom && _storage != nullptr) {
             this->stopAndWait();
