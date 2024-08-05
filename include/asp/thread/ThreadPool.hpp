@@ -10,11 +10,18 @@ class ThreadPool {
 public:
     using Task = std::function<void()>;
 
+    // Initialize the thread pool with the given amount of threads.
     ThreadPool(size_t workers);
+    // Initialize the thread pool with the amount of threads equal to the amount of CPUs on the machine.
+    ThreadPool();
+
     ~ThreadPool();
 
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool& operator=(const ThreadPool&) = delete;
+
+    ThreadPool(ThreadPool&&) = default;
+    ThreadPool& operator=(ThreadPool&&) = default;
 
     void pushTask(const Task& task);
     void pushTask(Task&& task);
@@ -35,7 +42,7 @@ private:
     };
 
     std::vector<Worker> workers;
-    Channel<Task> taskQueue;
+    std::unique_ptr<Channel<Task>> taskQueue;
     std::function<void(const std::exception&)> onException;
 };
 

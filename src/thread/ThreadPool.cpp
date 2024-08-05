@@ -3,13 +3,13 @@
 
 namespace asp {
 
-ThreadPool::ThreadPool(size_t tc) {
+ThreadPool::ThreadPool(size_t tc) : taskQueue(std::make_unique<Channel<Task>>()) {
     for (size_t i = 0; i < tc; i++) {
         Thread<> thread;
         thread.setLoopFunction([this, i = i](auto&) {
             auto& worker = this->workers.at(i);
 
-            auto task = this->taskQueue.popTimeout(std::chrono::milliseconds(10));
+            auto task = this->taskQueue->popTimeout(std::chrono::milliseconds(10));
 
             if (!task) return;
 
@@ -33,6 +33,8 @@ ThreadPool::ThreadPool(size_t tc) {
     }
 }
 
+ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
+
 ThreadPool::~ThreadPool() {
     try {
         this->join();
@@ -53,15 +55,15 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::pushTask(const Task& task) {
-    taskQueue.push(task);
+    taskQueue->push(task);
 }
 
 void ThreadPool::pushTask(Task&& task) {
-    taskQueue.push(std::move(task));
+    taskQueue->push(std::move(task));
 }
 
 void ThreadPool::join() {
-    while (!taskQueue.empty()) {
+    while (!taskQueue->empty()) {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
     }
 
@@ -81,7 +83,7 @@ void ThreadPool::join() {
 }
 
 bool ThreadPool::isDoingWork() {
-    if (!taskQueue.empty()) return true;
+    if (!taskQueue->empty()) return true;
 
     for (const auto& worker : workers) {
         if (worker.doingWork) {
