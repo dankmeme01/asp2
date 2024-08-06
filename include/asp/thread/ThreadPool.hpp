@@ -41,9 +41,15 @@ private:
         AtomicBool doingWork = false;
     };
 
-    std::vector<Worker> workers;
-    std::unique_ptr<Channel<Task>> taskQueue;
-    std::function<void(const std::exception&)> onException;
+    struct Storage {
+        std::vector<Worker> workers;
+        Channel<Task> taskQueue;
+        std::function<void(const std::exception&)> onException;
+    };
+
+    std::shared_ptr<Storage> _storage;
+
+    void _checkValid();
 };
 
 }

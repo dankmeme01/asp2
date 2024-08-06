@@ -3,13 +3,13 @@
 
 namespace asp {
 
-ThreadPool::ThreadPool(size_t tc) : taskQueue(std::make_unique<Channel<Task>>()) {
+ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
     for (size_t i = 0; i < tc; i++) {
         Thread<> thread;
-        thread.setLoopFunction([this, i = i](auto&) {
-            auto& worker = this->workers.at(i);
+        thread.setLoopFunction([storage = _storage, i = i](auto&) {
+            auto& worker = storage->workers.at(i);
 
-            auto task = this->taskQueue->popTimeout(std::chrono::milliseconds(10));
+            auto task = storage->taskQueue.popTimeout(std::chrono::milliseconds(10));
 
             if (!task) return;
 
@@ -25,10 +25,10 @@ ThreadPool::ThreadPool(size_t tc) : taskQueue(std::make_unique<Channel<Task>>())
             .doingWork = false
         };
 
-        workers.emplace_back(std::move(worker));
+        _storage->workers.emplace_back(std::move(worker));
     }
 
-    for (auto& worker : workers) {
+    for (auto& worker : _storage->workers) {
         worker.thread.start();
     }
 }
@@ -37,36 +37,42 @@ ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
 
 ThreadPool::~ThreadPool() {
     // if taskQueue is null, this instance of ThreadPool was moved from.
-    if (!taskQueue) return;
+    if (!_storage) return;
 
     try {
         this->join();
 
         // stop all threads and wait for them to terminate
-        for (auto& worker : workers) {
+        for (auto& worker : _storage->workers) {
             worker.thread.stop();
         }
 
-        for (auto& worker : workers) {
+        for (auto& worker : _storage->workers) {
             worker.thread.join();
         }
 
-        workers.clear();
+        _storage->workers.clear();
     } catch (const std::exception& e) {
         asp::log(LogLevel::Error, std::string("failed to cleanup thread pool: ") + e.what());
     }
 }
 
 void ThreadPool::pushTask(const Task& task) {
-    taskQueue->push(task);
+    this->_checkValid();
+
+    _storage->taskQueue.push(task);
 }
 
 void ThreadPool::pushTask(Task&& task) {
-    taskQueue->push(std::move(task));
+    this->_checkValid();
+
+    _storage->taskQueue.push(std::move(task));
 }
 
 void ThreadPool::join() {
-    while (!taskQueue->empty()) {
+    this->_checkValid();
+
+    while (!_storage->taskQueue.empty()) {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
     }
 
@@ -76,7 +82,7 @@ void ThreadPool::join() {
     do {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
         stillWorking = false;
-        for (const auto& worker : workers) {
+        for (const auto& worker : _storage->workers) {
             if (worker.doingWork) {
                 stillWorking = true;
                 break;
@@ -86,9 +92,11 @@ void ThreadPool::join() {
 }
 
 bool ThreadPool::isDoingWork() {
-    if (!taskQueue->empty()) return true;
+    this->_checkValid();
 
-    for (const auto& worker : workers) {
+    if (!_storage->taskQueue.empty()) return true;
+
+    for (const auto& worker : _storage->workers) {
         if (worker.doingWork) {
             return true;
         }
@@ -98,11 +106,17 @@ bool ThreadPool::isDoingWork() {
 }
 
 void ThreadPool::setExceptionFunction(const std::function<void(const std::exception&)>& f) {
-    onException = f;
+    this->_checkValid();
 
-    for (auto& worker : workers) {
+    _storage->onException = f;
+
+    for (auto& worker : _storage->workers) {
         worker.thread.setExceptionFunction(f);
     }
+}
+
+void ThreadPool::_checkValid() {
+    if (!_storage) throw std::runtime_error("Attempting to use an invalid ThreadPool that was moved from");
 }
 
 }
