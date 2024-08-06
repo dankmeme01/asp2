@@ -36,6 +36,9 @@ ThreadPool::ThreadPool(size_t tc) : taskQueue(std::make_unique<Channel<Task>>())
 ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
 
 ThreadPool::~ThreadPool() {
+    // if taskQueue is null, this instance of ThreadPool was moved from.
+    if (!taskQueue) return;
+
     try {
         this->join();
 
