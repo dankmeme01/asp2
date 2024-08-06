@@ -65,6 +65,10 @@ public:
     }
 
     void start(TFuncArgs&&... args) requires (sizeof...(TFuncArgs) > 0) {
+        if (movedFrom) {
+            throw std::runtime_error("Attempting to call start on an asp::Thread that was moved from");
+        }
+
         _storage->_stopped.clear();
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
             if (_storage->onStart) {
@@ -93,6 +97,10 @@ public:
     }
 
     void start(const TFuncArgs&... args) {
+        if (movedFrom) {
+            throw std::runtime_error("Attempting to call start on an asp::Thread that was moved from");
+        }
+
         _storage->_stopped.clear();
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
             if (_storage->onStart) {
@@ -122,6 +130,8 @@ public:
 
     // Request the thread to be stopped as soon as possible
     void stop() {
+        if (movedFrom) return;
+
         if (_storage) {
             _storage->_stopped.set();
         } else {
