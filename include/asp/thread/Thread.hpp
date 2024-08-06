@@ -32,7 +32,7 @@ public:
         std::shared_ptr<Storage> storage;
     };
 
-    using TFunc = std::function<void (TFuncArgs..., StopToken&)>;
+    using TFunc = std::function<void (TFuncArgs&..., StopToken&)>;
 
     Thread() {
         _storage = std::make_shared<Storage>();
