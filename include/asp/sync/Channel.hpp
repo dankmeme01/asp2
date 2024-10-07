@@ -1,8 +1,9 @@
 #pragma once
 #include "Mutex.hpp"
 
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/lock_types.hpp>
 #include <queue>
-#include <condition_variable>
 #include <optional>
 
 namespace asp {
@@ -24,7 +25,7 @@ public:
 
     // Obtains the element at the front of the queue, if the channel is empty, blocks until there's data.
     T pop() {
-        std::unique_lock lock(queue.mtx);
+        boost::unique_lock lock(queue.mtx);
         if (!queue.data.empty()) {
             return doPop(queue.data);
         }
@@ -37,7 +38,13 @@ public:
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
     template <typename Rep, typename Period>
     std::optional<T> popTimeout(std::chrono::duration<Rep, Period> timeout) {
-        std::unique_lock lock(queue.mtx);
+        return popTimeout(boost::chrono::microseconds(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+    }
+
+    // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
+    template <typename Rep, typename Period>
+    std::optional<T> popTimeout(boost::chrono::duration<Rep, Period> timeout) {
+        boost::unique_lock lock(queue.mtx);
         if (!queue.data.empty()) {
             return doPop(queue.data);
         }
@@ -54,7 +61,13 @@ public:
     // Blocks until messages are available, does not actually pop any messages from the channel.
     template <typename Rep, typename Period>
     void waitForMessages(std::chrono::duration<Rep, Period> timeout) {
-        std::unique_lock lock(queue.mtx);
+        waitForMessages(boost::chrono::microseconds(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+    }
+
+    // Blocks until messages are available, does not actually pop any messages from the channel.
+    template <typename Rep, typename Period>
+    void waitForMessages(boost::chrono::duration<Rep, Period> timeout) {
+        boost::unique_lock lock(queue.mtx);
 
         if (!queue.data.empty()) {
             return;
@@ -95,7 +108,7 @@ public:
 
 private:
     Mutex<std::queue<T>> queue;
-    std::condition_variable cvar;
+    boost::condition_variable cvar;
 
     T doPop(std::queue<T>& q) {
         T val = std::move(q.front());
