@@ -24,6 +24,7 @@ file(GLOB SOURCES
     src/math/*.cpp
     src/sync/*.cpp
     src/thread/*.cpp
+    src/time/*.cpp
     src/*.cpp
     ${OS_SOURCES}
 )
