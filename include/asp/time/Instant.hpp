@@ -15,6 +15,9 @@ namespace asp::time {
 
         static Instant now();
 
+        // Undeterminate state, do not use
+        constexpr inline Instant() {}
+
         Duration durationSince(const Instant& other) const;
 
         inline Duration elapsed() const {
