@@ -35,13 +35,15 @@ endif()
 
 add_library(asp STATIC ${HEADERS} ${SOURCES})
 
-CPMAddPackage(
-    NAME Boost
-    VERSION 1.86.0
-    URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.7z
-    URL_HASH SHA256=ee6e0793b5ec7d13e7181ec05d3b1aaa23615947295080e4b9930324488e078f
-    OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES thread" # escape with \\\;
-)
+if (NOT TARGET Boost::thread)
+    CPMAddPackage(
+        NAME Boost
+        VERSION 1.86.0
+        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.7z
+        URL_HASH SHA256=ee6e0793b5ec7d13e7181ec05d3b1aaa23615947295080e4b9930324488e078f
+        OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES thread" # escape with \\\;
+    )
+endif()
 
 target_link_libraries(asp PRIVATE Boost::thread)
 

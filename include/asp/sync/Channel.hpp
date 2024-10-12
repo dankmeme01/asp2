@@ -6,6 +6,8 @@
 #include <queue>
 #include <optional>
 
+#include <asp/time/Duration.hpp>
+
 namespace asp {
 
 /// Thread-safe message queue for exchanging data between multiple threads.
@@ -36,9 +38,8 @@ public:
     }
 
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
-    template <typename Rep, typename Period>
-    std::optional<T> popTimeout(std::chrono::duration<Rep, Period> timeout) {
-        return popTimeout(boost::chrono::microseconds(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+    std::optional<T> popTimeout(const time::Duration& timeout) {
+        return popTimeout(boost::chrono::microseconds(timeout.micros()));
     }
 
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
@@ -59,9 +60,8 @@ public:
     }
 
     // Blocks until messages are available, does not actually pop any messages from the channel.
-    template <typename Rep, typename Period>
-    void waitForMessages(std::chrono::duration<Rep, Period> timeout) {
-        waitForMessages(boost::chrono::microseconds(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+    void waitForMessages(const time::Duration& timeout) {
+        waitForMessages(boost::chrono::microseconds(timeout.micros()));
     }
 
     // Blocks until messages are available, does not actually pop any messages from the channel.

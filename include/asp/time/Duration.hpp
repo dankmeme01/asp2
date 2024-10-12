@@ -67,6 +67,7 @@ namespace asp::time {
         constexpr static inline Duration fromHours(u64 hours) { return _unchecked(detail::hours_to_secs(hours), 0); }
         constexpr static inline Duration fromDays(u64 days) { return _unchecked(detail::days_to_secs(days), 0); }
         constexpr static inline Duration fromWeeks(u64 weeks) { return _unchecked(detail::weeks_to_secs(weeks), 0); }
+        constexpr static inline Duration fromYears(u64 years) { return _unchecked(detail::years_to_secs(years), 0); }
 
         // Getter / converter functions
 
@@ -74,12 +75,10 @@ namespace asp::time {
             return m_seconds == 0 && m_nanos == 0;
         }
 
-        // Note: recommended not to use unless 128-bit support is enabled.
         constexpr inline u128 micros() const {
             return static_cast<u128>(m_seconds) * static_cast<u128>(detail::MICROS_IN_SEC) + static_cast<u128>(detail::nanos_to_micros(m_nanos));
         }
 
-        // Note: recommended not to use unless 128-bit support is enabled.
         constexpr inline u128 nanos() const {
             return static_cast<u128>(m_seconds) * static_cast<u128>(detail::NANOS_IN_SEC) + static_cast<u128>(m_nanos);
         }
@@ -193,7 +192,7 @@ namespace asp::time {
             return _unchecked(addedSecs, nanos);
         }
 
-        std::string toString(u8 precision) const;
+        std::string toString(u8 precision = 3) const;
 
         // Operators
 
@@ -214,7 +213,7 @@ namespace asp::time {
             if (auto res = this->checkedSub(other)) {
                 return res.value();
             } else {
-                detail::_throwrt("overflow when subtracting durations");
+                return Duration{};
             }
         }
 
@@ -236,6 +235,22 @@ namespace asp::time {
             return *this;
         }
 
+        constexpr inline std::strong_ordering operator<=>(const Duration& other) const {
+            if (m_seconds < other.m_seconds) {
+                return std::strong_ordering::less;
+            } else if (m_seconds > other.m_seconds) {
+                return std::strong_ordering::greater;
+            }
+
+            if (m_nanos < other.m_nanos) {
+                return std::strong_ordering::less;
+            } else if (m_nanos > other.m_nanos) {
+                return std::strong_ordering::greater;
+            }
+
+            return std::strong_ordering::equal;
+        }
+
     private:
         u64 m_seconds;
         // Invariant: m_nanos always between 0 and `s_to_ns(1)`
@@ -248,4 +263,18 @@ namespace asp::time {
             return dur;
         }
     };
+
+    constexpr inline Duration operator*(u32 val, const Duration& dur) {
+        return dur * val;
+    }
+
+    // for some reason this is necessary ?? the spaceship operator just doesn't work
+
+    constexpr inline bool operator==(const Duration& lhs, const Duration& rhs) {
+        return lhs.seconds() == rhs.seconds() && lhs.subsecNanos() == rhs.subsecNanos();
+    }
+
+    constexpr inline bool operator!=(const Duration& lhs, const Duration& rhs) {
+        return !(lhs == rhs);
+    }
 }

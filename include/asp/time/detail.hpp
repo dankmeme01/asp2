@@ -22,6 +22,7 @@ namespace asp::time::detail {
     constexpr inline u64 hours_to_secs(u64 in) { return minutes_to_secs(in * MINS_IN_HOUR); }
     constexpr inline u64 days_to_secs(u64 in) { return hours_to_secs(in * HOURS_IN_DAY); }
     constexpr inline u64 weeks_to_secs(u64 in) { return days_to_secs(in * DAYS_IN_WEEK); }
+    constexpr inline u64 years_to_secs(u64 in) { return days_to_secs(in * 365); }
 
     constexpr inline u64 secs_to_minutes(u64 in) { return in / SECS_IN_MIN; }
     constexpr inline u64 secs_to_hours(u64 in) { return secs_to_minutes(in) / MINS_IN_HOUR; }

@@ -36,3 +36,15 @@ namespace asp::time {
         return oss.str();
     }
 }
+
+namespace std {
+    std::string to_string(const asp::time::Duration& dur) {
+        return dur.toString();
+    }
+
+    template <> struct hash<asp::time::Duration> {
+        std::size_t operator()(const asp::time::Duration& dur) const noexcept {
+            return std::hash<asp::u64>{}(dur.nanos());
+        }
+    };
+}

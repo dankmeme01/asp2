@@ -9,7 +9,7 @@ ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
         thread.setLoopFunction([storage = _storage, i = i](auto&) {
             auto& worker = storage->workers.at(i);
 
-            auto task = storage->taskQueue.popTimeout(std::chrono::milliseconds(10));
+            auto task = storage->taskQueue.popTimeout(time::Duration::fromMillis(10));
 
             if (!task) return;
 
