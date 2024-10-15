@@ -30,7 +30,7 @@ namespace asp::inline nums {
 
     // If an overflow occurred, returns 'false' and contents of `out` are undefined. Otherwise, returns `true` and `out = a + b`
     template <typename T>
-    bool checkedAdd(T& out, T a, T b) {
+    constexpr bool checkedAdd(T& out, T a, T b) {
 #ifdef __clang__
         return __builtin_add_overflow(a, b, &out) == 0;
 #else
@@ -45,7 +45,7 @@ namespace asp::inline nums {
 
     // If an overflow occurred, returns 'false' and contents of `out` are undefined. Otherwise, returns `true` and `out = a - b`
     template <typename T>
-    bool checkedSub(T& out, T a, T b) {
+    constexpr bool checkedSub(T& out, T a, T b) {
 #ifdef __clang__
         return __builtin_sub_overflow(a, b, &out) == 0;
 #else
@@ -60,11 +60,11 @@ namespace asp::inline nums {
 
     // If an overflow occurred, returns 'false' and contents of `out` are undefined. Otherwise, returns `true` and `out = a * b`
     template <typename T>
-    bool checkedMul(T& out, T a, T b) {
+    constexpr bool checkedMul(T& out, T a, T b) {
 #ifdef __clang__
         return __builtin_mul_overflow(a, b, &out) == 0;
 #else
-        if (a != 0 && b > std::numeric_limits<uint64_t>::max() / a) {
+        if (a != 0 && b > std::numeric_limits<T>::max() / a) {
             return false;
         }
 
