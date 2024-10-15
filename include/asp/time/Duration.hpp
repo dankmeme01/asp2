@@ -101,11 +101,11 @@ namespace asp::time {
         template <typename As = u64>
         constexpr As seconds() const;
 
-        template<> u64 seconds() const { return m_seconds; }
-        template<> f32 seconds() const {
+        template<> constexpr u64 seconds() const { return m_seconds; }
+        template<> constexpr f32 seconds() const {
             return static_cast<f32>(m_seconds) + static_cast<f32>(m_nanos) / static_cast<f32>(detail::NANOS_IN_SEC);
         }
-        template<> f64 seconds() const {
+        template<> constexpr f64 seconds() const {
             return static_cast<f64>(m_seconds) + static_cast<f64>(m_nanos) / static_cast<f64>(detail::NANOS_IN_SEC);
         }
 
