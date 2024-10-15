@@ -18,11 +18,11 @@ namespace asp::time {
 
         static SystemTime now();
 
-        constexpr static SystemTime fromUnix(time_t t) {
+        inline static SystemTime fromUnix(time_t t) {
             return UNIX_EPOCH + Duration::fromSecs(t);
         }
 
-        constexpr static SystemTime fromUnixMillis(u64 ms) {
+        inline static SystemTime fromUnixMillis(u64 ms) {
             return UNIX_EPOCH + Duration::fromMillis(ms);
         }
 
