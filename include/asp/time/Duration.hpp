@@ -192,7 +192,11 @@ namespace asp::time {
             return _unchecked(addedSecs, nanos);
         }
 
+        // Format duration to a string, for example 1.484ms, 3.141h, 1.234s
         std::string toString(u8 precision = 3) const;
+
+        // Format duration to a human-readable string, for example 1.484 milliseconds, 3.141 hours, 1.234 seconds
+        std::string toHumanString(u8 precision = 0) const;
 
         // Operators
 

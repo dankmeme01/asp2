@@ -17,6 +17,7 @@ namespace asp::time::detail {
     constexpr inline u64 DAYS_IN_WEEK = 7;
 
     constexpr inline u64 SECS_IN_HOUR = SECS_IN_MIN * MINS_IN_HOUR;
+    constexpr inline u64 SECS_IN_DAY = SECS_IN_HOUR * HOURS_IN_DAY;
 
     constexpr inline u64 minutes_to_secs(u64 in) { return in * SECS_IN_MIN; }
     constexpr inline u64 hours_to_secs(u64 in) { return minutes_to_secs(in * MINS_IN_HOUR); }
