@@ -36,7 +36,7 @@ namespace asp::time {
         }
 
         // convert to an amount of microseconds, then to a duration
-        u64 micros = (static_cast<u64>(elapsed) * detail::NANOS_IN_MICROSEC) / static_cast<u64>(freq.QuadPart);
+        u64 micros = (static_cast<u64>(elapsed) * detail::NANOS_IN_MICROSEC) / static_cast<u64>(freq.QuadPart) * 1000;
 
         return Duration::fromMicros(micros);
     }
