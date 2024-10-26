@@ -4,7 +4,6 @@
 
 #include <asp/simd/CPUFeatures.hpp>
 
-
 #ifdef ASP_IS_WIN
 # include <intrin.h>
 #endif

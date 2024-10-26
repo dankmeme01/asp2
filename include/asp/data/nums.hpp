@@ -28,6 +28,19 @@ namespace asp::inline nums {
     using u128 = u64;
 #endif
 
+    namespace _detail {
+        template <bool Cond, typename True, typename False>
+        struct _conditional { using type = True; };
+
+        template <typename True, typename False>
+        struct _conditional<false, True, False> { using type = False; };
+    }
+
+    using usize = _detail::_conditional<sizeof(void*) == 8, u64, u32>::type;
+    using isize = _detail::_conditional<sizeof(void*) == 8, i64, i32>::type;
+
+    static_assert(sizeof(usize) == sizeof(void*), "usize must be the same size as a pointer");
+
     // If an overflow occurred, returns 'false' and contents of `out` are undefined. Otherwise, returns `true` and `out = a + b`
     template <typename T>
     constexpr bool checkedAdd(T& out, T a, T b) {

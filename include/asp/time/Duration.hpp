@@ -257,7 +257,7 @@ namespace asp::time {
 
     private:
         u64 m_seconds;
-        // Invariant: m_nanos always between 0 and `s_to_ns(1)`
+        // Invariant: m_nanos always between 0 and `s_to_ns(1)`, so less than a second
         u32 m_nanos;
 
         constexpr static inline Duration _unchecked(u64 secs, u32 nanos) {

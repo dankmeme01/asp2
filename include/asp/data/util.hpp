@@ -1,6 +1,8 @@
 #pragma once
 
 #include <asp/misc/traits.hpp>
+#include <asp/detail/config.hpp>
+#include <string_view>
 
 #include <stdint.h>
 
@@ -67,6 +69,88 @@ namespace asp::data {
         } else if constexpr (asp::is_one_of<T, int8_t, uint8_t, bool>) {
             return val;
         }
+    }
+
+    inline void _constexprFail() {}
+    inline void _constexprParseFailure() {}
+
+
+    template <std::integral T>
+    constexpr T constexprParse(std::string_view txt) {
+        T result = 0;
+        bool neg = false;
+        size_t idx = 0;
+        for (char c : txt) {
+            if (c == '-') {
+                if constexpr (!std::is_signed_v<T>) {
+                    // unexpected character, invoke an error
+                    if (std::is_constant_evaluated()) {
+                        detail::assertionFail("expected unsigned type, but found negative sign");
+                    } else {
+                        _constexprParseFailure();
+                    }
+                }
+
+                if (idx == 0) {
+                    neg = true;
+                    continue;
+                } else {
+                    if (std::is_constant_evaluated()) {
+                        detail::assertionFail("unexpected negative sign in the middle of the number");
+                    } else {
+                        _constexprParseFailure();
+                    }
+                }
+            }
+
+            if (c < '0' || c > '9') {
+                // unexpected character, invoke an error
+                if (std::is_constant_evaluated()) {
+                    detail::assertionFail("unexpected character in number");
+                } else {
+                    _constexprParseFailure();
+                }
+            }
+
+            // check for overflow
+            if (result > (std::numeric_limits<T>::max() - (c - '0')) / 10) {
+                // overflow, invoke an error
+                if (std::is_constant_evaluated()) {
+                    detail::assertionFail("overflow in number");
+                } else {
+                    _constexprParseFailure();
+                }
+            }
+
+            result = result * 10 + (c - '0');
+            idx++;
+        }
+
+        return result;
+    }
+
+    template <std::integral T>
+    constexpr std::string constexprToString(T val) {
+        if (val == 0) {
+            return "0";
+        }
+
+        std::string str;
+        if constexpr (std::is_signed_v<T>) {
+            if (val < 0) {
+                str += '-';
+                val = -val;
+            }
+        }
+
+        T tmp = val;
+        while (tmp > 0) {
+            str += '0' + (tmp % 10);
+            tmp /= 10;
+        }
+
+        std::reverse(str.begin(), str.end());
+        return str;
     }
 }
 
