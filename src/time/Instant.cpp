@@ -43,7 +43,7 @@ namespace asp::time {
 #else
     Instant Instant::now() {
         timespec tp;
-        if (0 != clock_gettime(CLOCK_MONOTONIC, &tp)) [[unlikely]] {
+        if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp)) [[unlikely]] {
             detail::_throwrt("failed to get the current time");
         }
 
