@@ -25,7 +25,7 @@ namespace asp::net {
                 if (std::is_constant_evaluated()) {
                     data::_constexprFail();
                 } else {
-                    detail::assertionFail("invalid IP range format (missing a slash)");
+                    ::asp::detail::assertionFail("invalid IP range format (missing a slash)");
                 }
             }
 
@@ -39,7 +39,7 @@ namespace asp::net {
                 if (std::is_constant_evaluated()) {
                     data::_constexprFail();
                 } else {
-                    detail::assertionFail("invalid IP range format (prefix length too large)");
+                    ::asp::detail::assertionFail("invalid IP range format (prefix length too large)");
                 }
             }
 
