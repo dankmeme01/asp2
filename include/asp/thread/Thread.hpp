@@ -72,6 +72,10 @@ public:
         }
 
         _storage->_stopped.clear();
+
+        // prevent crash if the thread is restarted
+        if (_handle.joinable()) _handle.join();
+
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
             if (_storage->onStart) {
                 _storage->onStart();
@@ -95,6 +99,8 @@ public:
             if (_storage->onTermination) {
                 _storage->onTermination();
             }
+
+            _storage->_stopped.set();
         }, std::forward<TFuncArgs>(args)...);
     }
 
@@ -104,6 +110,10 @@ public:
         }
 
         _storage->_stopped.clear();
+
+        // prevent crash if the thread is restarted
+        if (_handle.joinable()) _handle.join();
+
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
             if (_storage->onStart) {
                 _storage->onStart();
@@ -127,6 +137,8 @@ public:
             if (_storage->onTermination) {
                 _storage->onTermination();
             }
+
+            _storage->_stopped.set();
         }, args...);
     }
 
