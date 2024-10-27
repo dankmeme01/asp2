@@ -36,6 +36,7 @@ public:
 
     Thread() {
         _storage = std::make_shared<Storage>();
+        _storage->_stopped.set();
     }
 
     Thread(const Thread&) = delete;
@@ -57,6 +58,7 @@ public:
 
     Thread(TFunc&& func) {
         _storage = std::make_shared<Storage>();
+        _storage->_stopped.set();
         this->setLoopFunction(std::move(func));
     }
 
