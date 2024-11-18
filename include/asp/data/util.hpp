@@ -3,6 +3,7 @@
 #include <asp/misc/traits.hpp>
 #include <asp/detail/config.hpp>
 #include <string_view>
+#include <string>
 
 #include <stdint.h>
 
