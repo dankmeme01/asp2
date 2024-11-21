@@ -16,7 +16,7 @@ namespace asp::time {
     }
 
     void SystemTime::_check_not_zero() const {
-        if (_storage1 == 0 && _storage2 == 0) {
+        if (_storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE) {
             detail::_throwrt("attempting to perform an operation on an uninitialized SystemTime");
         }
     }

@@ -5,16 +5,19 @@
 #include "Duration.hpp"
 
 #include <time.h>
+#include <limits>
 
 namespace asp::time {
     class SystemTime {
+        constexpr static i64 INVALID_VALUE = std::numeric_limits<i64>::min();
+
     public:
         constexpr SystemTime(const SystemTime& other) = default;
         constexpr SystemTime& operator=(const SystemTime& other) = default;
         constexpr SystemTime(SystemTime&& other) = default;
         constexpr SystemTime& operator=(SystemTime&& other) = default;
 
-        constexpr SystemTime() : SystemTime(0, 0) {}
+        constexpr SystemTime() : SystemTime(INVALID_VALUE, INVALID_VALUE) {}
 
         static SystemTime now();
 

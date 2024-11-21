@@ -1,4 +1,5 @@
 #include <asp/time/Duration.hpp>
+#include <asp/Log.hpp>
 
 #include <sstream>
 #include <iomanip>
@@ -6,6 +7,7 @@
 
 namespace asp::time {
     [[noreturn]] void detail::_throwrt(const char* msg) {
+        asp::log(asp::LogLevel::Error, msg);
         throw std::runtime_error(msg);
     }
 
