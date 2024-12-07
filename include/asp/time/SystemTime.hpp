@@ -31,6 +31,8 @@ namespace asp::time {
 
         static SystemTime UNIX_EPOCH;
 
+        bool isInvalid() const;
+
         std::optional<Duration> durationSince(const SystemTime& other) const;
 
         inline Duration timeSinceEpoch() const {

@@ -16,7 +16,7 @@ namespace asp::time {
     }
 
     void SystemTime::_check_not_zero() const {
-        if (_storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE) {
+        if (this->isInvalid()) {
             detail::_throwrt("attempting to perform an operation on an uninitialized SystemTime");
         }
     }
@@ -46,6 +46,10 @@ namespace asp::time {
         }
 
         return SystemTime{ue.dwHighDateTime, ue.dwLowDateTime};
+    }
+
+    bool SystemTime::isInvalid() const {
+        return _storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE;
     }
 
     std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
