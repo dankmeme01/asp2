@@ -17,6 +17,7 @@ class Mutex {
 public:
     Mutex() : data(), mtx() {}
     Mutex(Inner&& obj) : data(std::move(obj)), mtx() {}
+    Mutex(const Inner& obj) : data(obj), mtx() {}
 
     Mutex(const Mutex&) = delete;
     Mutex(Mutex&&) = delete;
