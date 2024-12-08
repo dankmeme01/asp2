@@ -17,7 +17,7 @@ namespace asp::time {
         constexpr SystemTime(SystemTime&& other) = default;
         constexpr SystemTime& operator=(SystemTime&& other) = default;
 
-        constexpr SystemTime() : SystemTime(INVALID_VALUE, INVALID_VALUE) {}
+        SystemTime();
 
         static SystemTime now();
 

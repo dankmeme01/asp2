@@ -10,6 +10,8 @@
 namespace asp::time {
     SystemTime SystemTime::UNIX_EPOCH = _epoch();
 
+    SystemTime::SystemTime() : SystemTime(UNIX_EPOCH) {}
+
     time_t SystemTime::to_time_t() const {
         this->_check_not_zero();
         return this->timeSinceEpoch().seconds();
