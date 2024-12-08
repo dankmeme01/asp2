@@ -23,6 +23,10 @@ namespace asp::time {
         }
     }
 
+    bool SystemTime::isInvalid() const {
+        return _storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE;
+    }
+
 #ifdef ASP_IS_WIN
     SystemTime SystemTime::now() {
         FILETIME s;
@@ -48,10 +52,6 @@ namespace asp::time {
         }
 
         return SystemTime{ue.dwHighDateTime, ue.dwLowDateTime};
-    }
-
-    bool SystemTime::isInvalid() const {
-        return _storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE;
     }
 
     std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
