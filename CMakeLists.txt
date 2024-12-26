@@ -38,10 +38,10 @@ add_library(asp STATIC ${HEADERS} ${SOURCES})
 if (NOT TARGET Boost::thread)
     CPMAddPackage(
         NAME Boost
-        VERSION 1.86.0
-        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.7z
-        URL_HASH SHA256=ee6e0793b5ec7d13e7181ec05d3b1aaa23615947295080e4b9930324488e078f
-        OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES thread" # escape with \\\;
+        VERSION 1.87.0
+        URL https://github.com/boostorg/boost/releases/download/boost-1.87.0/boost-1.87.0-cmake.7z
+        URL_HASH SHA256=61d61a3f33283bab8f3736745a4e47c37141f07e413986cd05d1f942c69d529a
+        OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES thread"
     )
 endif()
 
@@ -58,4 +58,5 @@ install(TARGETS asp
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
 )
+
 install(DIRECTORY include/ DESTINATION include)
