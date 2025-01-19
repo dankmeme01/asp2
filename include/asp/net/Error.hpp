@@ -60,11 +60,8 @@ namespace asp::net {
         int _code;
     };
 
-    template <typename T, typename E = Error>
-    using Result = _r::Result<T, E>;
-
-    using _r::Ok;
-    using _r::Err;
+    template <typename T = void, typename E = Error>
+    using Result = asp::Result<T, E>;
 
     enum class AddressParseError {
         MissingOctets,

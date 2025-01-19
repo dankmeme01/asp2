@@ -25,6 +25,7 @@ file(GLOB SOURCES
     src/sync/*.cpp
     src/thread/*.cpp
     src/time/*.cpp
+    src/fs/*.cpp
     src/*.cpp
     ${OS_SOURCES}
 )
@@ -45,7 +46,9 @@ if (NOT TARGET Boost::thread)
     )
 endif()
 
-target_link_libraries(asp PRIVATE Boost::thread)
+CPMAddPackage("gh:geode-sdk/result@1.3.2")
+
+target_link_libraries(asp PRIVATE Boost::thread GeodeResult)
 
 target_include_directories(asp PUBLIC
     ${PROJECT_SOURCE_DIR}/include
