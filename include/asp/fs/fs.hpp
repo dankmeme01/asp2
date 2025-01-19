@@ -2,6 +2,9 @@
 
 #include "Error.hpp"
 #include <filesystem>
+#include <vector>
+#include <string>
+#include <stdint.h>
 
 namespace asp::fs {
     using path = std::filesystem::path;
