@@ -39,6 +39,7 @@ add_library(asp STATIC ${HEADERS} ${SOURCES})
 CPMAddPackage("gh:geode-sdk/result@1.3.2")
 
 target_link_libraries(asp PRIVATE GeodeResult)
+target_compile_definitions(asp PRIVATE NOMINMAX=1)
 
 target_include_directories(asp PUBLIC
     ${PROJECT_SOURCE_DIR}/include
