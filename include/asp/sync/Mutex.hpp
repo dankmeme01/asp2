@@ -1,7 +1,7 @@
 #pragma once
 #include "../detail/config.hpp"
 #include <utility>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 
 #ifdef ASP_DEBUG
 #include "DeadlockGuard.hpp"
@@ -97,7 +97,7 @@ private:
     friend class Channel;
 
     mutable Inner data;
-    mutable boost::mutex mtx;
+    mutable std::mutex mtx;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
@@ -154,7 +154,7 @@ public:
         return Guard(*this);
     }
 private:
-    mutable boost::mutex mtx;
+    mutable std::mutex mtx;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
