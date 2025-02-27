@@ -35,13 +35,7 @@ namespace asp::time {
             elapsed = 0;
         }
 
-        // if the compiler supports it, use 128-bit integers and compute the result as nanos
-#if defined(__GNUC__) || defined(__clang__)
-        u128 elapsedNanoTicks = static_cast<u128>(elapsed) * 1'000'000'000ULL;
-        u128 elapsedNanos = elapsedNanoTicks / static_cast<u128>(freq.QuadPart);
-        return Duration::fromNanos(static_cast<u64>(elapsedNanos));
-#else
-        // MSVC does not support 128-bit integers. Use 64-bit arithmetic only if the result fits
+        // use 64-bit arithmetic only if the result fits
         if (static_cast<u64>(elapsed) <= (std::numeric_limits<u64>::max() / 1'000'000'000ULL)) {
             u64 nanos = (static_cast<u64>(elapsed) * 1'000'000'000ULL) / static_cast<u64>(freq.QuadPart);
             return Duration::fromNanos(nanos);
@@ -50,7 +44,6 @@ namespace asp::time {
         // use doubles otherwise
         double nanosD = (static_cast<double>(elapsed) * 1'000'000'000.0) / static_cast<double>(freq.QuadPart);
         return Duration::fromNanos(static_cast<u64>(nanosD));
-#endif
     }
 #else
     Instant Instant::now() {
