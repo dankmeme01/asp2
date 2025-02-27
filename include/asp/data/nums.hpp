@@ -20,7 +20,7 @@ namespace asp::inline nums {
     using f32 = float;
     using f64 = double;
 
-#if (defined __GNUC__ || defined __clang__)
+#if (defined __GNUC__ || defined __clang__) && defined(ASP_USE_INT128)
     using i128 = __int128;
     using u128 = unsigned __int128;
 #endif
