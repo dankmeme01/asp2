@@ -75,12 +75,12 @@ namespace asp::time {
             return m_seconds == 0 && m_nanos == 0;
         }
 
-        constexpr inline u128 micros() const {
-            return static_cast<u128>(m_seconds) * static_cast<u128>(detail::MICROS_IN_SEC) + static_cast<u128>(detail::nanos_to_micros(m_nanos));
+        constexpr inline u64 micros() const {
+            return static_cast<u64>(m_seconds) * static_cast<u64>(detail::MICROS_IN_SEC) + static_cast<u64>(detail::nanos_to_micros(m_nanos));
         }
 
-        constexpr inline u128 nanos() const {
-            return static_cast<u128>(m_seconds) * static_cast<u128>(detail::NANOS_IN_SEC) + static_cast<u128>(m_nanos);
+        constexpr inline u64 nanos() const {
+            return static_cast<u64>(m_seconds) * static_cast<u64>(detail::NANOS_IN_SEC) + static_cast<u64>(m_nanos);
         }
 
         template <typename As = u64>
