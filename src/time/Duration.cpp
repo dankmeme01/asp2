@@ -30,7 +30,7 @@ namespace asp::time {
             oss << std::fixed << std::setprecision(precision) << millis << "ms";
         } else if (totalNanos >= detail::NANOS_IN_MICROSEC) {
             f64 micros = (f64)totalNanos / (f64)detail::NANOS_IN_MICROSEC;
-            oss << std::fixed << std::setprecision(precision) << micros << "µs";
+            oss << micros << "µs";
         } else {
             oss << totalNanos << "ns";
         }
