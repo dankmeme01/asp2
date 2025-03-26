@@ -18,7 +18,7 @@ namespace asp::time {
 
     template <typename T>
     T toChrono(const Duration& dur) {
-        return toChrono<T::rep, T::period>(dur);
+        return toChrono<typename T::rep, typename T::period>(dur);
     }
 
     // Converting SystemTime
