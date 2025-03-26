@@ -41,10 +41,16 @@ namespace asp::time {
             return this->durationSince(UNIX_EPOCH).value();
         }
 
-        // Return the amount of time passed since this measurement was taken until now.
+        // Return the amount of time passed since this measurement was taken until now, or a zero duration.
         inline Duration elapsed() const {
             this->_check_not_zero();
             return SystemTime::now().durationSince(*this).value_or(Duration{});
+        }
+
+        // Return the amount of time until this measurement is reached, or a zero duration.
+        inline Duration until() const {
+            this->_check_not_zero();
+            return this->durationSince(SystemTime::now()).value_or(Duration{});
         }
 
         inline bool isFuture() const {
