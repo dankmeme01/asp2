@@ -19,11 +19,11 @@ namespace asp::net {
         return Ok(num);
     }
 
-    Result<u16, void> tryParsePort(std::string_view str) {
+    Result<u16, void> detail::tryParsePort(std::string_view str) {
         return parseNum<u16>(str);
     }
 
-    Result<u8, void> tryParseOctet(std::string_view str) {
+    Result<u8, void> detail::tryParseOctet(std::string_view str) {
         return parseNum<u8>(str);
     }
 }
