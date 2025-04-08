@@ -26,6 +26,7 @@ file(GLOB SOURCES
     src/thread/*.cpp
     src/time/*.cpp
     src/fs/*.cpp
+    src/net/*.cpp
     src/*.cpp
     ${OS_SOURCES}
 )
