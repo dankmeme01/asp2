@@ -1,6 +1,7 @@
 #include <asp/net/SocketBase.hpp>
 #include <asp/time/Duration.hpp>
 
+#include <asp/detail/config.hpp>
 #include "utils.hpp"
 
 namespace asp::net {
@@ -19,7 +20,11 @@ SocketBase& SocketBase::operator=(SocketBase&& other) {
     }
 
     if (_socket != ASP_INVALID_SOCKET) {
+#ifdef ASP_IS_WIN
         closesocket(_socket);
+#else
+        ASP_ALWAYS_ASSERT(false, "networking unimplemented");
+#endif
     }
 
     _socket = other._socket;

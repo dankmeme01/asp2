@@ -42,14 +42,6 @@ Result<std::pair<TcpStream, SocketAddress>> TcpListener::accept() {
 
 #else // Unix implementation. TODO
 
-TcpListener::TcpListener() : _socket(-1) {}
-
-TcpListener::~TcpListener() {
-    if (_socket != -1) {
-        close(_socket);
-    }
-}
-
 #endif
 
 }
