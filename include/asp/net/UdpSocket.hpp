@@ -75,7 +75,7 @@ namespace asp::net {
         // Sends data over the socket, returns the number of bytes sent. connect() must have been called first.
         inline Result<usize> send(const void* data, usize len) {
             if (!_remoteAddr.port()) {
-                return _r::Err(Error::UdpNotConnected);
+                return Err(Error::UdpNotConnected);
             }
 
             return this->sendTo(data, len, _remoteAddr);

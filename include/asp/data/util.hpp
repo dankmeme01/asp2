@@ -20,7 +20,77 @@
 
 namespace asp::data {
     template <typename T>
-    concept is_primitive = asp::is_one_of<T, bool, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double>;
+    concept is_primitive = asp::is_one_of<T,
+        bool, char, signed char, unsigned char,
+        short, unsigned short,
+        int, unsigned int,
+        long, unsigned long,
+        long long, unsigned long long,
+        float, double
+    >;
+
+    template <typename T>
+    struct to_signed;
+
+    template <>
+    struct to_signed<unsigned char> {
+        using type = char;
+    };
+
+    template <>
+    struct to_signed<unsigned short> {
+        using type = short;
+    };
+
+    template <>
+    struct to_signed<unsigned int> {
+        using type = int;
+    };
+
+    template <>
+    struct to_signed<unsigned long> {
+        using type = long;
+    };
+
+    template <>
+    struct to_signed<unsigned long long> {
+        using type = long long;
+    };
+
+    template <typename T>
+    struct to_unsigned {
+        using type = T;
+    };
+
+    template <>
+    struct to_unsigned<char> {
+        using type = unsigned char;
+    };
+
+    template <>
+    struct to_unsigned<signed char> {
+        using type = unsigned char;
+    };
+
+    template <>
+    struct to_unsigned<short> {
+        using type = unsigned short;
+    };
+
+    template <>
+    struct to_unsigned<int> {
+        using type = unsigned int;
+    };
+
+    template <>
+    struct to_unsigned<long> {
+        using type = unsigned long;
+    };
+
+    template <>
+    struct to_unsigned<long long> {
+        using type = unsigned long long;
+    };
 
 #if defined(__clang__) && __has_builtin(__builtin_memcpy)
     # define DO_MEMCPY __builtin_memcpy
@@ -49,25 +119,20 @@ namespace asp::data {
     template <typename T>
     inline T byteswap(T val) {
         static_assert(is_primitive<T>, "Unsupported type for byteswap");
+        using SignedT = to_signed<T>::type;
+        using UnsignedT = to_unsigned<T>::type;
 
-        if constexpr (std::is_same_v<T, uint16_t>) {
-            return BSWAP16(val);
-        } else if constexpr (std::is_same_v<T, uint32_t>) {
-            return BSWAP32(val);
-        } else if constexpr (std::is_same_v<T, uint64_t>) {
-            return BSWAP64(val);
+        if constexpr (sizeof(T) == 2) {
+            return bit_cast<T>(BSWAP16(bit_cast<UnsignedT>(val)));
+        } else if constexpr (sizeof(T) == 4) {
+            return bit_cast<T>(BSWAP32(bit_cast<UnsignedT>(val)));
+        } else if constexpr (sizeof(T) == 8) {
+            return bit_cast<T>(BSWAP64(bit_cast<UnsignedT>(val)));
         } else if constexpr (std::is_same_v<T, float>) {
             return bit_cast<float>(BSWAP32(bit_cast<uint32_t>(val)));
         } else if constexpr (std::is_same_v<T, double>) {
             return bit_cast<double>(BSWAP64(bit_cast<uint64_t>(val)));
-        } else if constexpr (std::is_same_v<T, int16_t>) {
-            auto v = bit_cast<uint16_t>(val);
-            return bit_cast<int16_t>(BSWAP16(v));
-        } else if constexpr (std::is_same_v<T, int32_t>) {
-            return bit_cast<int32_t>(BSWAP32(bit_cast<uint32_t>(val)));
-        } else if constexpr (std::is_same_v<T, int64_t>) {
-            return bit_cast<int64_t>(BSWAP64(bit_cast<uint64_t>(val)));
-        } else if constexpr (asp::is_one_of<T, int8_t, uint8_t, bool>) {
+        } else if constexpr (asp::is_one_of<T, char, signed char, unsigned char, bool>) {
             return val;
         }
     }
