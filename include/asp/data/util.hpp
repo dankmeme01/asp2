@@ -30,7 +30,9 @@ namespace asp::data {
     >;
 
     template <typename T>
-    struct to_signed;
+    struct to_signed {
+        using type = T;
+    };
 
     template <>
     struct to_signed<unsigned char> {
