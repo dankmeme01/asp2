@@ -124,16 +124,16 @@ namespace asp::data {
         using SignedT = to_signed<T>::type;
         using UnsignedT = to_unsigned<T>::type;
 
-        if constexpr (sizeof(T) == 2) {
+        if constexpr (std::is_same_v<T, float>) {
+            return bit_cast<float>(BSWAP32(bit_cast<uint32_t>(val)));
+        } else if constexpr (std::is_same_v<T, double>) {
+            return bit_cast<double>(BSWAP64(bit_cast<uint64_t>(val)));
+        } else if constexpr (sizeof(T) == 2) {
             return bit_cast<T>(BSWAP16(bit_cast<UnsignedT>(val)));
         } else if constexpr (sizeof(T) == 4) {
             return bit_cast<T>(BSWAP32(bit_cast<UnsignedT>(val)));
         } else if constexpr (sizeof(T) == 8) {
             return bit_cast<T>(BSWAP64(bit_cast<UnsignedT>(val)));
-        } else if constexpr (std::is_same_v<T, float>) {
-            return bit_cast<float>(BSWAP32(bit_cast<uint32_t>(val)));
-        } else if constexpr (std::is_same_v<T, double>) {
-            return bit_cast<double>(BSWAP64(bit_cast<uint64_t>(val)));
         } else if constexpr (asp::is_one_of<T, char, signed char, unsigned char, bool>) {
             return val;
         }
