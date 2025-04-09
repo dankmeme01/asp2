@@ -2,6 +2,12 @@
 
 #include "utils.hpp"
 
+#ifndef ASP_IS_WIN
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netdb.h>
+#endif
+
 namespace asp::net {
     AddrInfoResult<IpAddress> getAddrInfo(const std::string& host, const std::string& service, bool udp, bool ipv6) {
         if (host.empty()) {

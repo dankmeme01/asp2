@@ -4,6 +4,10 @@
 #include <asp/detail/config.hpp>
 #include "utils.hpp"
 
+#ifndef ASP_IS_WIN
+# include <unistd.h> // close(2)
+#endif
+
 namespace asp::net {
 
 // Common code
@@ -23,7 +27,7 @@ SocketBase& SocketBase::operator=(SocketBase&& other) {
 #ifdef ASP_IS_WIN
         closesocket(_socket);
 #else
-        ASP_ALWAYS_ASSERT(false, "networking unimplemented");
+        ::close(_socket);
 #endif
     }
 
@@ -200,7 +204,7 @@ Result<SocketAddress> SocketBase::localAddress() {
 #else // Unix implementation. TODO
 
 SocketBase::~SocketBase() {
-    if (_socket != -1) {
+    if (_socket != ASP_INVALID_SOCKET) {
         ::close(_socket);
     }
 }
