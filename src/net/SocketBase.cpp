@@ -201,7 +201,7 @@ Result<SocketAddress> SocketBase::localAddress() {
 
 SocketBase::~SocketBase() {
     if (_socket != -1) {
-        close(_socket);
+        ::close(_socket);
     }
 }
 
