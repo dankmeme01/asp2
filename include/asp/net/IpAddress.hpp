@@ -180,7 +180,15 @@ namespace asp::net {
     }
 
     constexpr inline std::strong_ordering operator<=>(const Ipv4Address& lhs, const Ipv4Address& rhs) {
+#ifdef __APPLE__
+        if (lhs._octets == rhs._octets) {
+            return std::strong_ordering::equal;
+        }
+
+        return lhs._octets < rhs._octets ? std::strong_ordering::less : std::strong_ordering::greater;
+#else
         return lhs._octets <=> rhs._octets;
+#endif
     }
 
     // Represents an IPv6 address.
