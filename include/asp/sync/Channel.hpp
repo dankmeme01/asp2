@@ -6,6 +6,7 @@
 #include <optional>
 
 #include <asp/time/Duration.hpp>
+#include <asp/time/chrono.hpp>
 
 namespace asp {
 
@@ -38,7 +39,7 @@ public:
 
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
     std::optional<T> popTimeout(const time::Duration& timeout) {
-        return popTimeout(std::chrono::microseconds(timeout.micros()));
+        return popTimeout(time::toChrono<std::chrono::microseconds>(timeout));
     }
 
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
@@ -60,7 +61,7 @@ public:
 
     // Blocks until messages are available, does not actually pop any messages from the channel.
     void waitForMessages(const time::Duration& timeout) {
-        waitForMessages(std::chrono::microseconds(timeout.micros()));
+        waitForMessages(time::toChrono<std::chrono::microseconds>(timeout));
     }
 
     // Blocks until messages are available, does not actually pop any messages from the channel.

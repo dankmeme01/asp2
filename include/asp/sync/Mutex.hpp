@@ -160,4 +160,7 @@ private:
 #endif
 };
 
+template <typename T>
+using MutexGuard = typename Mutex<T>::Guard;
+
 }
