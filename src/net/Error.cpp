@@ -8,6 +8,7 @@
 # include <Windows.h>
 #else
 # include <errno.h>
+# include <string.h> // strerror
 #endif
 
 namespace asp::net {

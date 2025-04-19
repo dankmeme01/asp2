@@ -4,6 +4,8 @@
 #include <asp/detail/config.hpp>
 #include <string_view>
 #include <string>
+#include <algorithm>
+#include <limits>
 
 #include <stdint.h>
 

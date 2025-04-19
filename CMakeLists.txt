@@ -2,20 +2,27 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(asp VERSION 0.2.0)
+project(asp VERSION 1.0.0)
 
 file(GLOB_RECURSE HEADERS
     include/*.hpp
 )
 
 if (ANDROID)
-    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp")
+    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/platform/android/*.cpp" "src/platform/unix/*.cpp")
 elseif(IOS OR "${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
-    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp")
+    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/platform/ios/*.cpp" "src/platform/unix/*.cpp")
 elseif (APPLE)
-    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/simd/x86/*.cpp")
+    file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/simd/x86/*.cpp" "src/platform/macos/*.cpp" "src/platform/unix/*.cpp")
 elseif (WIN32)
-    file(GLOB_RECURSE OS_SOURCES "src/simd/x86/*.cpp")
+    file(GLOB_RECURSE OS_SOURCES "src/simd/x86/*.cpp" "src/platform/windows/*.cpp")
+elseif (UNIX)
+    # guesses
+    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        file(GLOB_RECURSE OS_SOURCES "src/simd/x86/*.cpp" "src/platform/unix/*.cpp")
+    else()
+        file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/platform/unix/*.cpp")
+    endif()
 else()
     message(FATAL_ERROR "Unsupported operating system")
 endif()
