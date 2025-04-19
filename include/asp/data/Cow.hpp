@@ -24,12 +24,12 @@ namespace asp::data {
 
     template <typename OwnedT, typename BorrowedT>
     concept CowConvertibleBorrowFn = requires(const OwnedT& owned) {
-        { asp::data::toBorrowed(owned) } -> std::convertible_to<BorrowedT>;
+        { ::asp::data::toBorrowed<BorrowedT, OwnedT>(owned) } -> std::convertible_to<BorrowedT>;
     };
 
     template <typename OwnedT, typename BorrowedT>
     concept CowConvertibleToOwned = requires(const BorrowedT& borrowed) {
-        { asp::data::toOwned(borrowed) } -> std::convertible_to<OwnedT>;
+        { ::asp::data::toOwned<OwnedT, BorrowedT>(borrowed) } -> std::convertible_to<OwnedT>;
     };
 
     template <typename OwnedT, typename BorrowedT>
@@ -43,6 +43,9 @@ namespace asp::data {
     public:
         using Owned = OwnedT;
         using Borrowed = BorrowedT;
+
+        constexpr static bool ConvertibleToOwned = CowConvertibleToOwned<Owned, Borrowed>;
+        constexpr static bool ConvertibleToBorrowed = CowConvertibleToBorrowed<Owned, Borrowed>;
 
         constexpr Cow(const Cow& other) = default;
         constexpr Cow& operator=(const Cow& other) = default;
@@ -128,7 +131,7 @@ namespace asp::data {
 
         // Returns the owned value, converting it from borrowed if necessary.
         // If the value is owned, it will be moved out of the Cow.
-        Owned toOwned() && requires CowConvertibleToOwned<Owned, Borrowed> {
+        Owned toOwned() && requires ConvertibleToOwned {
             if (isOwned()) {
                 return std::get<Owned>(std::move(_storage));
             } else {
@@ -138,7 +141,7 @@ namespace asp::data {
 
         // Returns the owned value, converting it from borrowed if necessary.
         // If the value is owned, it will be copied out of the Cow.
-        Owned toOwned() const& requires CowConvertibleToOwned<Owned, Borrowed> {
+        Owned toOwned() const& requires ConvertibleToOwned {
             if (isOwned()) {
                 return std::get<Owned>(_storage);
             } else {
@@ -146,16 +149,26 @@ namespace asp::data {
             }
         }
 
-        Borrowed toBorrowed() && requires CowConvertibleToBorrowed<Owned, Borrowed> = delete;
+        Borrowed toBorrowed() && requires ConvertibleToBorrowed = delete;
 
         // Returns the borrowed value, converting it from owned if necessary.
         // If the value is borrowed, it will be copied out of the Cow.
-        Borrowed toBorrowed() const& requires CowConvertibleToBorrowed<Owned, Borrowed> {
+        Borrowed toBorrowed() const& requires ConvertibleToBorrowed {
             if (isBorrowed()) {
                 return std::get<Borrowed>(_storage);
             } else {
                 return asp::data::toBorrowed<Borrowed>(std::get<Owned>(_storage));
             }
+        }
+
+        // Converts the inner value to owned, and returns a reference.
+        // If the value was already owned, nothing happens and the reference is returned.
+        Owned& convertToOwned() & requires ConvertibleToOwned {
+            if (isBorrowed()) {
+                _storage = asp::data::toOwned<Owned>(std::get<Borrowed>(_storage));
+            }
+
+            return std::get<Owned>(_storage);
         }
 
     private:

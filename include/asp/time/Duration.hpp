@@ -26,7 +26,7 @@ namespace asp::time {
         }
 
         constexpr static inline Duration fromSecs(u64 secs) { return _unchecked(secs, 0); }
-        constexpr static inline std::optional<Duration> fromSecsF32(f32 secs) {
+        ASP_CLANG_CONSTEXPR static std::optional<Duration> fromSecsF32(f32 secs) {
             if (secs < +0.f) {
                 return std::nullopt;
             }
@@ -40,7 +40,7 @@ namespace asp::time {
             );
         }
 
-        constexpr static inline std::optional<Duration> fromSecsF64(f64 secs) {
+        ASP_CLANG_CONSTEXPR static std::optional<Duration> fromSecsF64(f64 secs) {
             if (secs < +0.0) {
                 return std::nullopt;
             }
@@ -200,7 +200,7 @@ namespace asp::time {
 
         // Operators
 
-        constexpr inline Duration operator+(const Duration& other) const {
+        ASP_CLANG_CONSTEXPR Duration operator+(const Duration& other) const {
             if (auto res = this->checkedAdd(other)) {
                 return res.value();
             } else {
@@ -208,7 +208,7 @@ namespace asp::time {
             }
         }
 
-        constexpr inline Duration& operator+=(const Duration& other) {
+        ASP_CLANG_CONSTEXPR Duration& operator+=(const Duration& other) {
             *this = *this + other;
             return *this;
         }
@@ -226,7 +226,7 @@ namespace asp::time {
             return *this;
         }
 
-        constexpr inline Duration operator*(u32 val) const {
+        ASP_CLANG_CONSTEXPR Duration operator*(u32 val) const {
             if (auto res = this->checkedMul(val)) {
                 return res.value();
             } else {
@@ -234,7 +234,7 @@ namespace asp::time {
             }
         }
 
-        constexpr inline Duration& operator*=(u32 val) {
+        ASP_CLANG_CONSTEXPR Duration& operator*=(u32 val) {
             *this = *this * val;
             return *this;
         }

@@ -1,5 +1,6 @@
 #include <asp/time/sleep.hpp>
 #include <asp/time/chrono.hpp>
+#include <asp/time/Duration.hpp>
 #include <asp/time/SystemTime.hpp>
 #include <thread>
 

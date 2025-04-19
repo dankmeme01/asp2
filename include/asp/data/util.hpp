@@ -145,6 +145,14 @@ namespace asp::data {
 
     template <std::integral T>
     constexpr T constexprParse(std::string_view txt) {
+        if (txt.empty()) {
+            if (std::is_constant_evaluated()) {
+                _constexprParseFailure();
+            } else {
+                detail::assertionFail("empty string passed to constexprParse");
+            }
+        }
+
         T result = 0;
         bool neg = false;
         size_t idx = 0;
@@ -153,9 +161,19 @@ namespace asp::data {
                 if constexpr (!std::is_signed_v<T>) {
                     // unexpected character, invoke an error
                     if (std::is_constant_evaluated()) {
-                        detail::assertionFail("expected unsigned type, but found negative sign");
-                    } else {
                         _constexprParseFailure();
+                    } else {
+                        detail::assertionFail("expected unsigned type, but found negative sign");
+                    }
+                } else {
+                    // let's handle the potential overflow
+                    if (
+                        (sizeof(T) == 4 && txt == "-2147483648")
+                        || (sizeof(T) == 8 && txt == "-18446744073709551616")
+                        || (sizeof(T) == 2 && txt == "-32768")
+                        || (sizeof(T) == 1 && txt == "-128")
+                    ) {
+                        return std::numeric_limits<T>::min();
                     }
                 }
 
@@ -164,9 +182,9 @@ namespace asp::data {
                     continue;
                 } else {
                     if (std::is_constant_evaluated()) {
-                        detail::assertionFail("unexpected negative sign in the middle of the number");
-                    } else {
                         _constexprParseFailure();
+                    } else {
+                        detail::assertionFail("unexpected negative sign in the middle of the number");
                     }
                 }
             }
@@ -174,9 +192,9 @@ namespace asp::data {
             if (c < '0' || c > '9') {
                 // unexpected character, invoke an error
                 if (std::is_constant_evaluated()) {
-                    detail::assertionFail("unexpected character in number");
-                } else {
                     _constexprParseFailure();
+                } else {
+                    detail::assertionFail("unexpected character in number");
                 }
             }
 
@@ -184,9 +202,9 @@ namespace asp::data {
             if (result > (std::numeric_limits<T>::max() - (c - '0')) / 10) {
                 // overflow, invoke an error
                 if (std::is_constant_evaluated()) {
-                    detail::assertionFail("overflow in number");
-                } else {
                     _constexprParseFailure();
+                } else {
+                    detail::assertionFail("overflow in number");
                 }
             }
 
@@ -194,27 +212,51 @@ namespace asp::data {
             idx++;
         }
 
+        if (neg) {
+            result = -result;
+        }
+
         return result;
     }
 
     template <std::integral T>
     constexpr std::string constexprToString(T val) {
-        if (val == 0) {
-            return "0";
-        }
-
+        bool doAddSign = false;
         std::string str;
         if constexpr (std::is_signed_v<T>) {
             if (val < 0) {
-                str += '-';
+                // let's handle a special case where -val would return 0 despite val not being 0
+                if (val == std::numeric_limits<T>::min()) {
+                    if constexpr (std::is_same_v<T, int>) {
+                        return "-2147483648";
+                    } else if constexpr (std::is_same_v<T, long>) {
+                        return sizeof(long) == 8 ? "-18446744073709551616" : "-2147483648";
+                    } else if constexpr (std::is_same_v<T, long long>) {
+                        return "-18446744073709551616";
+                    } else if constexpr (std::is_same_v<T, short>) {
+                        return "-32768";
+                    } else if constexpr (std::is_same_v<T, uint8_t>) {
+                        return "-128";
+                    }
+                }
+
+                doAddSign = true;
                 val = -val;
             }
+        }
+
+        if (val == 0) {
+            return "0";
         }
 
         T tmp = val;
         while (tmp > 0) {
             str += '0' + (tmp % 10);
             tmp /= 10;
+        }
+
+        if (doAddSign) {
+            str += '-';
         }
 
         std::reverse(str.begin(), str.end());

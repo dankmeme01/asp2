@@ -10,7 +10,7 @@ file(GLOB_RECURSE HEADERS
 
 if (ANDROID)
     file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp")
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+elseif(IOS OR "${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
     file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp")
 elseif (APPLE)
     file(GLOB_RECURSE OS_SOURCES "src/simd/arm/*.cpp" "src/simd/x86/*.cpp")
@@ -54,3 +54,19 @@ install(TARGETS asp
     RUNTIME DESTINATION bin
 )
 install(DIRECTORY include/ DESTINATION include)
+
+# Google Tests
+
+option(ASP_BUILD_TESTS "Build tests for asp" OFF)
+
+if (ASP_BUILD_TESTS)
+    enable_testing()
+
+    CPMAddPackage("gh:google/googletest@1.16.0")
+
+    file(GLOB TEST_SOURCES tests/*.cpp)
+    add_executable(asp_tests ${TEST_SOURCES})
+    target_link_libraries(asp_tests PRIVATE asp gtest_main GeodeResult)
+    include(GoogleTest)
+    gtest_discover_tests(asp_tests)
+endif()

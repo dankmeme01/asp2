@@ -49,3 +49,9 @@ namespace asp::detail {
 #  define ASP_IS_MACOS
 # endif
 #endif
+
+#ifdef __clang__
+# define ASP_CLANG_CONSTEXPR constexpr inline
+#else
+# define ASP_CLANG_CONSTEXPR inline
+#endif

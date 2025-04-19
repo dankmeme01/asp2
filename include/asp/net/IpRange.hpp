@@ -13,6 +13,15 @@ namespace asp::net {
     class IpRange {
     public:
         constexpr IpRange() : _octets{0, 0, 0, 0}, _prefixLength(0) {}
+
+        constexpr IpRange(u8 a, u8 b, u8 c, u8 d, u8 len) : _octets{a, b, c, d}, _prefixLength(len) {
+            this->validatePrefixLen();
+        }
+
+        constexpr IpRange(std::array<u8, 4> octets, u8 len) : _octets{octets}, _prefixLength(len) {
+            this->validatePrefixLen();
+        }
+
         constexpr IpRange(const IpRange&) = default;
         constexpr IpRange(IpRange&&) = default;
         constexpr IpRange& operator=(const IpRange&) = default;
@@ -69,6 +78,26 @@ namespace asp::net {
             }
         }
 
+        // Returns the ipv4 part of this range, for example if the range is "127.0.0.1/24" then Ipv4Address representing "127.0.0.1" is returned.
+        constexpr inline Ipv4Address asIpv4() const {
+            return Ipv4Address(_octets[0], _octets[1], _octets[2], _octets[3]);
+        }
+
+        // Like `asIpv4` but masks out all bits after the prefix length.
+        // For example if the range is `255.255.255.255/26` then Ipv4Address representing "255.255.255.192" is returned
+        constexpr inline Ipv4Address asIpv4Mask() const {
+            if (_prefixLength == 0) {
+                return Ipv4Address{};
+            } else if (_prefixLength == 32) {
+                return this->asIpv4();
+            }
+
+            u32 bits = this->asIpv4().toBits();
+            u32 mask = ((1u << _prefixLength) - 1) << (32 - _prefixLength);
+
+            return Ipv4Address::fromBits(bits & mask);
+        }
+
         constexpr inline std::array<u8, 4> octets() const {
             return _octets;
         }
@@ -79,6 +108,10 @@ namespace asp::net {
 
         // Returns whether the given address is in this range.
         constexpr inline bool contains(const Ipv4Address& addr) const {
+            if (_prefixLength == 0) {
+                return true;
+            }
+
             u32 addrBits = addr.toBits();
             u32 rangeBits = this->toBits();
 
@@ -112,6 +145,16 @@ namespace asp::net {
             str += std::to_string(_prefixLength);
 
             return str;
+        }
+
+        constexpr void validatePrefixLen() {
+            if (_prefixLength > 32) {
+                if (std::is_constant_evaluated()) {
+                    data::_constexprFail();
+                } else {
+                    ::asp::detail::assertionFail("invalid prefix length passed to IpRange constructor");
+                }
+            }
         }
     };
 }

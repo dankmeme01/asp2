@@ -28,6 +28,16 @@ NumberCycle& NumberCycle::operator--() {
     return *this;
 }
 
+NumberCycle& NumberCycle::operator++(int) {
+    this->increment();
+    return *this;
+}
+
+NumberCycle& NumberCycle::operator--(int) {
+    this->decrement();
+    return *this;
+}
+
 void NumberCycle::increment() {
     current++;
     if (current > to) current = from;

@@ -19,6 +19,8 @@ public:
 
     NumberCycle& operator++();
     NumberCycle& operator--();
+    NumberCycle& operator++(int);
+    NumberCycle& operator--(int);
 
     void increment();
     void decrement();
