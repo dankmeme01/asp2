@@ -55,3 +55,7 @@ namespace asp::detail {
 #else
 # define ASP_CLANG_CONSTEXPR inline
 #endif
+
+#if !defined(__clang__) && !defined(__has_builtin)
+# define __has_builtin(x) 0
+#endif

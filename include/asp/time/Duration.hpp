@@ -268,7 +268,7 @@ namespace asp::time {
         }
     };
 
-    constexpr inline Duration operator*(u32 val, const Duration& dur) {
+    ASP_CLANG_CONSTEXPR Duration operator*(u32 val, const Duration& dur) {
         return dur * val;
     }
 
