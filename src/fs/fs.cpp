@@ -16,7 +16,7 @@ static Result<IRes> _fswrap(F&& function, Args&&... args) {
     auto result = function(std::forward<Args>(args)..., ec);
 
     if (ec == std::error_code{}) {
-        return Ok(result);
+        return Ok(std::move(result));
     } else {
         return Err(ec);
     }
@@ -34,6 +34,58 @@ static Result<void> _fswrapvoid(F&& function, Args&&... args) {
         return Err(ec);
     }
 }
+
+// File status
+
+namespace asp::fs {
+
+FileStatus::FileStatus(std::filesystem::file_status s) : m_status(s) {}
+
+std::filesystem::file_type FileStatus::type() const {
+    return m_status.type();
+}
+
+std::filesystem::perms FileStatus::permissions() const {
+    return m_status.permissions();
+}
+
+bool FileStatus::isBlockFile() const {
+    return std::filesystem::is_block_file(m_status);
+}
+
+bool FileStatus::isCharacterFile() const {
+    return std::filesystem::is_character_file(m_status);
+}
+
+bool FileStatus::isDirectory() const {
+    return std::filesystem::is_directory(m_status);
+}
+
+bool FileStatus::isFifo() const {
+    return std::filesystem::is_fifo(m_status);
+}
+
+bool FileStatus::isOther() const {
+    return std::filesystem::is_other(m_status);
+}
+
+bool FileStatus::isFile() const {
+    return std::filesystem::is_regular_file(m_status);
+}
+
+bool FileStatus::isSocket() const {
+    return std::filesystem::is_socket(m_status);
+}
+
+bool FileStatus::isSymlink() const {
+    return std::filesystem::is_symlink(m_status);
+}
+
+bool FileStatus::isUnknown() const {
+    return !std::filesystem::status_known(m_status);
+}
+
+} // namespace asp::fs
 
 // Copy
 
@@ -78,18 +130,26 @@ Result<void> asp::fs::createDirAll(const path& p) {
     }, p);
 }
 
-// Query file/directory/equivalence
+// Query file/directory/status/equivalence
+
+Result<asp::fs::FileStatus> asp::fs::status(const path& p) {
+    return _fswrap([](const path& p, std::error_code& ec) {
+        return std::filesystem::status(p, ec);
+    }, p).map([](auto s) {
+        return FileStatus(s);
+    });
+}
 
 Result<bool> asp::fs::isFile(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::is_regular_file(p, ec);
-    }, p);
+    return asp::fs::status(p).map([](FileStatus status) {
+        return status.isFile();
+    });
 }
 
 Result<bool> asp::fs::isDirectory(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::is_directory(p, ec);
-    }, p);
+    return asp::fs::status(p).map([](FileStatus status) {
+        return status.isDirectory();
+    });
 }
 
 Result<bool> asp::fs::equivalent(const path& path1, const path& path2) {
@@ -115,8 +175,17 @@ Result<void> asp::fs::remove(const path& p) {
 }
 
 Result<void> asp::fs::removeFile(const path& p) {
-    if (!GEODE_UNWRAP(isFile(p))) {
+    auto statusr = asp::fs::status(p);
+    if (!statusr) {
+        return Err(std::move(statusr).unwrapErr());
+    }
+
+    auto status = std::move(statusr).unwrap();
+
+    if (status.isDirectory()) {
         return Err(std::make_error_code(std::errc::is_a_directory));
+    } else if (!status.isFile()) {
+        return Err(std::make_error_code(std::errc::no_such_file_or_directory));
     }
 
     return _fswrapvoid([](const path& p, std::error_code& ec) {
@@ -125,7 +194,14 @@ Result<void> asp::fs::removeFile(const path& p) {
 }
 
 Result<void> asp::fs::removeDir(const path& p) {
-    if (!GEODE_UNWRAP(isDirectory(p))) {
+    auto statusr = asp::fs::status(p);
+    if (!statusr) {
+        return Err(std::move(statusr).unwrapErr());
+    }
+
+    auto status = std::move(statusr).unwrap();
+
+    if (!status.isDirectory()) {
         return Err(std::make_error_code(std::errc::not_a_directory));
     }
 
@@ -135,7 +211,14 @@ Result<void> asp::fs::removeDir(const path& p) {
 }
 
 Result<uintmax_t> asp::fs::removeDirAll(const path& p) {
-    if (!GEODE_UNWRAP(isDirectory(p))) {
+    auto statusr = asp::fs::status(p);
+    if (!statusr) {
+        return Err(std::move(statusr).unwrapErr());
+    }
+
+    auto status = std::move(statusr).unwrap();
+
+    if (!status.isDirectory()) {
         return Err(std::make_error_code(std::errc::not_a_directory));
     }
 

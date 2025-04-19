@@ -21,8 +21,27 @@ namespace asp::fs {
     //     // using Base::append;
     //     // using Base::clear;
     //     // using Base::concat;
-
     // };
+
+    class FileStatus {
+    public:
+        FileStatus(std::filesystem::file_status s);
+
+        std::filesystem::file_type type() const;
+        std::filesystem::perms permissions() const;
+        bool isBlockFile() const;
+        bool isCharacterFile() const;
+        bool isDirectory() const;
+        bool isFifo() const;
+        bool isOther() const;
+        bool isFile() const;
+        bool isSocket() const;
+        bool isSymlink() const;
+        bool isUnknown() const;
+
+    private:
+        std::filesystem::file_status m_status;
+    };
 
     Result<void> copy(const path& origin, const path& dest);
     Result<void> copy(const path& origin, const path& dest, std::filesystem::copy_options opts);
@@ -32,6 +51,7 @@ namespace asp::fs {
     Result<void> createDir(const path& path);
     Result<void> createDirAll(const path& path);
 
+    Result<FileStatus> status(const path& path);
     Result<bool> isFile(const path& path);
     Result<bool> isDirectory(const path& path);
     Result<bool> equivalent(const path& path1, const path& path2);
