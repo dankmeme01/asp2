@@ -23,10 +23,6 @@ namespace asp::time {
         }
     }
 
-    bool SystemTime::isInvalid() const {
-        return _storage1 == INVALID_VALUE && _storage2 == INVALID_VALUE;
-    }
-
 #ifdef ASP_IS_WIN
     SystemTime SystemTime::now() {
         FILETIME s;
@@ -116,7 +112,6 @@ namespace asp::time {
     SystemTime SystemTime::_epoch() {
         return SystemTime{0, 0};
     }
-
 
     std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
         this->_check_not_zero();
