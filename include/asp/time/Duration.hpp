@@ -239,6 +239,30 @@ namespace asp::time {
             return *this;
         }
 
+        ASP_CLANG_CONSTEXPR Duration operator/(u32 val) const {
+            if (val == 0) {
+                detail::_throwrt("attempted to divide a Duration by 0");
+            }
+
+            u64 secq = m_seconds / val;
+            u64 secr = m_seconds % val;
+
+            u64 totalNanos = secr * detail::NANOS_IN_SEC + m_nanos;
+            u64 nanosq = totalNanos / val;
+
+            if (nanosq >= detail::NANOS_IN_SEC) {
+                secq += nanosq / detail::NANOS_IN_SEC;
+                nanosq %= detail::NANOS_IN_SEC;
+            }
+
+            return Duration(secq, nanosq);
+        }
+
+        ASP_CLANG_CONSTEXPR Duration& operator/=(u32 val) {
+            *this = *this / val;
+            return *this;
+        }
+
         constexpr inline std::strong_ordering operator<=>(const Duration& other) const {
             if (m_seconds < other.m_seconds) {
                 return std::strong_ordering::less;
