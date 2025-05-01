@@ -29,35 +29,28 @@ namespace asp::time {
 
         static SystemTime UNIX_EPOCH;
 
-        bool isInvalid() const;
-
         std::optional<Duration> durationSince(const SystemTime& other) const;
 
         inline Duration timeSinceEpoch() const {
-            this->_check_not_zero();
             // we assume that this operation is infallible
             return this->durationSince(UNIX_EPOCH).value();
         }
 
         // Return the amount of time passed since this measurement was taken until now, or a zero duration.
         inline Duration elapsed() const {
-            this->_check_not_zero();
             return SystemTime::now().durationSince(*this).value_or(Duration{});
         }
 
         // Return the amount of time until this measurement is reached, or a zero duration.
         inline Duration until() const {
-            this->_check_not_zero();
             return this->durationSince(SystemTime::now()).value_or(Duration{});
         }
 
         inline bool isFuture() const {
-            this->_check_not_zero();
             return SystemTime::now() < *this;
         }
 
         inline bool isPast() const {
-            this->_check_not_zero();
             return *this < SystemTime::now();
         }
 
@@ -74,7 +67,6 @@ namespace asp::time {
         constexpr SystemTime(i64 _s, i64 _s2) : _storage1(_s), _storage2(_s2) {}
 
         static SystemTime _epoch();
-        void _check_not_zero() const;
 
         i64 _storage1;
         i64 _storage2;

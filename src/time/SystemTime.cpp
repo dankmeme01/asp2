@@ -13,14 +13,7 @@ namespace asp::time {
     SystemTime::SystemTime() : SystemTime(UNIX_EPOCH) {}
 
     time_t SystemTime::to_time_t() const {
-        this->_check_not_zero();
         return this->timeSinceEpoch().seconds();
-    }
-
-    void SystemTime::_check_not_zero() const {
-        if (this->isInvalid()) {
-            detail::_throwrt("attempting to perform an operation on an uninitialized SystemTime");
-        }
     }
 
 #ifdef ASP_IS_WIN
@@ -51,9 +44,6 @@ namespace asp::time {
     }
 
     std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
-        this->_check_not_zero();
-        other._check_not_zero();
-
         ULARGE_INTEGER lhs;
         lhs.LowPart = this->_storage2;
         lhs.HighPart = this->_storage1;
@@ -73,8 +63,6 @@ namespace asp::time {
     }
 
     SystemTime SystemTime::operator+(const Duration& dur) const {
-        this->_check_not_zero();
-
         ULARGE_INTEGER uli;
         uli.LowPart = this->_storage2;
         uli.HighPart = this->_storage1;
@@ -86,8 +74,6 @@ namespace asp::time {
     }
 
     std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const {
-        this->_check_not_zero();
-
         ULARGE_INTEGER lhs;
         lhs.LowPart = this->_storage2;
         lhs.HighPart = this->_storage1;
@@ -114,9 +100,6 @@ namespace asp::time {
     }
 
     std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
-        this->_check_not_zero();
-        other._check_not_zero();
-
         i64 secs = this->_storage1 - other._storage1;
         i64 nanos = this->_storage2 - other._storage2;
 
