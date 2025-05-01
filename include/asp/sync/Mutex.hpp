@@ -25,7 +25,7 @@ public:
     Mutex& operator=(const Mutex&) = delete;
     Mutex& operator=(Mutex&&) = delete;
 
-    class Guard {
+    class [[nodiscard("A mutex guard must be stored in a variable to be effective")]] Guard {
     public:
         Guard(const Guard&) = delete;
         Guard& operator=(const Guard&) = delete;
