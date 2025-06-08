@@ -44,6 +44,11 @@ endif()
 
 add_library(asp STATIC ${HEADERS} ${SOURCES})
 
+if (WIN32)
+    # fix debug builds
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _HAS_ITERATOR_DEBUGGING=0)
+endif()
+
 CPMAddPackage("gh:geode-sdk/result@1.3.2")
 
 target_link_libraries(asp PRIVATE GeodeResult)
