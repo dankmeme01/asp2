@@ -12,8 +12,13 @@ namespace asp {
 template <typename T>
 class Channel;
 
-template <typename Inner = void>
+template <typename Inner = void, bool Recursive = false>
 class Mutex {
+    using InnerMtx = std::conditional_t<
+        Recursive,
+        std::recursive_mutex,
+        std::mutex>;
+
 public:
     Mutex() : data(), mtx() {}
     Mutex(Inner&& obj) : data(std::move(obj)), mtx() {}
@@ -97,15 +102,20 @@ private:
     friend class Channel;
 
     mutable Inner data;
-    mutable std::mutex mtx;
+    mutable InnerMtx mtx;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
 };
 
 /* Specialization for Mutex<void> */
-template <>
-class Mutex<void> {
+template <bool Recursive>
+class Mutex<void, Recursive> {
+    using InnerMtx = std::conditional_t<
+        Recursive,
+        std::recursive_mutex,
+        std::mutex>;
+
 public:
     Mutex() : mtx() {}
 
@@ -154,7 +164,7 @@ public:
         return Guard(*this);
     }
 private:
-    mutable std::mutex mtx;
+    mutable InnerMtx mtx;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
