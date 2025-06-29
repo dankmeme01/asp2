@@ -16,7 +16,7 @@ namespace asp::time {
         return chronoDur;
     }
 
-    template <typename T>
+    template <typename T = std::chrono::nanoseconds>
     T toChrono(const Duration& dur) {
         return toChrono<typename T::rep, typename T::period>(dur);
     }
