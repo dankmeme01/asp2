@@ -14,4 +14,8 @@ namespace asp::time {
         auto tp = asp::time::toChrono(st);
         std::this_thread::sleep_until(tp);
     }
+
+    void yield() {
+        std::this_thread::yield();
+    }
 }

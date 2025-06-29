@@ -6,4 +6,5 @@ namespace asp::time {
 
     void sleep(const Duration& dur);
     void sleepUntil(const SystemTime& st);
+    void yield();
 }
