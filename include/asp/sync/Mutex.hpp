@@ -49,7 +49,8 @@ public:
             this->unlock();
         }
 
-        // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior.
+        // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
+        // unless it is relocked again with `.relock()`.
         void unlock() {
             if (!alreadyUnlocked) {
 #ifdef ASP_DEBUG
@@ -58,6 +59,21 @@ public:
                 mtx.mtx.unlock();
 
                 alreadyUnlocked = true;
+            }
+        }
+
+        // Relocks the mutex after being unlocked with `unlock()`.
+        // If the mutex was already locked, this does nothing.
+        void relock() {
+            if (alreadyUnlocked) {
+#ifdef ASP_DEBUG
+                mtx.dlGuard.lockAttempt();
+                mtx.mtx.lock();
+                mtx.dlGuard.lockSuccess();
+#else
+                mtx.mtx.lock();
+#endif
+                alreadyUnlocked = false;
             }
         }
 
