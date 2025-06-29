@@ -8,6 +8,8 @@
 #include <memory>
 #include <thread>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 
 namespace asp {
 
@@ -77,6 +79,8 @@ public:
         if (_handle.joinable()) _handle.join();
 
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
+            ::asp::_setThreadName(_storage->name);
+
             if (_storage->onStart) {
                 _storage->onStart();
             }
@@ -115,6 +119,8 @@ public:
         if (_handle.joinable()) _handle.join();
 
         _handle = std::thread([_storage = _storage](TFuncArgs&&... args) {
+            ::asp::_setThreadName(_storage->name);
+
             if (_storage->onStart) {
                 _storage->onStart();
             }
@@ -174,6 +180,11 @@ public:
         _storage.reset();
     }
 
+    // Set the name of the thread
+    void setName(std::string_view name) {
+        _storage->name = name;
+    }
+
     // Set the function that will be called when the thread is started. It will be called from within the created thread.
     void setStartFunction(std::function<void()>&& f) {
         _storage->onStart = std::move(f);
@@ -216,6 +227,7 @@ public:
 
     struct Storage {
         AtomicFlag _stopped;
+        std::string name = "asp::Thread";
         TFunc loopFunc;
         std::function<void()> onStart;
         std::function<void()> onTermination;
@@ -230,5 +242,7 @@ private:
 
 template <typename... Args>
 using StopToken = Thread<Args...>::StopToken;
+
+void _setThreadName(const std::string& name);
 
 }
