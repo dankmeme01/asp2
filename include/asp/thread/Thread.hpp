@@ -13,6 +13,8 @@
 
 namespace asp {
 
+void _setThreadName(const std::string& name);
+
 template <typename... TFuncArgs>
 class Thread {
 public:
@@ -242,7 +244,5 @@ private:
 
 template <typename... Args>
 using StopToken = Thread<Args...>::StopToken;
-
-void _setThreadName(const std::string& name);
 
 }
