@@ -8,6 +8,18 @@
 
 namespace asp::time {
 #ifdef ASP_IS_WIN
+    static LARGE_INTEGER getFrequency() {
+        static LARGE_INTEGER freq = []() -> LARGE_INTEGER {
+            LARGE_INTEGER f;
+            if (!QueryPerformanceFrequency(&f)) {
+                detail::_throwrt((std::string("failed to get the performance frequency: ") + std::to_string(GetLastError())).c_str());
+            }
+            return f;
+        }();
+
+        return freq;
+    }
+
     Instant Instant::now() {
         LARGE_INTEGER ticks;
 
@@ -20,14 +32,7 @@ namespace asp::time {
 
     Duration Instant::durationSince(const Instant& other) const {
         // get the tick frequency
-        static LARGE_INTEGER freq = []() -> LARGE_INTEGER {
-            LARGE_INTEGER f;
-            if (!QueryPerformanceFrequency(&f)) {
-                detail::_throwrt((std::string("failed to get the performance frequency: ") + std::to_string(GetLastError())).c_str());
-            }
-
-            return f;
-        }();
+        LARGE_INTEGER freq = getFrequency();
 
         // get amount of elapsed ticks
         i64 elapsed = this->_storage - other._storage;
@@ -44,6 +49,10 @@ namespace asp::time {
         // use doubles otherwise
         double nanosD = (static_cast<double>(elapsed) * 1'000'000'000.0) / static_cast<double>(freq.QuadPart);
         return Duration::fromNanos(static_cast<u64>(nanosD));
+    }
+
+    i64 Instant::rawNanos() const {
+        return this->durationSince(Instant{0}).nanos<i64>();
     }
 #else
     Instant Instant::now() {
@@ -71,6 +80,10 @@ namespace asp::time {
         }
 
         return Duration{static_cast<u64>(secs), static_cast<u32>(nanos)};
+    }
+
+    i64 Instant::rawNanos() const {
+        return this->durationSince(Instant{0, 0}).nanos<i64>();
     }
 #endif
 }

@@ -24,6 +24,8 @@ namespace asp::time {
             return Instant::now().durationSince(*this);
         }
 
+        i64 rawNanos() const;
+
     private:
 #ifdef ASP_IS_WIN
         constexpr Instant(i64 _s) : _storage(_s) {}
