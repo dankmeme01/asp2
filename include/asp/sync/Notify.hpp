@@ -6,12 +6,9 @@
 #include <cstddef>
 
 #ifdef ASP_IS_WIN
-struct CRITICAL_SECTION;
-struct CONDITION_VARIABLE;
-constexpr size_t ASP_NOTIFY_INNER_SIZE = 40 + 8; // size of crit section and condvar in that order
+# include <Windows.h>
 #else
 # include <pthread.h>
-constexpr size_t ASP_NOTIFY_INNER_SIZE = sizeof(pthread_mutex_t) + sizeof(pthread_cond_t);
 #endif
 
 namespace asp {
@@ -47,11 +44,15 @@ public:
 
 private:
 #ifdef ASP_IS_WIN
-    alignas(void*) char _storage[ASP_NOTIFY_INNER_SIZE];
+    CRITICAL_SECTION _critStorage;
+    CONDITION_VARIABLE _condStorage;
+
     CRITICAL_SECTION* _crit();
     CONDITION_VARIABLE* _cond();
 #else
-    alignas(std::max_align_t) char _storage[ASP_NOTIFY_INNER_SIZE];
+    pthread_mutex_t _mutexStorage;
+    pthread_cond_t _condStorage;
+
     pthread_mutex_t* _mutex();
     pthread_cond_t* _cond();
 #endif

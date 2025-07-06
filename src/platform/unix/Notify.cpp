@@ -6,11 +6,11 @@
 namespace asp {
 
 pthread_mutex_t* Notify::_mutex() {
-    return reinterpret_cast<pthread_mutex_t*>(_storage);
+    return &_mutexStorage;
 }
 
 pthread_cond_t* Notify::_cond() {
-    return reinterpret_cast<pthread_cond_t*>(_storage + sizeof(pthread_mutex_t));
+    return &_condStorage;
 }
 
 Notify::Notify() {

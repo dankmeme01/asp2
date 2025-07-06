@@ -1,17 +1,14 @@
 #include <asp/sync/Notify.hpp>
 #include <asp/time/Instant.hpp>
-#include <Windows.h>
-
-static_assert(sizeof(CRITICAL_SECTION) + sizeof(CONDITION_VARIABLE) == ASP_NOTIFY_INNER_SIZE);
 
 namespace asp {
 
 CRITICAL_SECTION* Notify::_crit() {
-    return reinterpret_cast<CRITICAL_SECTION*>(_storage);
+    return &_critStorage;
 }
 
 CONDITION_VARIABLE* Notify::_cond() {
-    return reinterpret_cast<CONDITION_VARIABLE*>(_storage + sizeof(CRITICAL_SECTION));
+    return &_condStorage;
 }
 
 Notify::Notify() {
