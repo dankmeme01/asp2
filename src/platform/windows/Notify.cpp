@@ -29,7 +29,7 @@ void Notify::wait() {
 
 bool Notify::wait(const time::Duration& timeout) {
     EnterCriticalSection(_crit());
-    bool result = SleepConditionVariableCS(_cond(), _crit(), timeout.millis<DWORD>());
+    bool result = SleepConditionVariableCS(_cond(), _crit(), timeout.millis<u64>());
     LeaveCriticalSection(_crit());
     return result;
 }
