@@ -57,7 +57,7 @@ bool Notify::wait(const time::Duration& timeout, const std::function<bool()>& pr
             return false;
         }
 
-        if (!SleepConditionVariableCS(_cond(), _crit(), leftTime.millis<DWORD>())) {
+        if (!SleepConditionVariableCS(_cond(), _crit(), leftTime.millis<u64>())) {
             LeaveCriticalSection(_crit());
             return false;
         }
