@@ -26,6 +26,7 @@ namespace asp::time {
         }
 
         constexpr static inline Duration fromSecs(u64 secs) { return _unchecked(secs, 0); }
+
         ASP_CLANG_CONSTEXPR static std::optional<Duration> fromSecsF32(f32 secs) {
             if (secs < +0.f) {
                 return std::nullopt;
@@ -68,6 +69,14 @@ namespace asp::time {
         constexpr static inline Duration fromDays(u64 days) { return _unchecked(detail::days_to_secs(days), 0); }
         constexpr static inline Duration fromWeeks(u64 weeks) { return _unchecked(detail::weeks_to_secs(weeks), 0); }
         constexpr static inline Duration fromYears(u64 years) { return _unchecked(detail::years_to_secs(years), 0); }
+
+        constexpr static inline Duration zero() {
+            return Duration(0, 0);
+        }
+
+        constexpr static inline Duration infinite() {
+            return Duration((u64)-1, detail::NANOS_IN_SEC - 1);
+        }
 
         // Getter / converter functions
 
