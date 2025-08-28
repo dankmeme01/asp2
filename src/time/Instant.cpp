@@ -55,7 +55,7 @@ namespace asp::time {
         return this->durationSince(Instant{0}).nanos();
     }
 
-    static Instant Instant::fromRawNanos(i64 nanos) {
+    Instant Instant::fromRawNanos(i64 nanos) {
         return Instant{nanos};
     }
 #else
@@ -88,6 +88,10 @@ namespace asp::time {
 
     i64 Instant::rawNanos() const {
         return this->durationSince(Instant{0, 0}).nanos();
+    }
+
+    Instant Instant::fromRawNanos(i64 nanos) {
+        return Instant{(i64)((u64)nanos / detail::NANOS_IN_SEC), (i64)((u64)nanos % detail::NANOS_IN_SEC)};
     }
 #endif
 }
