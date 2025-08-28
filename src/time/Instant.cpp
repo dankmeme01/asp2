@@ -54,6 +54,10 @@ namespace asp::time {
     i64 Instant::rawNanos() const {
         return this->durationSince(Instant{0}).nanos();
     }
+
+    static Instant fromRawNanos(i64 nanos) {
+        return Instant{nanos};
+    }
 #else
     Instant Instant::now() {
         timespec tp;

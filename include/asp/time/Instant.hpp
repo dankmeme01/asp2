@@ -25,6 +25,7 @@ namespace asp::time {
         }
 
         i64 rawNanos() const;
+        static Instant fromRawNanos(i64 nanos);
 
     private:
 #ifdef ASP_IS_WIN
