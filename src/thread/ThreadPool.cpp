@@ -39,6 +39,8 @@ ThreadPool::~ThreadPool() {
     // if taskQueue is null, this instance of ThreadPool was moved from.
     if (!_storage) return;
 
+    m_destructing = true;
+
     try {
         this->join();
 
@@ -69,18 +71,36 @@ void ThreadPool::pushTask(Task&& task) {
     _storage->taskQueue.push(std::move(task));
 }
 
+bool ThreadPool::allDead() {
+    for (auto& worker : _storage->workers) {
+        if (worker.thread.joinable()) return false;
+    }
+
+    return true;
+}
+
 void ThreadPool::join() {
     this->_checkValid();
 
     while (!_storage->taskQueue.empty()) {
-        std::this_thread::sleep_for(std::chrono::microseconds(200));
+        // if we are destructing, it's possible that all threads are dead now, just terminate
+        if (m_destructing && this->allDead()) {
+            return;
+        }
+
+        std::this_thread::sleep_for(std::chrono::microseconds(25));
     }
 
     // wait for working threads to finish
     bool stillWorking;
 
     do {
-        std::this_thread::sleep_for(std::chrono::microseconds(200));
+        // if we are destructing, it's possible that all threads are dead now, just terminate
+        if (m_destructing && this->allDead()) {
+            return;
+        }
+
+        std::this_thread::sleep_for(std::chrono::microseconds(25));
         stillWorking = false;
         for (const auto& worker : _storage->workers) {
             if (worker.doingWork) {

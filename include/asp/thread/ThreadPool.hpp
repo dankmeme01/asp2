@@ -48,8 +48,10 @@ private:
     };
 
     std::shared_ptr<Storage> _storage;
+    bool m_destructing = false;
 
     void _checkValid();
+    bool allDead();
 };
 
 }

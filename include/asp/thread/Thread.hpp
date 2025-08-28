@@ -162,6 +162,10 @@ public:
         }
     }
 
+    bool joinable() const {
+        return _handle.joinable();
+    }
+
     // Join the thread if possible, else do nothing
     void join() {
         if (_handle.joinable()) _handle.join();
