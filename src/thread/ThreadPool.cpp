@@ -78,7 +78,7 @@ void ThreadPool::pushTask(Task&& task) {
 bool ThreadPool::allDead() {
     for (auto& worker : _storage->workers) {
 #ifdef ASP_IS_WIN
-        auto hnd = worker.nativeHandle();
+        auto hnd = worker.thread.nativeHandle();
         DWORD code;
         if (GetExitCodeThread((HANDLE)hnd, &code) && code == STILL_ACTIVE) {
             return false;
