@@ -166,6 +166,10 @@ public:
         return _handle.joinable();
     }
 
+    std::thread::native_handle_type nativeHandle() {
+        return _handle.native_handle();
+    }
+
     // Join the thread if possible, else do nothing
     void join() {
         if (_handle.joinable()) _handle.join();

@@ -1,6 +1,10 @@
 #include <asp/thread/ThreadPool.hpp>
 #include <asp/Log.hpp>
 
+#ifdef ASP_IS_WIN
+# include <Windows.h>
+#endif
+
 namespace asp {
 
 ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
@@ -73,7 +77,15 @@ void ThreadPool::pushTask(Task&& task) {
 
 bool ThreadPool::allDead() {
     for (auto& worker : _storage->workers) {
+#ifdef ASP_IS_WIN
+        auto hnd = worker.nativeHandle();
+        DWORD code;
+        if (GetExitCodeThread((HANDLE)hnd, &code) && code == STILL_ACTIVE) {
+            return false;
+        }
+#else
         if (worker.thread.joinable()) return false;
+#endif
     }
 
     return true;
