@@ -3,6 +3,7 @@
 #include <concepts>
 #include <optional>
 #include <functional>
+#include <limits>
 
 namespace asp::iter {
 
@@ -42,6 +43,9 @@ public:
 
     // defined in Skip.hpp
     auto skip(size_t n) &&;
+
+    // defined in Cycle.hpp
+    auto cycle() &&;
 
     template <typename F>
     bool all(F&& f) && {
@@ -147,6 +151,8 @@ private:
     }
 };
 
+// Wrapper for C++ iterators
+
 template <typename It>
 concept IsCxxIterator = requires {
     { std::declval<It>() != std::declval<It>() } -> std::convertible_to<bool>;
@@ -175,9 +181,72 @@ private:
     It m_current, m_end;
 };
 
+// Empty iterator
+
 template <typename It = void**>
 auto empty() {
     return CxxIter<It>(It{}, It{});
+}
+
+// One shot iterator
+
+template <typename T>
+class OnceIter : public Iter<OnceIter<T>, T> {
+public:
+    using Item = T;
+
+    OnceIter(std::optional<T> value) : m_value(std::move(value)) {}
+
+    std::optional<T> next() {
+        if (m_value) {
+            auto item = std::move(*m_value);
+            m_value = std::nullopt;
+            return item;
+        }
+
+        return std::nullopt;
+    }
+
+private:
+    std::optional<T> m_value;
+};
+
+template <typename T>
+auto once(T value) {
+    return OnceIter<T>(std::move(value));
+}
+
+// Repeating iterator
+
+template <typename T>
+class RepeatIter : public Iter<RepeatIter<T>, T> {
+public:
+    using Item = T;
+
+    RepeatIter(T value, size_t times) : m_value(std::move(value)), m_times(times) {}
+
+    std::optional<T> next() {
+        if (m_times == 0) {
+            return std::nullopt;
+        }
+
+        --m_times;
+        return m_value;
+    }
+
+private:
+    T m_value;
+    size_t m_times;
+};
+
+template <typename T>
+auto repeat(T value, size_t times) {
+    return RepeatIter<T>(std::move(value), times);
+}
+
+template <typename T>
+auto repeat(T value) {
+    return RepeatIter<T>(std::move(value), std::numeric_limits<size_t>::max());
 }
 
 }

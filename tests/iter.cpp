@@ -219,4 +219,43 @@ TEST(IterTests, SplitIntVec) {
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, Empty) {
+    auto iter = empty<int*>();
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
 
+TEST(IterTests, Once) {
+    auto iter = once(42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, RepeatN) {
+    auto iter = repeat(42, 3);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, RepeatForever) {
+    auto iter = repeat(42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    ASSERT_EQ(iter.next(), 42);
+    // and so on...
+}
+
+TEST(IterTests, Cycle) {
+    std::vector<int> vec = {1, 2, 3};
+    auto iter = from(vec).cycle();
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 3);
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 3);
+    ASSERT_EQ(iter.next(), 1);
+}

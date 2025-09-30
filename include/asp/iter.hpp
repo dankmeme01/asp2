@@ -1,4 +1,5 @@
 #include "iter/Chain.hpp"
+#include "iter/Cycle.hpp"
 #include "iter/Filter.hpp"
 #include "iter/Inspect.hpp"
 #include "iter/Iter.hpp"
