@@ -103,7 +103,7 @@ public:
 
     auto enumerate() && {
         return std::move(*this).map([n = size_t{0}](auto item) mutable {
-            return std::make_pair(n++, item);
+            return std::make_pair(n++, std::move(item));
         });
     }
 

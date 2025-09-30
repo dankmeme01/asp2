@@ -180,3 +180,43 @@ TEST(IterTests, HolyMix) {
     ASSERT_EQ(outnum, -79482);
     ASSERT_EQ(outstr, "egi");
 }
+
+TEST(IterTests, SplitStrChar) {
+    std::string str = "hello,world,this,is,a,test";
+    auto iter = split(str, ',');
+
+    ASSERT_EQ(iter.next(), "hello");
+    ASSERT_EQ(iter.next(), "world");
+    ASSERT_EQ(iter.next(), "this");
+    ASSERT_EQ(iter.next(), "is");
+    ASSERT_EQ(iter.next(), "a");
+    ASSERT_EQ(iter.next(), "test");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, SplitStrStr) {
+    std::string str = "hello||world||this||is||a||test";
+    auto iter = split(str, "||");
+
+    ASSERT_EQ(iter.next(), "hello");
+    ASSERT_EQ(iter.next(), "world");
+    ASSERT_EQ(iter.next(), "this");
+    ASSERT_EQ(iter.next(), "is");
+    ASSERT_EQ(iter.next(), "a");
+    ASSERT_EQ(iter.next(), "test");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, SplitIntVec) {
+    std::vector<unsigned char> vec = {1, 0, 2, 0, 3, 0, 4, 0, 5};
+    auto iter = split(vec, 0);
+
+    ASSERT_EQ(iter.next().value()[0], 1);
+    ASSERT_EQ(iter.next().value()[0], 2);
+    ASSERT_EQ(iter.next().value()[0], 3);
+    ASSERT_EQ(iter.next().value()[0], 4);
+    ASSERT_EQ(iter.next().value()[0], 5);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+
