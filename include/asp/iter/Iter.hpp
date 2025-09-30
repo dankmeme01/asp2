@@ -1,4 +1,5 @@
 #pragma once
+#include <asp/detail/config.hpp>
 #include <type_traits>
 #include <concepts>
 #include <optional>
@@ -147,6 +148,53 @@ public:
             total += *item;
         }
         return total;
+    }
+
+    // c++ iterator support
+    struct iterator {
+    public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = Item;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Item*;
+        using reference = Item&;
+
+        iterator(Iter& iter, bool end) : m_iter(iter) {
+            if (!end) {
+                m_item = m_iter.derived().next();
+            }
+        }
+
+        iterator& operator++() {
+            ASP_ASSERT(m_item, "Incrementing end iterator");
+            m_item = m_iter.derived().next();
+            return *this;
+        }
+
+        reference operator*() {
+            ASP_ASSERT(m_item, "Dereferencing end iterator");
+            return *m_item;
+        }
+
+        bool operator==(const iterator& other) const {
+            return &m_iter == &other.m_iter && m_item.has_value() == other.m_item.has_value();
+        }
+
+        bool operator!=(const iterator& other) const {
+            return !(*this == other);
+        }
+
+    private:
+        std::optional<Item> m_item;
+        Iter& m_iter;
+    };
+
+    auto begin() {
+        return iterator{*this, false};
+    }
+
+    auto end() {
+        return iterator{*this, true};
     }
 
 private:

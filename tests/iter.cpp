@@ -268,3 +268,28 @@ TEST(IterTests, ArrayChunks) {
     ASSERT_EQ(iter.next(), (std::array<int, 3>{7, 8, 9}));
     ASSERT_EQ(iter.next(), std::nullopt);
 }
+
+TEST(IterTests, CxxIterRangeLoop) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+
+    int sum = 0;
+
+    for (int x : from(vec).map([](int x) { return x * 2; })) {
+        sum += x;
+    }
+
+    ASSERT_EQ(sum, 30);
+}
+
+TEST(IterTests, CxxIterLoop) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    auto iter = from(vec).map([](int x) { return x * 2; });
+
+    int sum = 0;
+
+    for (auto it = iter.begin(); it != iter.end(); ++it) {
+        sum += *it;
+    }
+
+    ASSERT_EQ(sum, 30);
+}
