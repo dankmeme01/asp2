@@ -47,6 +47,10 @@ public:
     // defined in Cycle.hpp
     auto cycle() &&;
 
+    // defined in ArrayChunks.hpp
+    template <size_t N>
+    auto arrayChunks() &&;
+
     template <typename F>
     bool all(F&& f) && {
         while (auto item = this->derived().next()) {

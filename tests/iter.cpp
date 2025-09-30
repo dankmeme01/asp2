@@ -259,3 +259,12 @@ TEST(IterTests, Cycle) {
     ASSERT_EQ(iter.next(), 3);
     ASSERT_EQ(iter.next(), 1);
 }
+
+TEST(IterTests, ArrayChunks) {
+    std::vector<int> vec = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    auto iter = from(vec).arrayChunks<3>();
+    ASSERT_EQ(iter.next(), (std::array<int, 3>{1, 2, 3}));
+    ASSERT_EQ(iter.next(), (std::array<int, 3>{4, 5, 6}));
+    ASSERT_EQ(iter.next(), (std::array<int, 3>{7, 8, 9}));
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
