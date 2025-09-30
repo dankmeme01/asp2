@@ -10,6 +10,16 @@ auto from(Cont&& cont) {
     return CxxIter(begin(cont), end(cont));
 }
 
+template <typename T>
+auto from(T* begin, T* end) {
+    return CxxIter<T*>(begin, end);
+}
+
+template <typename T>
+auto from(T* arr, size_t size) {
+    return CxxIter<T*>(arr, arr + size);
+}
+
 template <typename Cont>
 auto fromReverse(Cont&& cont) {
     using std::rbegin, std::rend;
