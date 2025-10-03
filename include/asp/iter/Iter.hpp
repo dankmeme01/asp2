@@ -31,6 +31,10 @@ public:
     template <typename F>
     auto filter(F&& f) &&;
 
+    // defined in FilterMap.hpp
+    template <typename F>
+    auto filterMap(F&& f) &&;
+
     // defined in Chain.hpp
     template <typename It2>
     auto chain(It2&& it2) &&;
@@ -93,7 +97,7 @@ public:
         return cnt;
     }
 
-    template <typename Cont>
+    template <typename Cont = std::vector<Item>>
     auto collect() && {
         Cont cont;
         while (auto item = this->derived().next()) {
