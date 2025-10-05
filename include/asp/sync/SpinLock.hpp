@@ -194,7 +194,7 @@ public:
             mtx._lock();
             mtx.dlGuard.lockSuccess();
 #else
-            mtx.mtx.lock();
+            mtx._lock();
 #endif
         }
 
@@ -237,7 +237,7 @@ public:
         bool alreadyUnlocked = false;
     };
 
-    Guard lock() const {
+    inline Guard lock() const {
         return Guard(*this);
     }
 private:
