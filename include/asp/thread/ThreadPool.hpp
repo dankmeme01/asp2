@@ -29,6 +29,9 @@ public:
     // Block the calling thread until all tasks have been completed.
     void join();
 
+    // Like `join`, but will spin instead of sleeping. Useful if the work is to be completed very quickly (milliseconds or less).
+    void joinSpin();
+
     // Returns `true` if the thread pool is currently doing any work, `false` if all threads are sleeping.
     bool isDoingWork();
 

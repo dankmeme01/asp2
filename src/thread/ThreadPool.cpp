@@ -5,6 +5,20 @@
 # include <Windows.h>
 #endif
 
+#ifdef ASP_IS_X86
+# include <immintrin.h>
+#else
+# include <arm_acle.h>
+#endif
+
+static void microYield() {
+#ifdef ASP_IS_X86
+    _mm_pause();
+#else
+    __yield();
+#endif
+}
+
 namespace asp {
 
 ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
@@ -113,6 +127,39 @@ void ThreadPool::join() {
         }
 
         std::this_thread::sleep_for(std::chrono::microseconds(25));
+        stillWorking = false;
+        for (const auto& worker : _storage->workers) {
+            if (worker.doingWork) {
+                stillWorking = true;
+                break;
+            }
+        }
+    } while (stillWorking);
+}
+
+void ThreadPool::joinSpin() {
+    this->_checkValid();
+
+    while (!_storage->taskQueue.empty()) {
+        // if we are destructing, it's possible that all threads are dead now, just terminate
+        if (m_destructing && this->allDead()) {
+            return;
+        }
+
+        microYield();
+    }
+
+    // wait for working threads to finish
+    bool stillWorking;
+
+    do {
+        // if we are destructing, it's possible that all threads are dead now, just terminate
+        if (m_destructing && this->allDead()) {
+            return;
+        }
+
+        microYield();
+
         stillWorking = false;
         for (const auto& worker : _storage->workers) {
             if (worker.doingWork) {
