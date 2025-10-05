@@ -2,6 +2,7 @@
 #include "iter/ArrayChunks.hpp"
 #include "iter/Cycle.hpp"
 #include "iter/Filter.hpp"
+#include "iter/FilterMap.hpp"
 #include "iter/Inspect.hpp"
 #include "iter/Iter.hpp"
 #include "iter/Map.hpp"
