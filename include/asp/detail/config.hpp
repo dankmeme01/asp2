@@ -59,3 +59,9 @@ namespace asp::detail {
 #if !defined(__clang__) && !defined(__has_builtin)
 # define __has_builtin(x) 0
 #endif
+
+#ifdef _WIN32
+# define ASP_FORCE_INLINE __forceinline
+#else
+# define ASP_FORCE_INLINE inline __attribute__((always_inline))
+#endif
