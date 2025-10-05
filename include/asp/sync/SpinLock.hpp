@@ -83,7 +83,7 @@ public:
             mtx._lock();
             mtx.dlGuard.lockSuccess();
 #else
-            mtx._unlock();
+            mtx._lock();
 #endif
         }
 
