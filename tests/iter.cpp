@@ -355,3 +355,11 @@ TEST(IterTests, CxxIterConsume) {
     ASSERT_EQ(vec[2], "");
 }
 
+TEST(IterTests, IterMap) {
+    std::unordered_map<std::string, int> map{{"1", 10}, {"2", 20}, {"3", 30}};
+
+    size_t val = from(map).find([](const auto& p) { return p.get().first == "2"; })->get().second;
+    ASSERT_EQ(val, 20);
+}
+
+

@@ -5,10 +5,31 @@
 
 namespace asp::iter {
 
+template <typename T>
+struct is_reference_wrapper : std::false_type {};
+
+template <typename U>
+struct is_reference_wrapper<std::reference_wrapper<U>> : std::true_type {};
+
+template <typename T>
+struct ExtractRefWrapper;
+
+template <typename T>
+struct ExtractRefWrapper<std::reference_wrapper<T>> {
+    using type = T;
+};
+
+template <typename T>
+using Unreference = std::conditional_t<
+    is_reference_wrapper<T>::value,
+    typename ExtractRefWrapper<T>::type,
+    std::remove_reference_t<T>
+>;
+
 template <typename It>
-class Copied : public Iter<Copied<It>, std::remove_reference_t<typename It::Item>> {
+class Copied : public Iter<Copied<It>, Unreference<typename It::Item>> {
 public:
-    using Item = std::remove_reference_t<typename It::Item>;
+    using Item = Unreference<typename It::Item>;
 
     Copied(It iter) : m_iter(std::move(iter)) {}
 

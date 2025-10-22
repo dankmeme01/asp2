@@ -220,9 +220,16 @@ concept IsCxxIterator = requires {
 };
 
 template <typename InpT, typename T = decltype(*std::declval<InpT>())>
-using CxxIterUnderlying = std::conditional_t<
+using CxxIterUntrivialize = std::conditional_t<
     std::is_trivially_copyable_v<std::remove_reference_t<T>>,
     std::remove_reference_t<T>,
+    T
+>;
+
+template <typename InpT, typename T = CxxIterUntrivialize<InpT>>
+using CxxIterUnderlying = std::conditional_t<
+    std::is_reference_v<T>,
+    std::reference_wrapper<std::decay_t<T>>,
     T
 >;
 
@@ -230,16 +237,16 @@ template <IsCxxIterator It>
 class CxxIter : public Iter<CxxIter<It>, CxxIterUnderlying<It>> {
 public:
     using Item = CxxIterUnderlying<It>;
-    constexpr static bool IsRef = std::is_reference_v<Item>;
+    constexpr static bool IsRef = std::is_reference_v<CxxIterUntrivialize<It>>;
 
     CxxIter(It begin, It end) : m_current(begin), m_end(end) {};
 
-    std::conditional_t<IsRef, std::optional<std::reference_wrapper<std::decay_t<Item>>>, std::optional<Item>> next() {
+    std::optional<Item> next() {
         if (m_current == m_end) {
             return std::nullopt;
         }
 
-        Item& item = *m_current;
+        decltype(auto) item = *m_current;
         ++m_current;
 
         if constexpr (IsRef) {
