@@ -253,6 +253,28 @@ private:
     It m_current, m_end;
 };
 
+template <IsCxxIterator It>
+class CxxIterConsume : public Iter<CxxIterConsume<It>, std::decay_t<decltype(*std::declval<It>())>> {
+public:
+    using Item = std::decay_t<decltype(*std::declval<It>())>;
+
+    CxxIterConsume(It begin, It end) : m_current(begin), m_end(end) {};
+
+    std::optional<Item> next() {
+        if (m_current == m_end) {
+            return std::nullopt;
+        }
+
+        Item item = std::move(*m_current);
+        ++m_current;
+
+        return item;
+    }
+
+private:
+    It m_current, m_end;
+};
+
 // Empty iterator
 
 template <typename It = void**>

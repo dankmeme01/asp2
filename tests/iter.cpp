@@ -340,3 +340,18 @@ TEST(IterTests, CxxIterMut2) {
     ASSERT_EQ(vec[1], "b");
     ASSERT_EQ(vec[2], "c");
 }
+
+TEST(IterTests, CxxIterConsume) {
+    std::vector<std::string> vec = {"a", "b", "c"};
+    auto vec2 = consume(vec).collect();
+
+    ASSERT_EQ(vec2.size(), 3);
+    ASSERT_EQ(vec2[0], "a");
+    ASSERT_EQ(vec2[1], "b");
+    ASSERT_EQ(vec2[2], "c");
+    ASSERT_EQ(vec.size(), 3);
+    ASSERT_EQ(vec[0], "");
+    ASSERT_EQ(vec[1], "");
+    ASSERT_EQ(vec[2], "");
+}
+

@@ -26,4 +26,10 @@ auto fromReverse(Cont&& cont) {
     return CxxIter(rbegin(cont), rend(cont));
 }
 
+template <typename Cont>
+auto consume(Cont&& cont) {
+    using std::begin, std::end;
+    return CxxIterConsume(begin(cont), end(cont));
+}
+
 }
