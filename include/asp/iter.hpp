@@ -1,5 +1,6 @@
 #include "iter/Chain.hpp"
 #include "iter/ArrayChunks.hpp"
+#include "iter/Copied.hpp"
 #include "iter/Cycle.hpp"
 #include "iter/Filter.hpp"
 #include "iter/FilterMap.hpp"

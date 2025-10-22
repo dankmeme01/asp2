@@ -23,6 +23,9 @@ public:
     template <typename F>
     auto map(F&& f) &&;
 
+    // defined in Copied.hpp
+    auto copied() &&;
+
     // defined in Inspect.hpp
     template <typename F>
     auto inspect(F&& f) &&;
@@ -216,21 +219,34 @@ concept IsCxxIterator = requires {
     { *std::declval<It>() };
 };
 
+template <typename InpT, typename T = decltype(*std::declval<InpT>())>
+using CxxIterUnderlying = std::conditional_t<
+    std::is_trivially_copyable_v<std::remove_reference_t<T>>,
+    std::remove_reference_t<T>,
+    T
+>;
+
 template <IsCxxIterator It>
-class CxxIter : public Iter<CxxIter<It>, std::remove_reference_t<decltype(*std::declval<It>())>> {
+class CxxIter : public Iter<CxxIter<It>, CxxIterUnderlying<It>> {
 public:
-    using Item = CxxIter::Item;
+    using Item = CxxIterUnderlying<It>;
+    constexpr static bool IsRef = std::is_reference_v<Item>;
 
     CxxIter(It begin, It end) : m_current(begin), m_end(end) {};
 
-    std::optional<Item> next() {
+    std::conditional_t<IsRef, std::optional<std::reference_wrapper<std::decay_t<Item>>>, std::optional<Item>> next() {
         if (m_current == m_end) {
             return std::nullopt;
         }
 
-        auto item = std::move(*m_current);
+        Item& item = *m_current;
         ++m_current;
-        return item;
+
+        if constexpr (IsRef) {
+            return std::ref(item);
+        } else {
+            return item;
+        }
     }
 
 private:

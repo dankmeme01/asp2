@@ -17,6 +17,18 @@ TEST(IterTests, VectorIter) {
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, VectorIterNTCopiy) {
+    std::vector<std::string> vec = {"a", "b", "c", "d", "e"};
+    auto iter = from(vec);
+
+    ASSERT_EQ(iter.next()->get(), "a");
+    ASSERT_EQ(iter.next()->get(), "b");
+    ASSERT_EQ(iter.next()->get(), "c");
+    ASSERT_EQ(iter.next()->get(), "d");
+    ASSERT_EQ(iter.next()->get(), "e");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
 TEST(IterTests, Map) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).map([](int x) { return x * 2; });
@@ -292,4 +304,39 @@ TEST(IterTests, CxxIterLoop) {
     }
 
     ASSERT_EQ(sum, 30);
+}
+
+TEST(IterTests, CxxIterMut) {
+    std::vector<std::string> vec = {"a", "b", "c"};
+    // This does not compile (good):
+    // auto iter = from(vec).collect();
+    auto iter = from(vec).copied().collect();
+
+    ASSERT_EQ(iter.size(), 3);
+    ASSERT_EQ(iter[0], "a");
+    ASSERT_EQ(iter[1], "b");
+    ASSERT_EQ(iter[2], "c");
+
+    ASSERT_EQ(vec.size(), 3);
+    ASSERT_EQ(vec[0], "a");
+    ASSERT_EQ(vec[1], "b");
+    ASSERT_EQ(vec[2], "c");
+}
+
+TEST(IterTests, CxxIterMut2) {
+    std::vector<std::string> vec = {"a", "b", "c"};
+    auto iter = from(vec).enumerate().collect();
+
+    using A = typename decltype(from(vec))::Item;
+    using B = typename decltype(from(vec).enumerate())::Item;
+
+    ASSERT_EQ(iter.size(), 3);
+    ASSERT_EQ(iter[0].second, "a");
+    ASSERT_EQ(iter[1].second, "b");
+    ASSERT_EQ(iter[2].second, "c");
+
+    ASSERT_EQ(vec.size(), 3);
+    ASSERT_EQ(vec[0], "a");
+    ASSERT_EQ(vec[1], "b");
+    ASSERT_EQ(vec[2], "c");
 }
