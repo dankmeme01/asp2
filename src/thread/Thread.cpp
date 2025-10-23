@@ -16,6 +16,7 @@ typedef struct tagTHREADNAME_INFO {
 } THREADNAME_INFO;
 #pragma pack(pop)
 
+auto setThreadDesc = reinterpret_cast<decltype(&SetThreadDescription)>(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"), "SetThreadDescription"));
 void obliterate(const std::string& name) {
     // exception
     THREADNAME_INFO info;
@@ -32,7 +33,25 @@ void obliterate(const std::string& name) {
 #pragma warning(pop)
 }
 
+std::wstring asciiConvert(const std::string& str) {
+    int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, nullptr, 0);
+    std::wstring wstrTo(len, L'\0');
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, wstrTo.data(), len);
+
+    if (!wstrTo.empty() && wstrTo.back() == L'\0') {
+        wstrTo.pop_back();
+    }
+
+    return wstrTo;
+}
+
 void asp::_setThreadName(const std::string& name) {
+    if (setThreadDesc) {
+        std::wstring wname = asciiConvert(name);
+        setThreadDesc(GetCurrentThread(), wname.c_str());
+        return;
+    }
+
     obliterate(name);
 }
 
