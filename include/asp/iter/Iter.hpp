@@ -229,7 +229,7 @@ using CxxIterUntrivialize = std::conditional_t<
 template <typename InpT, typename T = CxxIterUntrivialize<InpT>>
 using CxxIterUnderlying = std::conditional_t<
     std::is_reference_v<T>,
-    std::reference_wrapper<std::decay_t<T>>,
+    std::reference_wrapper<std::remove_reference_t<T>>,
     T
 >;
 
@@ -246,12 +246,13 @@ public:
             return std::nullopt;
         }
 
-        decltype(auto) item = *m_current;
-        ++m_current;
-
         if constexpr (IsRef) {
-            return std::ref(item);
+            auto rw = std::ref(*m_current);
+            ++m_current;
+            return rw;
         } else {
+            decltype(auto) item = *m_current;
+            ++m_current;
             return item;
         }
     }

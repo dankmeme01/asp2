@@ -28,10 +28,13 @@ using Unreference = std::conditional_t<
     std::remove_reference_t<T>
 >;
 
+template <typename T>
+using ToCopied = std::remove_cv_t<Unreference<T>>;
+
 template <typename It>
-class Copied : public Iter<Copied<It>, Unreference<typename It::Item>> {
+class Copied : public Iter<Copied<It>, ToCopied<typename It::Item>> {
 public:
-    using Item = Unreference<typename It::Item>;
+    using Item = ToCopied<typename It::Item>;
 
     Copied(It iter) : m_iter(std::move(iter)) {}
 
