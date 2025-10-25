@@ -12,7 +12,9 @@ template <typename U>
 struct is_reference_wrapper<std::reference_wrapper<U>> : std::true_type {};
 
 template <typename T>
-struct ExtractRefWrapper;
+struct ExtractRefWrapper {
+    using type = T;
+};
 
 template <typename T>
 struct ExtractRefWrapper<std::reference_wrapper<T>> {
