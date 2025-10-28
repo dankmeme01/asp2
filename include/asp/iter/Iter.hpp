@@ -222,7 +222,7 @@ concept IsCxxIterator = requires {
 template <typename InpT, typename T = decltype(*std::declval<InpT>())>
 using CxxIterUntrivialize = std::conditional_t<
     std::is_trivially_copyable_v<std::remove_reference_t<T>>,
-    std::remove_reference_t<T>,
+    std::decay_t<T>,
     T
 >;
 
@@ -230,7 +230,7 @@ template <typename InpT, typename T = CxxIterUntrivialize<InpT>>
 using CxxIterUnderlying = std::conditional_t<
     std::is_reference_v<T>,
     std::reference_wrapper<std::remove_reference_t<T>>,
-    T
+    std::remove_cv_t<T>
 >;
 
 template <IsCxxIterator It>
