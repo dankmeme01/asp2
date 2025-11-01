@@ -123,6 +123,13 @@ public:
         });
     }
 
+    template <typename Y>
+    auto mapCast() && {
+        return std::move(*this).map([](auto item) {
+            return static_cast<Y>(item);
+        });
+    }
+
     void forEach(auto&& f) && {
         while (auto item = this->derived().next()) {
             std::invoke(f, *item);
