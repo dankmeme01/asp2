@@ -50,8 +50,9 @@ if (WIN32)
 endif()
 
 CPMAddPackage("gh:geode-sdk/result@1.3.2")
+CPMAddPackage("gh:fmtlib/fmt#11.2.0")
 
-target_link_libraries(asp PRIVATE GeodeResult)
+target_link_libraries(asp PUBLIC GeodeResult fmt)
 target_compile_definitions(asp PRIVATE NOMINMAX=1)
 
 target_include_directories(asp PUBLIC
