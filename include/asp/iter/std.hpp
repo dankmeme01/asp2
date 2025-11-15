@@ -32,4 +32,26 @@ auto consume(Cont&& cont) {
     return CxxIterConsume(begin(cont), end(cont));
 }
 
+template <typename Cont, typename T>
+bool contains(Cont&& cont, const T& value) {
+    for (auto&& item : cont) {
+        if (item == value) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
+bool contains(T* arr, size_t size, const T& value) {
+    for (size_t i = 0; i < size; i++) {
+        if (arr[i] == value) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 }
