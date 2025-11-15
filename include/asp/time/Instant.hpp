@@ -1,40 +1,40 @@
 #pragma once
 
 #include <asp/detail/config.hpp>
-#include <optional>
-#include "detail.hpp"
 #include "Duration.hpp"
 
 namespace asp::time {
-    class Instant {
-    public:
-        constexpr Instant(const Instant& other) = default;
-        constexpr Instant& operator=(const Instant& other) = default;
-        constexpr Instant(Instant&& other) = default;
-        constexpr Instant& operator=(Instant&& other) = default;
 
-        static Instant now();
+class Instant {
+public:
+    constexpr Instant(const Instant& other) = default;
+    constexpr Instant& operator=(const Instant& other) = default;
+    constexpr Instant(Instant&& other) = default;
+    constexpr Instant& operator=(Instant&& other) = default;
 
-        // Undeterminate state, do not use
-        constexpr inline Instant() {}
+    static Instant now();
 
-        Duration durationSince(const Instant& other) const;
+    // Undeterminate state, do not use
+    constexpr inline Instant() {}
 
-        inline Duration elapsed() const {
-            return Instant::now().durationSince(*this);
-        }
+    Duration durationSince(const Instant& other) const;
 
-        i64 rawNanos() const;
-        static Instant fromRawNanos(i64 nanos);
+    inline Duration elapsed() const {
+        return Instant::now().durationSince(*this);
+    }
 
-    private:
-#ifdef ASP_IS_WIN
-        constexpr Instant(i64 _s) : _storage(_s) {}
-        i64 _storage;
-#else
-        constexpr Instant(i64 _s, i64 _s2) : _storage1(_s), _storage2(_s2) {}
-        i64 _storage1;
-        i64 _storage2;
-#endif
-    };
+    Instant operator+(const Duration& dur) const;
+    Instant operator-(const Duration& dur) const;
+    Instant& operator+=(const Duration& dur);
+    Instant& operator-=(const Duration& dur);
+
+    i64 rawNanos() const;
+    static Instant fromRawNanos(i64 nanos);
+
+private:
+    constexpr Instant(u64 s, u64 n) : m_secs(s), m_nanos(n) {}
+    u64 m_secs  = 0;
+    u64 m_nanos = 0;
+};
+
 }

@@ -1,4 +1,5 @@
 #include <asp/time/Instant.hpp>
+#include <asp/time/detail.hpp>
 
 #ifdef ASP_IS_WIN
 # include <Windows.h>
@@ -7,91 +8,96 @@
 #endif
 
 namespace asp::time {
+
 #ifdef ASP_IS_WIN
-    static LARGE_INTEGER getFrequency() {
-        static LARGE_INTEGER freq = []() -> LARGE_INTEGER {
-            LARGE_INTEGER f;
-            if (!QueryPerformanceFrequency(&f)) {
-                detail::_throwrt((std::string("failed to get the performance frequency: ") + std::to_string(GetLastError())).c_str());
-            }
-            return f;
-        }();
 
-        return freq;
-    }
+static LARGE_INTEGER getFrequency() {
+    static auto freq = []() -> LARGE_INTEGER {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        return f;
+    }();
 
-    Instant Instant::now() {
-        LARGE_INTEGER ticks;
+    return freq;
+}
 
-        if (!QueryPerformanceCounter(&ticks)) {
-            detail::_throwrt((std::string("failed to get the performance counter: ") + std::to_string(GetLastError())).c_str());
-        }
+static i64 qpc() {
+    LARGE_INTEGER tx;
+    QueryPerformanceCounter(&tx);
+    return tx.QuadPart;
+}
 
-        return Instant{ticks.QuadPart};
-    }
+Instant Instant::now() {
+    static auto epoch = qpc();
+    LARGE_INTEGER freq = getFrequency();
 
-    Duration Instant::durationSince(const Instant& other) const {
-        // get the tick frequency
-        LARGE_INTEGER freq = getFrequency();
+    i64 elapsed = std::max<i64>(0, qpc() - epoch);
 
-        // get amount of elapsed ticks
-        i64 elapsed = this->_storage - other._storage;
-        if (elapsed < 0) {
-            elapsed = 0;
-        }
+    // convert dt to seconds and nanos
+    u64 secs = elapsed / freq.QuadPart;
+    u64 remTicks = elapsed % freq.QuadPart;
+    u64 nanos = (remTicks * 1'000'000'000ULL) / freq.QuadPart;
 
-        // use 64-bit arithmetic only if the result fits
-        if (static_cast<u64>(elapsed) <= (std::numeric_limits<u64>::max() / 1'000'000'000ULL)) {
-            u64 nanos = (static_cast<u64>(elapsed) * 1'000'000'000ULL) / static_cast<u64>(freq.QuadPart);
-            return Duration::fromNanos(nanos);
-        }
+    return Instant{secs, nanos};
+}
 
-        // use doubles otherwise
-        double nanosD = (static_cast<double>(elapsed) * 1'000'000'000.0) / static_cast<double>(freq.QuadPart);
-        return Duration::fromNanos(static_cast<u64>(nanosD));
-    }
-
-    i64 Instant::rawNanos() const {
-        return this->durationSince(Instant{0}).nanos();
-    }
-
-    Instant Instant::fromRawNanos(i64 nanos) {
-        return Instant{nanos};
-    }
 #else
-    Instant Instant::now() {
-        timespec tp;
-        if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp)) [[unlikely]] {
-            detail::_throwrt("failed to get the current time");
-        }
 
-        return Instant{tp.tv_sec, tp.tv_nsec};
+Instant Instant::now() {
+    timespec tp;
+    if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp)) [[unlikely]] {
+        detail::_throwrt("failed to get the current time");
     }
 
-    Duration Instant::durationSince(const Instant& other) const {
-        i64 secs = this->_storage1 - other._storage1;
-        i64 nanos = this->_storage2 - other._storage2;
+    return Instant{(u64)tp.tv_sec, (u64)tp.tv_nsec};
+}
 
-        if (nanos < 0) {
-            nanos += detail::NANOS_IN_SEC;
-            secs -= 1;
-        }
-
-        // clamp to 0 if negative
-        if (secs < 0) {
-            secs = 0;
-            nanos = 0;
-        }
-
-        return Duration{static_cast<u64>(secs), static_cast<u32>(nanos)};
-    }
-
-    i64 Instant::rawNanos() const {
-        return this->durationSince(Instant{0, 0}).nanos();
-    }
-
-    Instant Instant::fromRawNanos(i64 nanos) {
-        return Instant{(i64)((u64)nanos / detail::NANOS_IN_SEC), (i64)((u64)nanos % detail::NANOS_IN_SEC)};
-    }
 #endif
+
+Duration Instant::durationSince(const Instant& other) const {
+    i64 secs = m_secs - other.m_secs;
+    i64 nanos = m_nanos - other.m_nanos;
+
+    if (nanos < 0) {
+        nanos += detail::NANOS_IN_SEC;
+        secs -= 1;
+    }
+
+    // clamp to 0 if negative
+    if (secs < 0) {
+        secs = 0;
+        nanos = 0;
+    }
+
+    return Duration{static_cast<u64>(secs), static_cast<u32>(nanos)};
+}
+
+i64 Instant::rawNanos() const {
+    return (i64)(m_secs * detail::NANOS_IN_SEC + m_nanos);
+}
+
+Instant Instant::fromRawNanos(i64 nanos) {
+    u64 secs = (u64)nanos / detail::NANOS_IN_SEC;
+    u64 subsecNanos = (u64)nanos % detail::NANOS_IN_SEC;
+    return Instant{secs, subsecNanos};
+}
+
+Instant Instant::operator+(const Duration& dur) const {
+    return Instant::fromRawNanos(this->rawNanos() + dur.nanos());
+}
+
+Instant Instant::operator-(const Duration& dur) const {
+    return Instant::fromRawNanos(this->rawNanos() - dur.nanos());
+}
+
+Instant& Instant::operator+=(const Duration& dur) {
+    *this = *this + dur;
+    return *this;
+}
+
+Instant& Instant::operator-=(const Duration& dur) {
+    *this = *this - dur;
+    return *this;
+}
+
 }
