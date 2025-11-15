@@ -100,4 +100,11 @@ Instant& Instant::operator-=(const Duration& dur) {
     return *this;
 }
 
+std::strong_ordering Instant::operator<=>(const Instant& other) const {
+    auto scmp = m_secs <=> other.m_secs;
+    auto ncmp = m_nanos <=> other.m_nanos;
+
+    return (scmp != std::strong_ordering::equal) ? scmp : ncmp;
+}
+
 }

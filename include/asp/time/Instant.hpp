@@ -28,6 +28,9 @@ public:
     Instant& operator+=(const Duration& dur);
     Instant& operator-=(const Duration& dur);
 
+    std::strong_ordering operator<=>(const Instant& other) const;
+    bool operator==(const Instant& other) const = default;
+
     i64 rawNanos() const;
     static Instant fromRawNanos(i64 nanos);
 
