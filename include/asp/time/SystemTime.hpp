@@ -1,6 +1,7 @@
 #pragma once
 
 #include "detail.hpp"
+#include "DateTime.hpp"
 #include <optional>
 #include "Duration.hpp"
 
@@ -55,6 +56,10 @@ namespace asp::time {
         }
 
         time_t to_time_t() const;
+
+        Date dateUtc() const;
+        Time timeUtc() const;
+        DateTime dateTimeUtc() const;
 
         std::optional<Duration> operator-(const SystemTime& other) const {
             return this->durationSince(other);

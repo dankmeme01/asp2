@@ -1,11 +1,22 @@
 #include <asp/time/SystemTime.hpp>
 #include <asp/detail/config.hpp>
+#include <ctime>
+# include <time.h>
 
 #ifdef ASP_IS_WIN
 # include <Windows.h>
-#else
-# include <time.h>
 #endif
+
+static std::tm getTm(const asp::time::SystemTime& st) {
+    std::tm tm{};
+    auto timet = st.to_time_t();
+#ifdef ASP_IS_WIN
+    gmtime_s(&tm, &timet);
+#else
+    gmtime_r(&timet, &tm);
+#endif
+    return tm;
+}
 
 namespace asp::time {
     SystemTime SystemTime::UNIX_EPOCH = _epoch();
@@ -14,6 +25,32 @@ namespace asp::time {
 
     time_t SystemTime::to_time_t() const {
         return this->timeSinceEpoch().seconds();
+    }
+
+    Date SystemTime::dateUtc() const {
+        auto tm = getTm(*this);
+        return Date{
+            static_cast<u32>(tm.tm_year + 1900),
+            static_cast<u8>(tm.tm_mon + 1),
+            static_cast<u8>(tm.tm_mday),
+            static_cast<u8>(tm.tm_wday)
+        };
+    }
+
+    Time SystemTime::timeUtc() const {
+        auto tm = getTm(*this);
+        return Time{
+            static_cast<u8>(tm.tm_hour),
+            static_cast<u8>(tm.tm_min),
+            static_cast<u8>(tm.tm_sec),
+        };
+    }
+
+    DateTime SystemTime::dateTimeUtc() const {
+        return DateTime{
+            this->dateUtc(),
+            this->timeUtc()
+        };
     }
 
 #ifdef ASP_IS_WIN
