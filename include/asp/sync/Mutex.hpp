@@ -11,7 +11,7 @@ class Channel;
 template <typename T, bool Recursive>
 class Mutex;
 
-template <typename T, bool Recursive>
+template <typename T = void, bool Recursive = false>
 class [[nodiscard("A mutex guard must be stored in a variable to be effective")]] MutexGuardBase {
 public:
     MutexGuardBase(const MutexGuardBase&) = delete;
@@ -62,7 +62,7 @@ protected:
     bool locked = false;
 };
 
-template <typename T, bool Recursive>
+template <typename T = void, bool Recursive = false>
 struct MutexGuard : public MutexGuardBase<T, Recursive> {
     T& operator*() {
         return this->mtx->m_data;
@@ -121,7 +121,7 @@ protected:
     mutable MutexType m_mtx;
 };
 
-template <typename T, bool Recursive = false>
+template <typename T = void, bool Recursive = false>
 class Mutex : public MutexBase<T, Recursive> {
 public:
     using Guard = MutexGuard<T, Recursive>;
