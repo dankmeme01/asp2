@@ -1,7 +1,9 @@
 #pragma once
 #include "../detail/config.hpp"
+#include <asp/Log.hpp>
 #include <utility>
 #include <mutex>
+#include <fmt/core.h>
 
 namespace asp {
 
@@ -18,8 +20,7 @@ public:
     MutexGuardBase& operator=(const MutexGuardBase&) = delete;
 
     MutexGuardBase(Mutex<T, Recursive>& mutex) : mtx(&mutex) {
-        mtx->m_mtx.lock();
-        locked = true;
+        this->relock();
     }
 
     MutexGuardBase(MutexGuardBase&& other) noexcept {
@@ -53,7 +54,17 @@ public:
     void relock() {
         if (locked) return;
 
+#ifdef _WIN32
+        try {
+            mtx->m_mtx.lock();
+        } catch (const std::exception& e) {
+            locked = false;
+            asp::log(LogLevel::Error, fmt::format("mutex lock failed: {}", e.what()));
+            throw;
+        }
+#else
         mtx->m_mtx.lock();
+#endif
         locked = true;
     }
 
