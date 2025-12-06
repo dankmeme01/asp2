@@ -54,4 +54,20 @@ bool contains(T* arr, size_t size, const T& value) {
     return false;
 }
 
+/// Extract keys from a map-like container, requires the container to have pair iterators
+template <typename Map>
+auto keys(const Map& map) {
+    return iter::from(map).copied().map([](auto&& pair) {
+        return pair.first;
+    });
+}
+
+/// Extract values from a map-like container, requires the container to have pair iterators
+template <typename Map>
+auto values(const Map& map) {
+    return iter::from(map).copied().map([](auto&& pair) {
+        return pair.second;
+    });
+}
+
 }
