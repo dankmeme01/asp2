@@ -18,21 +18,23 @@ public:
     Channel() {}
 
     bool empty() const {
-        return queue.lock()->empty();
+        std::unique_lock lock(mtx);
+        return queue.empty();
     }
 
     size_t size() const {
-        return queue.lock()->size();
+        std::unique_lock lock(mtx);
+        return queue.size();
     }
 
     // Obtains the element at the front of the queue, if the channel is empty, blocks until there's data.
     T pop() {
-        std::unique_lock lock(queue.mtx);
-        if (!queue.data.empty()) {
-            return doPop(queue.data);
+        std::unique_lock lock(mtx);
+        if (!queue.empty()) {
+            return doPop(queue);
         }
 
-        cvar.wait(lock, [this] { return !queue.data.empty(); });
+        cvar.wait(lock, [this] { return !queue.empty(); });
 
         return doPop(queue.data);
     }
@@ -45,18 +47,18 @@ public:
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
     template <typename Rep, typename Period>
     std::optional<T> popTimeout(std::chrono::duration<Rep, Period> timeout) {
-        std::unique_lock lock(queue.mtx);
-        if (!queue.data.empty()) {
-            return doPop(queue.data);
+        std::unique_lock lock(mtx);
+        if (!queue.empty()) {
+            return doPop(queue);
         }
 
-        bool available = cvar.wait_for(lock, timeout, [this] { return !queue.data.empty(); });
+        bool available = cvar.wait_for(lock, timeout, [this] { return !queue.empty(); });
 
         if (!available) {
             return std::nullopt;
         }
 
-        return std::optional<T>(std::move(doPop(queue.data)));
+        return std::optional<T>(std::move(doPop(queue)));
     }
 
     // Blocks until messages are available, does not actually pop any messages from the channel.
@@ -67,47 +69,50 @@ public:
     // Blocks until messages are available, does not actually pop any messages from the channel.
     template <typename Rep, typename Period>
     void waitForMessages(std::chrono::duration<Rep, Period> timeout) {
-        std::unique_lock lock(queue.mtx);
+        std::unique_lock lock(mtx);
 
-        if (!queue.data.empty()) {
+        if (!queue.empty()) {
             return;
         }
 
-        cvar.wait_for(lock, timeout, [this] { return !queue.data.empty(); });
+        cvar.wait_for(lock, timeout, [this] { return !queue.empty(); });
     }
 
     // Obtains the element at the front of the queue, throws if the channel is empty.
     T popNow() {
-        auto q = queue.lock();
-        if (q->empty()) {
+        std::unique_lock lock(mtx);
+        if (queue.empty()) {
             throw std::runtime_error("attempting to pop a message from an empty channel");
         }
 
-        return doPop(*q);
+        return doPop(queue);
     }
 
     // Returns the element at the front of the queue if present, otherwise returns `std::nullopt`.
     std::optional<T> tryPop() {
-        auto q = queue.lock();
-        if (q->empty()) return std::nullopt;
+        std::unique_lock lock(mtx);
+        if (queue.empty()) return std::nullopt;
 
-        return doPop(*q);
+        return doPop(queue);
     }
 
     // Pushes a new message to the queue.
     void push(const T& msg) {
-        queue.lock()->push(msg);
+        std::unique_lock lock(mtx);
+        queue.push(msg);
         cvar.notify_one();
     }
 
     // Pushes a new message to the queue.
     void push(T&& msg) {
-        queue.lock()->push(std::move(msg));
+        std::unique_lock lock(mtx);
+        queue.push(std::move(msg));
         cvar.notify_one();
     }
 
 private:
-    Mutex<std::queue<T>> queue;
+    std::queue<T> queue;
+    mutable std::mutex mtx;
     std::condition_variable cvar;
 
     T doPop(std::queue<T>& q) {

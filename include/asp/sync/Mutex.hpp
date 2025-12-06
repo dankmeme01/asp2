@@ -3,206 +3,155 @@
 #include <utility>
 #include <mutex>
 
-#ifdef ASP_DEBUG
-#include "DeadlockGuard.hpp"
-#endif
-
 namespace asp {
 
 template <typename T>
 class Channel;
 
-template <typename Inner = void, bool Recursive = false>
-class Mutex {
-    using InnerMtx = std::conditional_t<
-        Recursive,
-        std::recursive_mutex,
-        std::mutex>;
+template <typename T, bool Recursive>
+class Mutex;
 
+template <typename T, bool Recursive>
+class [[nodiscard("A mutex guard must be stored in a variable to be effective")]] MutexGuardBase {
 public:
-    Mutex() : data(), mtx() {}
-    Mutex(Inner&& obj) : data(std::move(obj)), mtx() {}
-    Mutex(const Inner& obj) : data(obj), mtx() {}
+    MutexGuardBase(const MutexGuardBase&) = delete;
+    MutexGuardBase& operator=(const MutexGuardBase&) = delete;
 
-    Mutex(const Mutex&) = delete;
-    Mutex(Mutex&&) = delete;
-
-    Mutex& operator=(const Mutex&) = delete;
-    Mutex& operator=(Mutex&&) = delete;
-
-    class [[nodiscard("A mutex guard must be stored in a variable to be effective")]] Guard {
-    public:
-        Guard(const Guard&) = delete;
-        Guard& operator=(const Guard&) = delete;
-
-        Guard(const Mutex& mtx) : mtx(mtx) {
-#ifdef ASP_DEBUG
-            mtx.dlGuard.lockAttempt();
-            mtx.mtx.lock();
-            mtx.dlGuard.lockSuccess();
-#else
-            mtx.mtx.lock();
-#endif
-        }
-
-        ~Guard() {
-            this->unlock();
-        }
-
-        // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
-        // unless it is relocked again with `.relock()`.
-        void unlock() {
-            if (!alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.unlock();
-#endif
-                mtx.mtx.unlock();
-
-                alreadyUnlocked = true;
-            }
-        }
-
-        // Relocks the mutex after being unlocked with `unlock()`.
-        // If the mutex was already locked, this does nothing.
-        void relock() {
-            if (alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.lockAttempt();
-                mtx.mtx.lock();
-                mtx.dlGuard.lockSuccess();
-#else
-                mtx.mtx.lock();
-#endif
-                alreadyUnlocked = false;
-            }
-        }
-
-        Inner& operator*() {
-            return mtx.data;
-        }
-
-        const Inner& operator*() const {
-            return mtx.data;
-        }
-
-        Inner* operator->() {
-            return &mtx.data;
-        }
-
-        const Inner* operator->() const {
-            return &mtx.data;
-        }
-
-        Guard& operator=(const Inner& rhs) {
-            mtx.data = rhs;
-            return *this;
-        }
-
-        Guard& operator=(Inner&& rhs) {
-            mtx.data = std::move(rhs);
-            return *this;
-        }
-    private:
-        const Mutex& mtx;
-        bool alreadyUnlocked = false;
-    };
-
-    Guard lock() const {
-        return Guard(*this);
+    MutexGuardBase(Mutex<T, Recursive>& mutex) : mtx(&mutex) {
+        mtx->m_mtx.lock();
+        locked = true;
     }
 
-private:
-    friend class Guard;
+    MutexGuardBase(MutexGuardBase&& other) noexcept {
+        *this = std::move(other);
+    }
 
-    template <typename T>
-    friend class Channel;
+    MutexGuardBase& operator=(MutexGuardBase&& other) noexcept {
+        if (this != &other) {
+            this->mtx = other.mtx;
+            this->locked = other.locked;
 
-    mutable Inner data;
-    mutable InnerMtx mtx;
-#ifdef ASP_DEBUG
-    mutable DeadlockGuard dlGuard;
-#endif
+            other.mtx = nullptr;
+            other.locked = false;
+        }
+        return *this;
+    }
+
+    ~MutexGuardBase() {
+        this->unlock();
+    }
+
+    // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
+    // unless it is relocked again with `.relock()`.
+    void unlock() {
+        if (!locked) return;
+
+        mtx->m_mtx.unlock();
+        locked = false;
+    }
+
+    void relock() {
+        if (locked) return;
+
+        mtx->m_mtx.lock();
+        locked = true;
+    }
+
+protected:
+    Mutex<T, Recursive>* mtx;
+    bool locked = false;
 };
 
-/* Specialization for Mutex<void> */
+template <typename T, bool Recursive>
+struct MutexGuard : public MutexGuardBase<T, Recursive> {
+    T& operator*() {
+        return this->mtx->m_data;
+    }
+
+    const T& operator*() const {
+        return this->mtx->m_data;
+    }
+
+    T* operator->() {
+        return &this->mtx->m_data;
+    }
+
+    const T* operator->() const {
+        return &this->mtx->m_data;
+    }
+
+    MutexGuard& operator=(const T& other) {
+        this->mtx->m_data = other;
+        return *this;
+    }
+
+    MutexGuard& operator=(T&& other) {
+        this->mtx->m_data = std::move(other);
+        return *this;
+    }
+};
+
+// Specializations for void and non void
 template <bool Recursive>
-class Mutex<void, Recursive> {
-    using InnerMtx = std::conditional_t<
+class MutexGuard<void, Recursive> : public MutexGuardBase<void, Recursive> {
+    // nothing!
+};
+
+template <typename T = void, bool Recursive = false>
+class MutexBase {
+public:
+    using MutexType = std::conditional_t<
         Recursive,
         std::recursive_mutex,
         std::mutex>;
 
-public:
-    Mutex() : mtx() {}
+    MutexBase() = default;
 
-    Mutex(const Mutex&) = delete;
-    Mutex(Mutex&&) = delete;
+    MutexBase(const MutexBase&) = delete;
+    MutexBase(MutexBase&&) = delete;
+    MutexBase& operator=(const MutexBase&) = delete;
+    MutexBase& operator=(MutexBase&&) = delete;
 
-    Mutex& operator=(const Mutex&) = delete;
-    Mutex& operator=(Mutex&&) = delete;
+protected:
+    template <typename U>
+    friend class Channel;
+    template <typename U, bool R>
+    friend class MutexGuardBase;
 
-    class Guard {
-    public:
-        Guard(const Mutex& mtx) : mtx(mtx) {
-#ifdef ASP_DEBUG
-            mtx.dlGuard.lockAttempt();
-            mtx.mtx.lock();
-            mtx.dlGuard.lockSuccess();
-#else
-            mtx.mtx.lock();
-#endif
-        }
-
-        ~Guard() {
-            this->unlock();
-        }
-
-        // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
-        // unless it is relocked again with `.relock()`.
-        void unlock() {
-            if (!alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.unlock();
-#endif
-                mtx.mtx.unlock();
-
-                alreadyUnlocked = true;
-            }
-        }
-
-        // Relocks the mutex after being unlocked with `unlock()`.
-        // If the mutex was already locked, this does nothing.
-        void relock() {
-            if (alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.lockAttempt();
-                mtx.mtx.lock();
-                mtx.dlGuard.lockSuccess();
-#else
-                mtx.mtx.lock();
-#endif
-                alreadyUnlocked = false;
-            }
-        }
-
-        Guard(const Guard&) = delete;
-        Guard& operator=(const Guard&) = delete;
-    private:
-        const Mutex& mtx;
-        bool alreadyUnlocked = false;
-    };
-
-    Guard lock() const {
-        return Guard(*this);
-    }
-private:
-    mutable InnerMtx mtx;
-#ifdef ASP_DEBUG
-    mutable DeadlockGuard dlGuard;
-#endif
+    mutable MutexType m_mtx;
 };
 
-template <typename T>
-using MutexGuard = typename Mutex<T>::Guard;
+template <typename T, bool Recursive = false>
+class Mutex : public MutexBase<T, Recursive> {
+public:
+    using Guard = MutexGuard<T, Recursive>;
+
+    template <typename... Args>
+    Mutex(Args&&... args) : m_data(std::forward<Args>(args)...) {}
+
+    Guard lock() const {
+        return Guard(const_cast<Mutex<T, Recursive>&>(*this));
+    }
+
+private:
+    friend class MutexGuard<T, Recursive>;
+
+    T m_data;
+};
+
+template <bool Recursive>
+class Mutex<void, Recursive> : public MutexBase<void, Recursive> {
+public:
+    using Guard = MutexGuard<void, Recursive>;
+
+    Mutex() = default;
+
+    Guard lock() const {
+        return Guard(const_cast<Mutex<void, Recursive>&>(*this));
+    }
+
+private:
+    friend class MutexGuard<void, Recursive>;
+};
 
 }
