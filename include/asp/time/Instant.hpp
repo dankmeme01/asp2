@@ -14,6 +14,9 @@ public:
 
     static Instant now();
 
+    /// Returns an instant representing the far future, likely never to be reached.
+    static Instant farFuture();
+
     // Undeterminate state, do not use
     constexpr inline Instant() {}
 

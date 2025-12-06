@@ -52,6 +52,10 @@ Instant Instant::now() {
     return Instant{(u64)tp.tv_sec, (u64)tp.tv_nsec};
 }
 
+Instant Instant::farFuture() {
+    return Instant{u64(1ull << 61), 0};
+}
+
 #endif
 
 Duration Instant::durationSince(const Instant& other) const {
