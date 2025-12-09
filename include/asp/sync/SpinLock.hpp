@@ -160,7 +160,7 @@ private:
     friend class Channel;
 
     mutable Inner data;
-    mutable uint8_t mtx;
+    mutable uint8_t mtx = 0;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
@@ -241,7 +241,7 @@ public:
         return Guard(*this);
     }
 private:
-    mutable uint8_t mtx;
+    mutable uint8_t mtx = 0;
 #ifdef ASP_DEBUG
     mutable DeadlockGuard dlGuard;
 #endif
