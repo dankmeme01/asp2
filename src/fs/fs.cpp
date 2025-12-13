@@ -286,7 +286,7 @@ static std::string formatError(int error = errno) {
 
 #ifdef _WIN32
 template <typename T>
-Result<> readFileInto(std::filesystem::path const& path, T& out) {
+geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
     HANDLE file = CreateFileW(
         path.native().c_str(),
         GENERIC_READ,
@@ -323,7 +323,7 @@ Result<> readFileInto(std::filesystem::path const& path, T& out) {
     return Ok();
 }
 
-Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
     HANDLE file = CreateFileW(
         path.native().c_str(),
         GENERIC_WRITE,
