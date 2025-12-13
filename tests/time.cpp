@@ -95,3 +95,49 @@ TEST(SleepTests, SleepUntil) {
 
     EXPECT_LE(diff.millis(), 50);
 }
+
+TEST(InstantTests, Cmp) {
+    auto i1 = Instant::now();
+    auto i2 = Instant::now();
+
+    EXPECT_GE(i2, i1);
+    EXPECT_LE(i1, i2);
+
+    auto ad = i1.absDiff(i2);
+    EXPECT_EQ(ad, i2.absDiff(i1));
+    EXPECT_EQ(ad, i2.durationSince(i1));
+}
+
+TEST(InstantTests, AddSub) {
+    auto i1 = Instant::now();
+    auto dur = Duration::fromMillis(500);
+
+    auto i2 = i1 + dur;
+    auto i3 = i2 - dur;
+
+    EXPECT_EQ(i1, i3);
+    EXPECT_EQ(i2.durationSince(i1), dur);
+    EXPECT_EQ(i1.durationSince(i2), Duration::zero());
+}
+
+TEST(InstantTests, AddOverflow) {
+    auto i1 = Instant::farFuture();
+    auto dur = Duration::fromSecs(UINT64_MAX);
+
+    EXPECT_THROW({
+        auto i2 = i1 + dur;
+    }, std::runtime_error);
+
+    EXPECT_FALSE(i1.checkedAdd(dur).has_value());
+}
+
+TEST(InstantTests, SubOverflow) {
+    auto i1 = Instant::now();
+    auto dur = Duration::fromSecs(UINT64_MAX);
+
+    EXPECT_THROW({
+        auto i2 = i1 - dur;
+    }, std::runtime_error);
+
+    EXPECT_FALSE(i1.checkedSub(dur).has_value());
+}
