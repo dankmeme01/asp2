@@ -1,5 +1,7 @@
 #include <asp/time/Instant.hpp>
 #include <asp/time/detail.hpp>
+#include <asp/data/nums.hpp>
+#include <stdexcept>
 
 #ifdef ASP_IS_WIN
 # include <Windows.h>
@@ -86,36 +88,71 @@ Instant Instant::fromRawNanos(i64 nanos) {
     return Instant{secs, subsecNanos};
 }
 
-Instant Instant::operator+(const Duration& dur) const {
-    auto secs = m_secs + dur.seconds();
-    auto nanos = m_nanos + dur.subsecNanos();
-
-    if (nanos >= detail::NANOS_IN_SEC) {
-        nanos -= detail::NANOS_IN_SEC;
-        secs += 1;
+std::optional<Instant> Instant::checkedAdd(const Duration& dur) const {
+    u64 added;
+    if (!asp::checkedAdd(added, m_secs, dur.seconds())) {
+        return std::nullopt;
     }
 
-    return Instant{secs, nanos};
+    u64 extra = 0;
+    u32 nanos = m_nanos + dur.subsecNanos();
+    if (nanos >= detail::NANOS_IN_SEC) {
+        nanos -= detail::NANOS_IN_SEC;
+        extra = 1;
+    }
+
+    if (!asp::checkedAdd(added, added, extra)) {
+        return std::nullopt;
+    }
+
+    return Instant{added, nanos};
+}
+
+std::optional<Instant> Instant::checkedSub(const Duration& dur) const {
+    u64 subbed;
+    if (!asp::checkedSub(subbed, m_secs, dur.seconds())) {
+        return std::nullopt;
+    }
+
+    u32 nanos;
+    u32 durNanos = dur.subsecNanos();
+    if (m_nanos > durNanos) {
+        nanos = m_nanos - durNanos;
+    } else {
+        u64 temp;
+        if (!asp::checkedSub(temp, subbed, 1ULL)) {
+            return std::nullopt;
+        }
+
+        subbed = temp;
+        nanos = m_nanos + detail::NANOS_IN_SEC - durNanos;
+    }
+
+    return Instant{subbed, (u64)nanos};
+}
+
+Duration Instant::absDiff(const Instant& other) const {
+    if (*this >= other) {
+        return this->durationSince(other);
+    } else {
+        return other.durationSince(*this);
+    }
+}
+
+Instant Instant::operator+(const Duration& dur) const {
+    auto out = this->checkedAdd(dur);
+    if (!out.has_value()) {
+        throw std::overflow_error("Instant addition overflowed");
+    }
+    return *out;
 }
 
 Instant Instant::operator-(const Duration& dur) const {
-    if (dur.seconds() > m_secs) {
-        return Instant{0, 0};
+    auto out = this->checkedSub(dur);
+    if (!out.has_value()) {
+        throw std::overflow_error("Instant subtraction overflowed");
     }
-
-    auto secs = m_secs - dur.seconds();
-    auto nanos = (i64)m_nanos - (i64)dur.subsecNanos();
-
-    if (nanos < 0) {
-        if (secs == 0) {
-            return Instant{0, 0};
-        }
-
-        nanos += detail::NANOS_IN_SEC;
-        secs -= 1;
-    }
-
-    return Instant{secs, (u64)nanos};
+    return *out;
 }
 
 Instant& Instant::operator+=(const Duration& dur) {

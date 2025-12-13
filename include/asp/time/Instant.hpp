@@ -26,7 +26,16 @@ public:
         return Instant::now().durationSince(*this);
     }
 
+    /// Adds the given duration to this instant, returning std::nullopt on overflow.
+    std::optional<Instant> checkedAdd(const Duration& dur) const;
+    /// Subtracts the given duration from this instant, returning std::nullopt on overflow.
+    std::optional<Instant> checkedSub(const Duration& dur) const;
+    /// Returns the absolute difference between this instant and another instant.
+    Duration absDiff(const Instant& other) const;
+
+    /// Adds the given duration to this instant, throwing on overflow.
     Instant operator+(const Duration& dur) const;
+    /// Subtracts the given duration from this instant, throwing on overflow.
     Instant operator-(const Duration& dur) const;
     Instant& operator+=(const Duration& dur);
     Instant& operator-=(const Duration& dur);
