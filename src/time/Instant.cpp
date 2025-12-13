@@ -55,7 +55,7 @@ Instant Instant::now() {
 #endif
 
 Instant Instant::farFuture() {
-    return Instant{u64(1ull << 61), 0};
+    return Instant{u64(1ull << 48), 0};
 }
 
 Duration Instant::durationSince(const Instant& other) const {
@@ -87,11 +87,35 @@ Instant Instant::fromRawNanos(i64 nanos) {
 }
 
 Instant Instant::operator+(const Duration& dur) const {
-    return Instant::fromRawNanos(this->rawNanos() + dur.nanos());
+    auto secs = m_secs + dur.seconds();
+    auto nanos = m_nanos + dur.subsecNanos();
+
+    if (nanos >= detail::NANOS_IN_SEC) {
+        nanos -= detail::NANOS_IN_SEC;
+        secs += 1;
+    }
+
+    return Instant{secs, nanos};
 }
 
 Instant Instant::operator-(const Duration& dur) const {
-    return Instant::fromRawNanos(this->rawNanos() - dur.nanos());
+    if (dur.seconds() > m_secs) {
+        return Instant{0, 0};
+    }
+
+    auto secs = m_secs - dur.seconds();
+    auto nanos = (i64)m_nanos - (i64)dur.subsecNanos();
+
+    if (nanos < 0) {
+        if (secs == 0) {
+            return Instant{0, 0};
+        }
+
+        nanos += detail::NANOS_IN_SEC;
+        secs -= 1;
+    }
+
+    return Instant{secs, (u64)nanos};
 }
 
 Instant& Instant::operator+=(const Duration& dur) {
