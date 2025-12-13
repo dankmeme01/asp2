@@ -80,11 +80,11 @@ namespace asp::fs {
 
     Result<std::filesystem::directory_iterator> iterdir(const path& path);
 
-    Result<std::vector<uint8_t>> read(const path& path);
-    Result<std::string> readToString(const path& path);
+    geode::Result<std::vector<uint8_t>> read(const path& path);
+    geode::Result<std::string> readToString(const path& path);
 
-    Result<void> write(const path& path, const std::vector<uint8_t>& data);
-    Result<void> write(const path& path, const std::string& data);
-    Result<void> write(const path& path, const char*, size_t size);
-    Result<void> write(const path& path, const unsigned char*, size_t size);
+    geode::Result<void> write(const path& path, const std::vector<uint8_t>& data);
+    geode::Result<void> write(const path& path, const std::string& data);
+    geode::Result<void> write(const path& path, const char*, size_t size);
+    geode::Result<void> write(const path& path, const unsigned char*, size_t size);
 }

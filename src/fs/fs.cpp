@@ -1,5 +1,16 @@
 #include <asp/fs/fs.hpp>
-#include <fstream>
+#include <cstring>
+#include <fmt/format.h>
+
+#ifdef _WIN32
+# include <windows.h>
+#else
+# include <fcntl.h>
+# include <sys/stat.h>
+# include <sys/types.h>
+# include <unistd.h>
+# include <cerrno>
+#endif
 
 template <typename T = void, typename E = asp::fs::Error>
 using Result = asp::fs::Result<T, E>;
@@ -241,50 +252,192 @@ Result<std::filesystem::directory_iterator> asp::fs::iterdir(const path& p) {
     }, p);
 }
 
-// Reading
+#ifdef _WIN32
+static std::string formatError(DWORD error = GetLastError()) {
+    LPSTR buffer = nullptr;
+    DWORD size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        error,
+        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        (LPSTR)&buffer,
+        0,
+        nullptr
+    );
 
-Result<std::vector<uint8_t>> asp::fs::read(const path& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-        return Err(std::make_error_code(std::errc::no_such_file_or_directory));
+    if (size == 0 || !buffer) {
+        return fmt::format("Win error {}", error);
     }
 
-    return Ok(std::vector<uint8_t>(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()));
+    std::string message(buffer, size);
+    LocalFree(buffer);
+
+    while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
+        message.pop_back();
+    }
+
+    return message;
+}
+#else
+static std::string formatError(int error = errno) {
+    return strerror(error); // thank you posix for making it simple
+}
+#endif
+
+#ifdef _WIN32
+template <typename T>
+Result<> readFileInto(std::filesystem::path const& path, T& out) {
+    HANDLE file = CreateFileW(
+        path.native().c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (file == INVALID_HANDLE_VALUE) {
+        return Err(fmt::format("Unable to open file: {}", formatError()));
+    }
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(file, &fileSize)) {
+        CloseHandle(file);
+        return Err(fmt::format("Unable to get file size: {}", formatError()));
+    }
+
+    out.resize(fileSize.QuadPart);
+    DWORD read = 0;
+    if (!ReadFile(file, out.data(), static_cast<DWORD>(out.size()), &read, nullptr)) {
+        CloseHandle(file);
+        return Err(fmt::format("Unable to read file: {}", formatError()));
+    }
+
+    CloseHandle(file);
+
+    if (read < out.size()) {
+        return Err(fmt::format("Unable to read entire file: only read {} of {}", read, out.size()));
+    }
+
+    return Ok();
 }
 
-Result<std::string> asp::fs::readToString(const path& path) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        return Err(std::make_error_code(std::errc::no_such_file_or_directory));
+Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+    HANDLE file = CreateFileW(
+        path.native().c_str(),
+        GENERIC_WRITE,
+        0,
+        nullptr,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (file == INVALID_HANDLE_VALUE) {
+        return Err(fmt::format("Unable to open file: {}", formatError()));
     }
 
-    return Ok(std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()));
+    DWORD written = 0;
+    if (!WriteFile(file, data, static_cast<DWORD>(size), &written, nullptr)) {
+        CloseHandle(file);
+        return Err(fmt::format("Unable to write file: {}", formatError()));
+    }
+
+    if (written < size) {
+        CloseHandle(file);
+        return Err(fmt::format("Unable to write entire file: only wrote {} of {}", written, size));
+    }
+
+    CloseHandle(file);
+
+    return Ok();
+}
+
+#else
+
+template <typename T>
+geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
+    int file = open(path.native().c_str(), O_RDONLY);
+
+    if (file == -1) {
+        return Err(fmt::format("Unable to open file: {}", formatError()));
+    }
+
+    struct stat fst;
+    if (fstat(file, &fst) == -1) {
+        close(file);
+        return Err(fmt::format("Unable to get file size: {}", formatError()));
+    }
+
+    out.resize(fst.st_size);
+    ssize_t bread = read(file, out.data(), out.size());
+    close(file);
+
+    if (bread < 0) {
+        return Err(fmt::format("Unable to read file: {}", formatError()));
+    }
+
+    if (bread < out.size()) {
+        return Err(fmt::format("Unable to read entire file: only read {} of {}", bread, out.size()));
+    }
+
+    return Ok();
+}
+
+geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+    int file = open(path.native().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+    if (file < 0) {
+        return Err(fmt::format("Unable to open file: {}", formatError()));
+    }
+
+    size_t written = 0;
+    while (written < size) {
+        ssize_t bwrite = write(file, (uint8_t*)data + written, size - written);
+        if (bwrite < 0) {
+            if (errno == EINTR) continue;
+            close(file);
+            return Err(fmt::format("Unable to write file: {}", formatError()));
+        }
+        written += bwrite;
+    }
+
+    close(file);
+
+    return Ok();
+}
+
+#endif
+
+// Reading
+
+geode::Result<std::vector<uint8_t>> asp::fs::read(const path& path) {
+    std::vector<uint8_t> data;
+    GEODE_UNWRAP(readFileInto(path, data));
+    return Ok(std::move(data));
+}
+
+geode::Result<std::string> asp::fs::readToString(const path& path) {
+    std::string data;
+    GEODE_UNWRAP(readFileInto(path, data));
+    return Ok(std::move(data));
 }
 
 // Writing
 
-Result<void> asp::fs::write(const path& path, const std::vector<uint8_t>& data) {
+geode::Result<void> asp::fs::write(const path& path, const std::vector<uint8_t>& data) {
     return write(path, reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-Result<void> asp::fs::write(const path& path, const std::string& data) {
+geode::Result<void> asp::fs::write(const path& path, const std::string& data) {
     return write(path, data.c_str(), data.size());
 }
 
-Result<void> asp::fs::write(const path& path, const unsigned char* data, size_t size) {
+geode::Result<void> asp::fs::write(const path& path, const unsigned char* data, size_t size) {
     return write(path, reinterpret_cast<const char*>(data), size);
 }
 
-Result<void> asp::fs::write(const path& path, const char* data, size_t size) {
-    std::ofstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-        return Err(std::make_error_code(std::errc::no_such_file_or_directory));
-    }
-
-    file.write(data, size);
-    if (!file.good()) {
-        return Err(std::make_error_code(std::errc::io_error));
-    }
-
-    return Ok();
+geode::Result<void> asp::fs::write(const path& path, const char* data, size_t size) {
+    return writeFileFrom(path, (void*)data, size);
 }
