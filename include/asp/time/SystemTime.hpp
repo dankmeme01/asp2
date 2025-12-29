@@ -2,8 +2,10 @@
 
 #include "detail.hpp"
 #include "DateTime.hpp"
-#include <optional>
 #include "Duration.hpp"
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+#include <optional>
 
 #include <time.h>
 
@@ -60,6 +62,17 @@ namespace asp::time {
         Date dateUtc() const;
         Time timeUtc() const;
         DateTime dateTimeUtc() const;
+
+        inline std::string format(std::string_view fmt) const {
+            time_t curTime = this->to_time_t();
+            auto ms = this->timeSinceEpoch().subsecMillis();
+            return fmt::format(fmt::runtime(fmt), fmt::localtime(curTime), ms);
+        }
+
+        inline std::string toString(bool millis = false) const {
+            return this->format(millis ? "{:%Y-%m-%d %H:%M:%S}.{:03}" : "{:%Y-%m-%d %H:%M:%S}");
+        }
+
 
         std::optional<Duration> operator-(const SystemTime& other) const {
             return this->durationSince(other);
