@@ -57,7 +57,7 @@ public:
     ~SmallVec() {
         this->clear();
         if (isLarge()) {
-            delete[] large;
+            delete[] m_large;
         }
     }
 
@@ -75,14 +75,14 @@ public:
 
         this->clear();
         if (this->isLarge()) {
-            delete[] large;
+            delete[] m_large;
         }
 
         if (other.isLarge()) {
             m_capacity = other.m_capacity;
             m_size = other.m_size;
-            large = other.large;
-            other.large = nullptr;
+            m_large = other.m_large;
+            other.m_large = nullptr;
             other.m_size = 0;
             other.m_capacity = N;
         } else {
@@ -90,8 +90,8 @@ public:
             m_size = other.m_size;
 
             for (size_t i = 0; i < m_size; i++) {
-                small[i].init(std::move(other.small[i].get()));
-                other.small[i].destroy();
+                m_small[i].init(std::move(other.m_small[i].get()));
+                other.m_small[i].destroy();
             }
         }
 
@@ -111,11 +111,11 @@ public:
     }
 
     T* data() noexcept {
-        return this->isLarge() ? large->ptr() : small[0].ptr();
+        return this->isLarge() ? m_large->ptr() : m_small[0].ptr();
     }
 
     const T* data() const noexcept {
-        return this->isLarge() ? large->ptr() : small[0].ptr();
+        return this->isLarge() ? m_large->ptr() : m_small[0].ptr();
     }
 
     T& operator[](size_t index) noexcept {
@@ -143,10 +143,10 @@ public:
         }
 
         if (this->isLarge()) {
-            delete[] large;
+            delete[] m_large;
         }
 
-        large = newStorage.release();
+        m_large = newStorage.release();
         m_capacity = newCap;
     }
 
@@ -198,8 +198,8 @@ public:
 
 private:
     union {
-        detail::Uninit<T> small[N];
-        detail::Uninit<T>* large;
+        detail::Uninit<T> m_small[N];
+        detail::Uninit<T>* m_large;
     };
     size_t m_size = 0;
     size_t m_capacity = N;
