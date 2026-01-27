@@ -57,6 +57,29 @@ TEST(SharedPtrTest, LeakTest) {
     EXPECT_TRUE(destroyed);
 }
 
+TEST(SharedPtrTest, Polymorphism) {
+    static bool baseD = false;
+    static bool derD = false;
+
+    struct Base {
+        virtual ~Base() { baseD = true; }
+    };
+    struct Derived : public Base {
+        ~Derived() override { derD = true; }
+    };
+
+    auto der = make_shared<Derived>();
+    SharedPtr<Base> base = der;
+    drop(std::move(der));
+
+    EXPECT_FALSE(baseD);
+    EXPECT_FALSE(derD);
+    drop(std::move(base));
+
+    EXPECT_TRUE(baseD);
+    EXPECT_TRUE(derD);
+}
+
 TEST(PtrSwapTest, Basic) {
     PtrSwap<std::string> swap;
     EXPECT_FALSE(swap.load());

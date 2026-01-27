@@ -10,10 +10,13 @@ class WeakPtr;
 template <typename T>
 class PtrSwap;
 
+using SharedPtrDtor = void(*)(void*);
+
 template <typename T>
 struct SharedPtrBlock {
     std::atomic<size_t> strong;
     std::atomic<size_t> weak;
+    SharedPtrDtor dtor;
     T data;
 
     template <typename... Args>
@@ -22,6 +25,9 @@ struct SharedPtrBlock {
         mem->strong.store(1);
         mem->weak.store(1);
         new (&mem->data) T(std::forward<Args>(args)...);
+        mem->dtor = [](void* ptr) {
+            reinterpret_cast<T*>(ptr)->~T();
+        };
         return mem;
     }
 };
@@ -105,6 +111,11 @@ public:
 
     void leak() {
         m_block = nullptr;
+    }
+
+    template <typename Y>
+    operator SharedPtr<Y>() const requires std::is_convertible_v<T*, Y*> {
+        return SharedPtr<Y>{reinterpret_cast<SharedPtrBlock<Y>*>(m_block)};
     }
 
 private:
@@ -200,7 +211,7 @@ void SharedPtr<T>::release() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     auto weak = WeakPtr<T>::adoptFromRaw(m_block);
-    m_block->data.~T();
+    m_block->dtor(&m_block->data);
 
     // dtor of weak will handle the actual deallocation, if necessary
 }
