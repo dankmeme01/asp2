@@ -165,6 +165,60 @@ public:
         this->emplace_back(std::move(value));
     }
 
+    T* insert(T* iter, const T& value) {
+        T* ptr = this->shift(iter, 1);
+        *ptr = value;
+        return ptr;
+    }
+
+    T* insert(T* iter, T&& value) {
+        T* ptr = this->shift(iter, 1);
+        *ptr = std::move(value);
+        return ptr;
+    }
+
+    void insert(T* iter, size_t count, const T& value) {
+        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        for (size_t i = 0; i < count; i++) {
+            ptr[i] = value;
+        }
+    }
+
+    void insert(T* iter, size_t count, T&& value) {
+        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        for (size_t i = 0; i < count; i++) {
+            ptr[i] = std::move(value);
+        }
+    }
+
+    template<typename InputIt>
+    void insert(T* iter, InputIt first, InputIt last) {
+        size_t count = std::distance(first, last);
+        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        for (size_t i = 0; i < count; i++, ++first)
+            ptr[i] = *first;
+        }
+    }
+
+    T* erase(T* iter) {
+        if (iter < data() || iter >= data() + m_size) {
+            throw std::out_of_range("SmallVec::erase: iterator out of range");
+        }
+        iter->~T();
+        return this->shift(iter, -1);
+    }
+
+    T* erase(T* first, T* last) {
+        if (first < data() || last > data() + m_size || first > last) {
+            throw std::out_of_range("SmallVec::erase: iterator range out of range");
+        }
+        size_t count = std::distance(first, last);
+        for (size_t i = 0; i < count; i++) {
+            first[i].~T();
+        }
+        return this->shift(first, -static_cast<ptrdiff_t>(count));
+    }
+
     void pop_back() {
         if (m_size == 0) {
             throw std::out_of_range("SmallVec::pop_back: empty vector");
@@ -189,6 +243,20 @@ public:
         return data() + m_size;
     }
 
+    T& front() {
+        if (m_size == 0) {
+            throw std::out_of_range("SmallVec::front: empty vector");
+        }
+        return data()[0];
+    }
+
+    T& back() {
+        if (m_size == 0) {
+            throw std::out_of_range("SmallVec::back: empty vector");
+        }
+        return data()[m_size - 1];
+    }
+
     void clear() noexcept {
         for (size_t i = 0; i < m_size; i++) {
             data()[i].~T();
@@ -203,6 +271,28 @@ private:
     };
     size_t m_size = 0;
     size_t m_capacity = N;
+
+    T* shift(T* iter, ptrdiff_t offset) {
+        if (offset > 0) {
+            this->growFor(static_cast<size_t>(offset));
+        }
+
+        T* dataPtr = data();
+        ptrdiff_t index = std::distance(dataPtr, iter);
+
+        if (offset > 0) {
+            for (ptrdiff_t i = m_size - 1; i >= index; i--) {
+                dataPtr[i + offset] = std::move(dataPtr[i]);
+            }
+        } else if (offset < 0) {
+            for (ptrdiff_t i = index; i < m_size; i++) {
+                dataPtr[i + offset] = std::move(dataPtr[i]);
+            }
+        }
+
+        m_size += offset;
+        return dataPtr + index;
+    }
 
     bool isLarge() const {
         return m_capacity > N;
