@@ -20,7 +20,15 @@ struct Uninit {
         return std::launder(reinterpret_cast<T*>(&data));
     }
 
+    const T* ptr() const {
+        return std::launder(reinterpret_cast<const T*>(&data));
+    }
+
     T& get() {
+        return *ptr();
+    }
+
+    const T& get() const {
         return *ptr();
     }
 
@@ -62,8 +70,25 @@ public:
         }
     }
 
-    SmallVec(const SmallVec& other) = delete;
-    SmallVec& operator=(const SmallVec& other) = delete;
+    SmallVec(const SmallVec& other) {
+        *this = other;
+    }
+
+    SmallVec& operator=(const SmallVec& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        this->clear();
+        this->reserve(other.m_size);
+
+        auto otherData = other.idata();
+        for (size_t i = 0; i < other.m_size; i++) {
+            this->emplace_back(otherData[i].get());
+        }
+
+        return *this;
+    }
 
     SmallVec(SmallVec&& other) noexcept {
         *this = std::move(other);
@@ -155,7 +180,7 @@ public:
     template <typename... Args>
     void emplace_back(Args&&... args) {
         this->growFor(1);
-        new (data() + m_size) T(std::forward<Args>(args)...);
+        idata()[m_size].init(std::forward<Args>(args)...);
         m_size++;
     }
 
@@ -260,6 +285,10 @@ private:
     size_t m_capacity = N;
 
     detail::Uninit<T>* idata() {
+        return this->isLarge() ? m_large : &m_small[0];
+    }
+
+    const detail::Uninit<T>* idata() const {
         return this->isLarge() ? m_large : &m_small[0];
     }
 
