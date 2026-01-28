@@ -60,3 +60,59 @@ TEST(SmallVecTest, MoveSemantics) {
 
     EXPECT_EQ(vec.size(), 0);
 }
+
+TEST(SmallVecTest, Copy) {
+    SmallVec<int, 2> vec;
+    vec.push_back(10);
+    vec.push_back(20);
+
+    auto vec2 = vec;
+    EXPECT_EQ(vec2.size(), 2);
+    EXPECT_EQ(vec2[0], 10);
+    EXPECT_EQ(vec2[1], 20);
+
+    vec2.push_back(30);
+    EXPECT_EQ(vec2.size(), 3);
+    EXPECT_EQ(vec2[2], 30);
+
+    auto vec3 = vec2;
+    EXPECT_EQ(vec3.size(), 3);
+    EXPECT_EQ(vec3[0], 10);
+    EXPECT_EQ(vec3[1], 20);
+    EXPECT_EQ(vec3[2], 30);
+}
+
+TEST(SmallVecTest, InsertErase) {
+    SmallVec<int, 3> vec;
+    vec.push_back(1);
+    vec.push_back(3);
+    vec.push_back(4);
+
+    vec.insert(vec.begin() + 1, 2);
+    EXPECT_EQ(vec.size(), 4);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+    EXPECT_EQ(vec[3], 4);
+
+    vec.erase(vec.begin() + 2);
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 4);
+
+    vec.insert(vec.end(), 5);
+    EXPECT_EQ(vec.size(), 4);
+    EXPECT_EQ(vec[3], 5);
+
+    vec.erase(vec.begin(), vec.begin() + 2);
+    EXPECT_EQ(vec.size(), 2);
+    EXPECT_EQ(vec[0], 4);
+    EXPECT_EQ(vec[1], 5);
+
+    vec.insert(vec.begin() + 1, 5, 6);
+    EXPECT_EQ(vec.size(), 7);
+    EXPECT_EQ(vec[0], 4);
+    EXPECT_EQ(vec[1], 6);
+    EXPECT_EQ(vec[6], 5);
+}

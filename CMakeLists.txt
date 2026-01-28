@@ -79,6 +79,12 @@ if (ASP_BUILD_TESTS)
 
     file(GLOB TEST_SOURCES tests/*.cpp)
     add_executable(asp_tests ${TEST_SOURCES})
+
+    if (NOT WIN32)
+        target_compile_options(asp_tests PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+        target_link_options(asp_tests PRIVATE -fsanitize=address)
+    endif()
+
     target_link_libraries(asp_tests PRIVATE asp gtest_main GeodeResult)
     include(GoogleTest)
     gtest_discover_tests(asp_tests)
