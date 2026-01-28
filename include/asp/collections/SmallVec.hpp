@@ -166,37 +166,36 @@ public:
     }
 
     T* insert(T* iter, const T& value) {
-        T* ptr = this->shift(iter, 1);
-        *ptr = value;
-        return ptr;
+        auto* ptr = this->shift(iter, 1);
+        ptr->init(value);
+        return ptr->ptr();
     }
 
     T* insert(T* iter, T&& value) {
-        T* ptr = this->shift(iter, 1);
-        *ptr = std::move(value);
-        return ptr;
+        auto* ptr = this->shift(iter, 1);
+        ptr->init(std::move(value));
+        return ptr->ptr();
     }
 
     void insert(T* iter, size_t count, const T& value) {
-        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        auto* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
         for (size_t i = 0; i < count; i++) {
-            ptr[i] = value;
+            ptr[i].init(value);
         }
     }
 
     void insert(T* iter, size_t count, T&& value) {
-        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        auto* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
         for (size_t i = 0; i < count; i++) {
-            ptr[i] = std::move(value);
+            ptr[i].init(std::move(value));
         }
     }
 
-    template<typename InputIt>
-    void insert(T* iter, InputIt first, InputIt last) {
+    void insert(T* iter, T const* first, T const* last) {
         size_t count = std::distance(first, last);
-        T* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
-        for (size_t i = 0; i < count; i++, ++first)
-            ptr[i] = *first;
+        auto* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
+        for (size_t i = 0; i < count; i++, ++first) {
+            ptr[i].init(*first);
         }
     }
 
@@ -204,8 +203,7 @@ public:
         if (iter < data() || iter >= data() + m_size) {
             throw std::out_of_range("SmallVec::erase: iterator out of range");
         }
-        iter->~T();
-        return this->shift(iter, -1);
+        return this->shift(iter + 1, -1)->ptr();
     }
 
     T* erase(T* first, T* last) {
@@ -213,10 +211,7 @@ public:
             throw std::out_of_range("SmallVec::erase: iterator range out of range");
         }
         size_t count = std::distance(first, last);
-        for (size_t i = 0; i < count; i++) {
-            first[i].~T();
-        }
-        return this->shift(first, -static_cast<ptrdiff_t>(count));
+        return this->shift(first + count, -static_cast<ptrdiff_t>(count))->ptr();
     }
 
     void pop_back() {
@@ -272,26 +267,32 @@ private:
     size_t m_size = 0;
     size_t m_capacity = N;
 
-    T* shift(T* iter, ptrdiff_t offset) {
+    detail::Uninit<T>* shift(T* iter, ptrdiff_t offset) {
+        ptrdiff_t index = std::distance(data(), iter);
+
         if (offset > 0) {
             this->growFor(static_cast<size_t>(offset));
         }
 
-        T* dataPtr = data();
-        ptrdiff_t index = std::distance(dataPtr, iter);
+        auto* dataPtr = this->isLarge() ? m_large : &m_small[0];
 
         if (offset > 0) {
             for (ptrdiff_t i = m_size - 1; i >= index; i--) {
-                dataPtr[i + offset] = std::move(dataPtr[i]);
+                dataPtr[i + offset].init(std::move(data()[i]));
+                dataPtr[i].destroy();
             }
         } else if (offset < 0) {
-            for (ptrdiff_t i = index; i < m_size; i++) {
-                dataPtr[i + offset] = std::move(dataPtr[i]);
+            for (ptrdiff_t i = index; i < m_size; ++i) {
+                dataPtr[i + offset].init(std::move(data()[i]));
+                dataPtr[i].destroy();
+            }
+            for (ptrdiff_t i = m_size + offset; i < m_size; i++) {
+                dataPtr[i].destroy();
             }
         }
 
         m_size += offset;
-        return dataPtr + index;
+        return &dataPtr[index];
     }
 
     bool isLarge() const {
