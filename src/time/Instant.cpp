@@ -48,7 +48,7 @@ Instant Instant::now() {
 Instant Instant::now() {
     timespec tp;
     if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp)) [[unlikely]] {
-        detail::_throwrt("failed to get the current time");
+        time_detail::_throwrt("failed to get the current time");
     }
 
     return Instant{(u64)tp.tv_sec, (u64)tp.tv_nsec};
@@ -65,7 +65,7 @@ Duration Instant::durationSince(const Instant& other) const {
     i64 nanos = m_nanos - other.m_nanos;
 
     if (nanos < 0) {
-        nanos += detail::NANOS_IN_SEC;
+        nanos += time_detail::NANOS_IN_SEC;
         secs -= 1;
     }
 
@@ -79,12 +79,12 @@ Duration Instant::durationSince(const Instant& other) const {
 }
 
 i64 Instant::rawNanos() const {
-    return (i64)(m_secs * detail::NANOS_IN_SEC + m_nanos);
+    return (i64)(m_secs * time_detail::NANOS_IN_SEC + m_nanos);
 }
 
 Instant Instant::fromRawNanos(i64 nanos) {
-    u64 secs = (u64)nanos / detail::NANOS_IN_SEC;
-    u64 subsecNanos = (u64)nanos % detail::NANOS_IN_SEC;
+    u64 secs = (u64)nanos / time_detail::NANOS_IN_SEC;
+    u64 subsecNanos = (u64)nanos % time_detail::NANOS_IN_SEC;
     return Instant{secs, subsecNanos};
 }
 
@@ -96,8 +96,8 @@ std::optional<Instant> Instant::checkedAdd(const Duration& dur) const {
 
     u64 extra = 0;
     u32 nanos = m_nanos + dur.subsecNanos();
-    if (nanos >= detail::NANOS_IN_SEC) {
-        nanos -= detail::NANOS_IN_SEC;
+    if (nanos >= time_detail::NANOS_IN_SEC) {
+        nanos -= time_detail::NANOS_IN_SEC;
         extra = 1;
     }
 
@@ -125,7 +125,7 @@ std::optional<Instant> Instant::checkedSub(const Duration& dur) const {
         }
 
         subbed = temp;
-        nanos = m_nanos + detail::NANOS_IN_SEC - durNanos;
+        nanos = m_nanos + time_detail::NANOS_IN_SEC - durNanos;
     }
 
     return Instant{subbed, (u64)nanos};

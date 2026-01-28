@@ -74,7 +74,7 @@ namespace asp::inline time {
 
         FILETIME ue;
         if (!SystemTimeToFileTime(&epoch, &ue)) {
-            detail::_throwrt("failed to get unix epoch");
+            time_detail::_throwrt("failed to get unix epoch");
         }
 
         return SystemTime{ue.dwHighDateTime, ue.dwLowDateTime};
@@ -126,7 +126,7 @@ namespace asp::inline time {
     SystemTime SystemTime::now() {
         timespec tp;
         if (0 != clock_gettime(CLOCK_REALTIME, &tp)) [[unlikely]] {
-            detail::_throwrt("failed to get the current time");
+            time_detail::_throwrt("failed to get the current time");
         }
 
         return SystemTime{tp.tv_sec, tp.tv_nsec};
@@ -141,7 +141,7 @@ namespace asp::inline time {
         i64 nanos = this->_storage2 - other._storage2;
 
         if (nanos < 0) {
-            nanos += detail::NANOS_IN_SEC;
+            nanos += time_detail::NANOS_IN_SEC;
             secs -= 1;
         }
 
@@ -156,8 +156,8 @@ namespace asp::inline time {
         i64 secs = this->_storage1 + dur.seconds();
         i64 nanos = this->_storage2 + dur.subsecNanos();
 
-        if (nanos >= detail::NANOS_IN_SEC) {
-            nanos -= detail::NANOS_IN_SEC;
+        if (nanos >= time_detail::NANOS_IN_SEC) {
+            nanos -= time_detail::NANOS_IN_SEC;
             secs += 1;
         }
 
