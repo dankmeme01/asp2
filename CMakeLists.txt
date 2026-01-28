@@ -70,7 +70,7 @@ install(DIRECTORY include/ DESTINATION include)
 
 # Google Tests
 
-option(ASP_BUILD_TESTS "Build tests for asp" ON)
+option(ASP_BUILD_TESTS "Build tests for asp" OFF)
 
 if (ASP_BUILD_TESTS)
     enable_testing()
@@ -79,8 +79,12 @@ if (ASP_BUILD_TESTS)
 
     file(GLOB TEST_SOURCES tests/*.cpp)
     add_executable(asp_tests ${TEST_SOURCES})
-    target_compile_options(asp_tests PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(asp_tests PRIVATE -fsanitize=address)
+
+    if (NOT WIN32)
+        target_compile_options(asp_tests PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+        target_link_options(asp_tests PRIVATE -fsanitize=address)
+    endif()
+
     target_link_libraries(asp_tests PRIVATE asp gtest_main GeodeResult)
     include(GoogleTest)
     gtest_discover_tests(asp_tests)

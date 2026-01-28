@@ -61,6 +61,27 @@ TEST(SmallVecTest, MoveSemantics) {
     EXPECT_EQ(vec.size(), 0);
 }
 
+TEST(SmallVecTest, Copy) {
+    SmallVec<int, 2> vec;
+    vec.push_back(10);
+    vec.push_back(20);
+
+    auto vec2 = vec;
+    EXPECT_EQ(vec2.size(), 2);
+    EXPECT_EQ(vec2[0], 10);
+    EXPECT_EQ(vec2[1], 20);
+
+    vec2.push_back(30);
+    EXPECT_EQ(vec2.size(), 3);
+    EXPECT_EQ(vec2[2], 30);
+
+    auto vec3 = vec2;
+    EXPECT_EQ(vec3.size(), 3);
+    EXPECT_EQ(vec3[0], 10);
+    EXPECT_EQ(vec3[1], 20);
+    EXPECT_EQ(vec3[2], 30);
+}
+
 TEST(SmallVecTest, InsertErase) {
     SmallVec<int, 3> vec;
     vec.push_back(1);

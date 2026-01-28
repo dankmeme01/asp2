@@ -1,4 +1,5 @@
 #pragma once
+#include <asp/detail/config.hpp>
 #include <stddef.h>
 #include <utility>
 #include <stdexcept>
@@ -135,11 +136,12 @@ public:
         }
 
         auto newStorage = std::make_unique<detail::Uninit<T>[]>(newCap);
+        auto data = idata();
 
         // move elements
         for (size_t i = 0; i < m_size; i++) {
-            newStorage[i].init(std::move(data()[i]));
-            data()[i].~T();
+            newStorage[i].init(std::move(data[i].get()));
+            data[i].destroy();
         }
 
         if (this->isLarge()) {
@@ -184,13 +186,6 @@ public:
         }
     }
 
-    void insert(T* iter, size_t count, T&& value) {
-        auto* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
-        for (size_t i = 0; i < count; i++) {
-            ptr[i].init(std::move(value));
-        }
-    }
-
     void insert(T* iter, T const* first, T const* last) {
         size_t count = std::distance(first, last);
         auto* ptr = this->shift(iter, static_cast<ptrdiff_t>(count));
@@ -200,10 +195,7 @@ public:
     }
 
     T* erase(T* iter) {
-        if (iter < data() || iter >= data() + m_size) {
-            throw std::out_of_range("SmallVec::erase: iterator out of range");
-        }
-        return this->shift(iter + 1, -1)->ptr();
+        return this->erase(iter, iter + 1);
     }
 
     T* erase(T* first, T* last) {
@@ -219,7 +211,7 @@ public:
             throw std::out_of_range("SmallVec::pop_back: empty vector");
         }
         m_size--;
-        data()[m_size].~T();
+        idata()[m_size].destroy();
     }
 
     T* begin() noexcept {
@@ -254,7 +246,7 @@ public:
 
     void clear() noexcept {
         for (size_t i = 0; i < m_size; i++) {
-            data()[i].~T();
+            idata()[i].destroy();
         }
         m_size = 0;
     }
@@ -267,32 +259,49 @@ private:
     size_t m_size = 0;
     size_t m_capacity = N;
 
+    detail::Uninit<T>* idata() {
+        return this->isLarge() ? m_large : &m_small[0];
+    }
+
+    /// Shifts elements starting from 'iter' by 'offset' positions (positive or negative)
+    /// Returns the new location of 'iter'
     detail::Uninit<T>* shift(T* iter, ptrdiff_t offset) {
         ptrdiff_t index = std::distance(data(), iter);
+        ASP_ASSERT(index >= 0 && static_cast<size_t>(index) <= m_size, "SmallVec::shift: iterator out of range");
 
         if (offset > 0) {
             this->growFor(static_cast<size_t>(offset));
         }
 
-        auto* dataPtr = this->isLarge() ? m_large : &m_small[0];
-
         if (offset > 0) {
+            // move elements [index, m_size) to the right by offset
             for (ptrdiff_t i = m_size - 1; i >= index; i--) {
-                dataPtr[i + offset].init(std::move(data()[i]));
-                dataPtr[i].destroy();
+                this->moveOne(i, i + offset);
             }
         } else if (offset < 0) {
+            // move elements [index, m_size) to the left by -offset
             for (ptrdiff_t i = index; i < m_size; ++i) {
-                dataPtr[i + offset].init(std::move(data()[i]));
-                dataPtr[i].destroy();
-            }
-            for (ptrdiff_t i = m_size + offset; i < m_size; i++) {
-                dataPtr[i].destroy();
+                this->moveOne(i, i + offset);
             }
         }
 
         m_size += offset;
-        return &dataPtr[index];
+        return &idata()[index];
+    }
+
+    /// Moves element from index 'from' to index 'to', destroys original element,
+    /// and destroys the destination element if it existed.
+    void moveOne(size_t from, size_t to) {
+        if (from == to) [[unlikely]] return;
+
+        auto data = this->idata();
+
+        if (to < m_size) {
+            data[to].destroy();
+        }
+
+        data[to].init(std::move(data[from].get()));
+        data[from].destroy();
     }
 
     bool isLarge() const {
