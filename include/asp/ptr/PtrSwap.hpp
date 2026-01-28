@@ -40,10 +40,24 @@ public:
         this->swap(ptr);
     }
 
+    void store(Ptr&& ptr) {
+        this->swap(std::move(ptr));
+    }
+
     Ptr swap(const Ptr& ptr) {
         size_t newB = reinterpret_cast<size_t>(ptr.m_block);
         size_t oldB = m_block.exchange(newB, std::memory_order::seq_cst);
         this->retain(ptr);
+
+        return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
+    }
+
+    Ptr swap(Ptr&& ptr) {
+        size_t newB = reinterpret_cast<size_t>(ptr.m_block);
+        size_t oldB = m_block.exchange(newB, std::memory_order::seq_cst);
+
+        // skip the retain and just null out the moved-from ptr
+        ptr.leak();
 
         return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
     }
