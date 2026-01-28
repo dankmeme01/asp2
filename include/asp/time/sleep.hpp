@@ -1,6 +1,6 @@
 #pragma once
 
-namespace asp::time {
+namespace asp::inline time {
     class Duration;
     class SystemTime;
 

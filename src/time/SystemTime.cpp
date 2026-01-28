@@ -18,7 +18,7 @@ static std::tm getTm(const asp::time::SystemTime& st) {
     return tm;
 }
 
-namespace asp::time {
+namespace asp::inline time {
     SystemTime SystemTime::UNIX_EPOCH = _epoch();
 
     SystemTime::SystemTime() : SystemTime(UNIX_EPOCH) {}

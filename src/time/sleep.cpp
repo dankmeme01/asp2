@@ -4,7 +4,7 @@
 #include <asp/time/SystemTime.hpp>
 #include <thread>
 
-namespace asp::time {
+namespace asp::inline time {
     void sleep(const Duration& dur) {
         auto val = asp::time::toChrono<std::chrono::microseconds>(dur);
         std::this_thread::sleep_for(val);

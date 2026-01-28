@@ -1,7 +1,7 @@
 #pragma once
 #include <asp/data/nums.hpp>
 
-namespace asp::time {
+namespace asp::inline time {
 
 /// Represents a calendar date.
 /// Month: 1 = January, 12 = December

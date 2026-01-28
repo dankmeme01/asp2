@@ -9,7 +9,17 @@
 
 #include <time.h>
 
-namespace asp::time {
+namespace asp::inline time {
+    inline std::tm localtime(std::time_t time) {
+        struct std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &time);
+#else
+        localtime_r(&time, &tm);
+#endif
+        return tm;
+    }
+
     class SystemTime {
     public:
         constexpr SystemTime(const SystemTime& other) = default;
@@ -66,7 +76,7 @@ namespace asp::time {
         inline std::string format(std::string_view fmt) const {
             time_t curTime = this->to_time_t();
             auto ms = this->timeSinceEpoch().subsecMillis();
-            return fmt::format(fmt::runtime(fmt), fmt::localtime(curTime), ms);
+            return fmt::format(fmt::runtime(fmt), asp::localtime(curTime), ms);
         }
 
         inline std::string toString(bool millis = false) const {

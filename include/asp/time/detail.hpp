@@ -5,7 +5,7 @@
 # include <cmath> // std::floor
 #endif
 
-namespace asp::time::detail {
+namespace asp::inline time::detail {
     constexpr inline u64 NANOS_IN_SEC = 1'000'000'000;
     constexpr inline u64 NANOS_IN_MILLISEC = 1'000'000;
     constexpr inline u64 NANOS_IN_MICROSEC = 1'000;

@@ -3,7 +3,7 @@
 #include <asp/detail/config.hpp>
 #include "Duration.hpp"
 
-namespace asp::time {
+namespace asp::inline time {
 
 class Instant {
 public:

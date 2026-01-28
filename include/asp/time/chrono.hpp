@@ -4,7 +4,7 @@
 #include "SystemTime.hpp"
 #include <chrono>
 
-namespace asp::time {
+namespace asp::inline time {
     // Converting durations
 
     template <typename Rep, typename Period>

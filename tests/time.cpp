@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 
 using namespace asp;
-using namespace asp::time;
 
 TEST(DurationTests, Ctor) {
     auto dur = Duration::fromSecs(123);

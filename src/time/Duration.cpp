@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <stdexcept>
 
-namespace asp::time {
+namespace asp::inline time {
     [[noreturn]] void detail::_throwrt(const char* msg) {
         asp::log(asp::LogLevel::Error, msg);
         throw std::runtime_error(msg);

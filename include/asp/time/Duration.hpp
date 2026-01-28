@@ -6,7 +6,7 @@
 
 #include "detail.hpp"
 
-namespace asp::time {
+namespace asp::inline time {
     class Duration {
     public:
         constexpr inline Duration() : m_seconds(0), m_nanos(0) {}

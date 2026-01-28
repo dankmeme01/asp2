@@ -9,7 +9,7 @@
 # include <time.h>
 #endif
 
-namespace asp::time {
+namespace asp::inline time {
 
 #ifdef ASP_IS_WIN
 

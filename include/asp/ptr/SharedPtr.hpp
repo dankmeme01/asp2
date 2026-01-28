@@ -23,7 +23,7 @@ struct SharedPtrBlock {
     template <typename... Args>
     static SharedPtrBlock* create(Args&&... args) {
         // use unique_ptr for exception safety
-        std::unique_ptr mem{reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock)))};
+        std::unique_ptr<SharedPtrBlock> mem{reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock)))};
 
         mem->strong.store(1);
         mem->weak.store(1);
