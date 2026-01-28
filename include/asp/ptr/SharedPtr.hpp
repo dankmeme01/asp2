@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <utility>
+#include <memory>
 
 namespace asp {
 
@@ -21,14 +22,17 @@ struct SharedPtrBlock {
 
     template <typename... Args>
     static SharedPtrBlock* create(Args&&... args) {
-        auto mem = reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock)));
+        // use unique_ptr for exception safety
+        std::unique_ptr mem{reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock)))};
+
         mem->strong.store(1);
         mem->weak.store(1);
         new (&mem->data) T(std::forward<Args>(args)...);
         mem->dtor = [](void* ptr) {
             reinterpret_cast<T*>(ptr)->~T();
         };
-        return mem;
+
+        return mem.release();
     }
 };
 
@@ -103,10 +107,6 @@ public:
 
     bool operator==(const SharedPtr& other) const {
         return m_block == other.m_block;
-    }
-
-    bool operator==(const T& other) const {
-        return m_block && (m_block->data == other);
     }
 
     void leak() {
