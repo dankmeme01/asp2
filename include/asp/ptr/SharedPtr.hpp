@@ -7,9 +7,13 @@ namespace asp {
 
 template <typename T>
 class WeakPtr;
-
+template <typename T>
+class SharedPtr;
 template <typename T>
 class PtrSwap;
+
+template <typename T, typename... Args>
+SharedPtr<T> make_shared(Args&&... args);
 
 using SharedPtrDtor = void(*)(void*);
 
@@ -121,9 +125,14 @@ public:
 private:
     friend class WeakPtr<T>;
     friend class PtrSwap<T>;
+
+    template <typename U, typename... Args>
+    friend SharedPtr<U> make_shared(Args&&... args);
+
     SharedPtrBlock<T>* m_block;
 
     void release();
+    void _initSharedFromThis(T* ptr);
 };
 
 template <typename T>
@@ -182,6 +191,10 @@ public:
         return SharedPtr<T>();
     }
 
+    bool expired() const {
+        return !m_block || m_block->strong.load(std::memory_order::relaxed) == 0;
+    }
+
 private:
     SharedPtrBlock<T>* m_block;
 
@@ -191,7 +204,9 @@ private:
 template <typename T, typename... Args>
 SharedPtr<T> make_shared(Args&&... args) {
     auto block = SharedPtrBlock<T>::create(std::forward<Args>(args)...);
-    return SharedPtr<T>::adoptFromRaw(block);
+    auto sp = SharedPtr<T>::adoptFromRaw(block);
+    sp._initSharedFromThis(sp.get());
+    return sp;
 }
 
 template <typename T, typename... Args>
@@ -227,6 +242,47 @@ void WeakPtr<T>::release() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     ::operator delete(m_block);
+}
+
+// Shared from this impl
+
+template <typename T>
+class EnableSharedFromThis {
+public:
+    SharedPtr<T> sharedFromThis() {
+        return m_weak.upgrade();
+    }
+
+    SharedPtr<const T> sharedFromThis() const {
+        return m_weak.upgrade();
+    }
+
+    WeakPtr<T> weakFromThis() {
+        return m_weak;
+    }
+
+    WeakPtr<const T> weakFromThis() const {
+        return m_weak;
+    }
+
+protected:
+    EnableSharedFromThis() = default;
+    EnableSharedFromThis(const EnableSharedFromThis&) {}
+    EnableSharedFromThis& operator=(const EnableSharedFromThis&) { return *this; }
+    ~EnableSharedFromThis() = default;
+
+private:
+    mutable WeakPtr<T> m_weak{};
+
+    template <class U>
+    friend class SharedPtr;
+};
+
+template <typename T>
+void SharedPtr<T>::_initSharedFromThis(T* ptr) {
+    if constexpr (std::is_base_of_v<EnableSharedFromThis<T>, T>) {
+        ptr->EnableSharedFromThis::m_weak = *this;
+    }
 }
 
 }
