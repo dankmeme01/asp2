@@ -21,6 +21,20 @@ static void microYield() {
 
 namespace asp {
 
+ThreadPool::Worker::Worker(Thread<> thread) : thread(std::move(thread)), doingWork(false) {}
+
+ThreadPool::Worker::Worker(Worker&& other) noexcept {
+    *this = std::move(other);
+}
+
+ThreadPool::Worker& ThreadPool::Worker::operator=(Worker&& other) noexcept {
+    if (this != &other) {
+        thread = std::move(other.thread);
+        doingWork = other.doingWork.load();
+    }
+    return *this;
+}
+
 ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
     for (size_t i = 0; i < tc; i++) {
         Thread<> thread;
@@ -38,12 +52,7 @@ ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
             worker.doingWork = false;
         });
 
-        Worker worker = {
-            .thread = std::move(thread),
-            .doingWork = false
-        };
-
-        _storage->workers.emplace_back(std::move(worker));
+        _storage->workers.emplace_back(std::move(thread));
     }
 
     for (auto& worker : _storage->workers) {

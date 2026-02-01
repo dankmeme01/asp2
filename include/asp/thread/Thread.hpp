@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../detail/config.hpp"
-#include "../sync/Atomic.hpp"
 #include "../Log.hpp"
 
 #include <functional>
@@ -29,7 +28,7 @@ public:
 
         // Stops the thread (not immediately, but the loop function will never be called again after it returns)
         void stop() {
-            storage->_stopped.set();
+            storage->_stopped.test_and_set();
         }
 
     private:
@@ -40,7 +39,7 @@ public:
 
     Thread() {
         _storage = std::make_shared<Storage>();
-        _storage->_stopped.set();
+        _storage->_stopped.test_and_set();
     }
 
     Thread(const Thread&) = delete;
@@ -58,11 +57,12 @@ public:
             _storage = std::move(other._storage);
             other.movedFrom = true;
         }
+        return *this;
     }
 
     Thread(TFunc&& func) {
         _storage = std::make_shared<Storage>();
-        _storage->_stopped.set();
+        _storage->_stopped.test_and_set();
         this->setLoopFunction(std::move(func));
     }
 
@@ -90,7 +90,7 @@ public:
             StopToken stopToken(_storage);
 
             try {
-                while (!_storage->_stopped) {
+                while (!_storage->_stopped.test()) {
                     _storage->loopFunc(args..., stopToken);
                 }
             } catch (const std::exception& e) {
@@ -106,7 +106,7 @@ public:
                 _storage->onTermination();
             }
 
-            _storage->_stopped.set();
+            _storage->_stopped.test_and_set();
         }, std::forward<TFuncArgs>(args)...);
     }
 
@@ -130,7 +130,7 @@ public:
             StopToken stopToken(_storage);
 
             try {
-                while (!_storage->_stopped) {
+                while (!_storage->_stopped.test()) {
                     _storage->loopFunc(args..., stopToken);
                 }
             } catch (const std::exception& e) {
@@ -146,7 +146,7 @@ public:
                 _storage->onTermination();
             }
 
-            _storage->_stopped.set();
+            _storage->_stopped.test_and_set();
         }, args...);
     }
 
@@ -155,7 +155,7 @@ public:
         if (movedFrom) return;
 
         if (_storage) {
-            _storage->_stopped.set();
+            _storage->_stopped.test_and_set();
         } else {
             asp::log(LogLevel::Error, "tried to stop a detached Thread");
             throw std::runtime_error("tried to stop a detached Thread");
@@ -226,7 +226,7 @@ public:
     }
 
     bool isStopped() {
-        return !_storage || _storage->_stopped;
+        return !_storage || _storage->_stopped.test();
     }
 
     ~Thread() {
@@ -236,7 +236,7 @@ public:
     }
 
     struct Storage {
-        AtomicFlag _stopped;
+        std::atomic_flag _stopped;
         std::string name = "asp::Thread";
         TFunc loopFunc;
         std::function<void()> onStart;

@@ -2,7 +2,6 @@
 
 #include "Thread.hpp"
 #include "../sync/Channel.hpp"
-#include "../sync/Atomic.hpp"
 
 namespace asp {
 
@@ -41,7 +40,12 @@ public:
 private:
     struct Worker {
         Thread<> thread;
-        AtomicBool doingWork = false;
+        std::atomic<bool> doingWork = false;
+
+        Worker() = default;
+        Worker(Thread<> thread);
+        Worker(Worker&&) noexcept;
+        Worker& operator=(Worker&&) noexcept;
     };
 
     struct Storage {

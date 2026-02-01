@@ -2,10 +2,6 @@
 #include "../detail/config.hpp"
 #include <utility>
 
-#ifdef ASP_DEBUG
-# include "DeadlockGuard.hpp"
-#endif
-
 #ifdef ASP_IS_X86
 # include <immintrin.h>
 #endif
@@ -78,13 +74,7 @@ public:
         Guard& operator=(const Guard&) = delete;
 
         Guard(const SpinLock& mtx) : mtx(mtx) {
-#ifdef ASP_DEBUG
-            mtx.dlGuard.lockAttempt();
             mtx._lock();
-            mtx.dlGuard.lockSuccess();
-#else
-            mtx._lock();
-#endif
         }
 
         inline ~Guard() {
@@ -95,9 +85,6 @@ public:
         // unless it is relocked again with `.relock()`.
         inline void unlock() {
             if (!alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.unlock();
-#endif
                 mtx._unlock();
 
                 alreadyUnlocked = true;
@@ -108,13 +95,7 @@ public:
         // If the mutex was already locked, this does nothing.
         inline void relock() {
             if (alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.lockAttempt();
                 mtx._lock();
-                mtx.dlGuard.lockSuccess();
-#else
-                mtx._lock();
-#endif
                 alreadyUnlocked = false;
             }
         }
@@ -161,9 +142,6 @@ private:
 
     mutable Inner data;
     mutable uint8_t mtx = 0;
-#ifdef ASP_DEBUG
-    mutable DeadlockGuard dlGuard;
-#endif
 
     void _lock() const {
         acquireAtomicLock(&mtx);
@@ -189,13 +167,7 @@ public:
     class Guard {
     public:
         inline Guard(const SpinLock& mtx) : mtx(mtx) {
-#ifdef ASP_DEBUG
-            mtx.dlGuard.lockAttempt();
             mtx._lock();
-            mtx.dlGuard.lockSuccess();
-#else
-            mtx._lock();
-#endif
         }
 
         inline ~Guard() {
@@ -206,11 +178,7 @@ public:
         // unless it is relocked again with `.relock()`.
         inline void unlock() {
             if (!alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.unlock();
-#endif
                 mtx._unlock();
-
                 alreadyUnlocked = true;
             }
         }
@@ -219,13 +187,7 @@ public:
         // If the mutex was already locked, this does nothing.
         inline void relock() {
             if (alreadyUnlocked) {
-#ifdef ASP_DEBUG
-                mtx.dlGuard.lockAttempt();
                 mtx._lock();
-                mtx.dlGuard.lockSuccess();
-#else
-                mtx._lock();
-#endif
                 alreadyUnlocked = false;
             }
         }
@@ -242,9 +204,6 @@ public:
     }
 private:
     mutable uint8_t mtx = 0;
-#ifdef ASP_DEBUG
-    mutable DeadlockGuard dlGuard;
-#endif
 
     void _lock() const {
         acquireAtomicLock(&mtx);
