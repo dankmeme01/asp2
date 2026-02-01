@@ -117,6 +117,11 @@ public:
         m_block = nullptr;
     }
 
+    void reset() {
+        this->release();
+        m_block = nullptr;
+    }
+
     template <typename Y>
     operator SharedPtr<Y>() const requires std::is_convertible_v<T*, Y*> {
         return SharedPtr<Y>{reinterpret_cast<SharedPtrBlock<Y>*>(m_block)};
