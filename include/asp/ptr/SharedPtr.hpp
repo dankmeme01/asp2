@@ -17,24 +17,30 @@ SharedPtr<T> make_shared(Args&&... args);
 
 using SharedPtrDtor = void(*)(void*);
 
-template <typename T>
-struct SharedPtrBlock {
+struct SharedPtrBlockBase {
     std::atomic<size_t> strong;
     std::atomic<size_t> weak;
     SharedPtrDtor dtor;
+};
+
+template <typename T>
+struct SharedPtrBlock : SharedPtrBlockBase {
     T data;
 
     template <typename... Args>
     static SharedPtrBlock* create(Args&&... args) {
-        // use unique_ptr for exception safety
-        std::unique_ptr<SharedPtrBlock> mem{reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock)))};
+        // wrap into unique_ptr for exception safety
+        std::unique_ptr<SharedPtrBlock, void(*)(void*)> mem{
+            reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock))),
+            +[](void* ptr) { ::operator delete(ptr); }
+        };
 
         mem->strong.store(1);
         mem->weak.store(1);
-        new (&mem->data) T(std::forward<Args>(args)...);
         mem->dtor = [](void* ptr) {
             reinterpret_cast<T*>(ptr)->~T();
         };
+        new (&mem->data) T(std::forward<Args>(args)...);
 
         return mem.release();
     }
@@ -124,7 +130,8 @@ public:
 
     template <typename Y>
     operator SharedPtr<Y>() const requires std::is_convertible_v<T*, Y*> {
-        return SharedPtr<Y>{reinterpret_cast<SharedPtrBlock<Y>*>(m_block)};
+        SharedPtrBlockBase* base = m_block;
+        return SharedPtr<Y>{reinterpret_cast<SharedPtrBlock<Y>*>(base)};
     }
 
 private:
@@ -189,7 +196,7 @@ public:
         size_t strong = m_block->strong.load(std::memory_order::relaxed);
         while (strong != 0) {
             if (m_block->strong.compare_exchange_weak(strong, strong + 1, std::memory_order::acquire, std::memory_order::relaxed)) {
-                return SharedPtr<T>::adoptFromRaw(m_block);
+                return SharedPtr<T>::adoptFromRaw(reinterpret_cast<SharedPtrBlock<T>*>(m_block));
             }
         }
 
@@ -201,7 +208,7 @@ public:
     }
 
 private:
-    SharedPtrBlock<T>* m_block;
+    SharedPtrBlockBase* m_block;
 
     void release();
 };
