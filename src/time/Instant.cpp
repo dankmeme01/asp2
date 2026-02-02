@@ -30,10 +30,9 @@ static i64 qpc() {
 }
 
 Instant Instant::now() {
-    static auto epoch = qpc();
     LARGE_INTEGER freq = getFrequency();
 
-    i64 elapsed = std::max<i64>(0, qpc() - epoch);
+    u64 elapsed = qpc();
 
     // convert dt to seconds and nanos
     u64 secs = elapsed / freq.QuadPart;
