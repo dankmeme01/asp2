@@ -1,6 +1,7 @@
 #pragma once
 #include "../detail/config.hpp"
 #include <utility>
+#include <stdint.h>
 
 #ifdef ASP_IS_X86
 # include <immintrin.h>
