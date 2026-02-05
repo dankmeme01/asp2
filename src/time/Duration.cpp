@@ -1,74 +1,90 @@
 #include <asp/time/Duration.hpp>
 #include <asp/Log.hpp>
+#include <asp/format.hpp>
 
-#include <sstream>
-#include <iomanip>
 #include <stdexcept>
-
 
 [[noreturn]] void asp::time_detail::_throwrt(const char* msg) {
     asp::log(asp::LogLevel::Error, msg);
     throw std::runtime_error(msg);
 }
 
+static void trimTrailingZeros(std::string_view& s) {
+    auto dot = s.find('.');
+    if (dot != std::string::npos) {
+        while (!s.empty() && s.back() == '0')
+            s.remove_suffix(1);
+        if (!s.empty() && s.back() == '.')
+            s.remove_suffix(1);
+    }
+}
+
 namespace asp::inline time {
+    std::string_view suffixForUnit(DurationUnit unit, bool human) {
+        switch (unit) {
+            case DurationUnit::Nanos:  return human ? " nanoseconds" : "ns";
+            case DurationUnit::Micros: return human ? " microseconds" : "µs";
+            case DurationUnit::Millis: return human ? " milliseconds" : "ms";
+            case DurationUnit::Secs:   return human ? " seconds" : "s";
+            case DurationUnit::Mins:   return human ? " minutes" : "min";
+            case DurationUnit::Hours:  return human ? " hours" : "h";
+            default:                   return "";
+        }
+    }
 
-    std::string Duration::toString(u8 precision) const {
-        u64 totalNanos = time_detail::secs_to_nanos(m_seconds) + m_nanos;
-        f64 totalSeconds = static_cast<f64>(totalNanos) / static_cast<f64>(time_detail::NANOS_IN_SEC);
+    std::pair<std::string_view, DurationUnit> formatDurationNum(
+        std::array<char, 32>& buf, const asp::Duration& dur, int precision
+    ) {
+        using namespace asp::time_detail;
+        using namespace asp::nums;
 
-        std::ostringstream oss;
+        u64 totalNanos = secs_to_nanos(dur.seconds()) + dur.subsecNanos();
 
-        if (totalSeconds >= time_detail::SECS_IN_HOUR) {
-            f64 hours = totalSeconds / time_detail::SECS_IN_HOUR;
-            oss << std::fixed << std::setprecision(precision) << hours << "h";
-        } else if (totalSeconds >= time_detail::SECS_IN_MIN) {
-            f64 mins = totalSeconds / time_detail::SECS_IN_MIN;
-            oss << std::fixed << std::setprecision(precision) << mins << "m";
-        } else if (totalSeconds >= 1.0) {
-            oss << std::fixed << std::setprecision(precision) << totalSeconds << "s";
-        } else if (totalNanos >= time_detail::NANOS_IN_MILLISEC) {
-            f64 millis = (f64)totalNanos / (f64)time_detail::NANOS_IN_MILLISEC;
-            oss << std::fixed << std::setprecision(precision) << millis << "ms";
-        } else if (totalNanos >= time_detail::NANOS_IN_MICROSEC) {
-            u64 micros = (f64)totalNanos / (f64)time_detail::NANOS_IN_MICROSEC;
-            oss << micros << "µs";
+        f64 value;
+        DurationUnit unit;
+
+        if (totalNanos >= SECS_IN_HOUR * NANOS_IN_SEC) {
+            value = f64(totalNanos) / f64(SECS_IN_HOUR * NANOS_IN_SEC);
+            unit = DurationUnit::Hours;
+        } else if (totalNanos >= SECS_IN_MIN * NANOS_IN_SEC) {
+            value = f64(totalNanos) / f64(SECS_IN_MIN * NANOS_IN_SEC);
+            unit = DurationUnit::Mins;
+        } else if (totalNanos >= NANOS_IN_SEC) {
+            value = f64(totalNanos) / f64(NANOS_IN_SEC);
+            unit = DurationUnit::Secs;
+        } else if (totalNanos >= NANOS_IN_MILLISEC) {
+            value = f64(totalNanos) / f64(NANOS_IN_MILLISEC);
+            unit = DurationUnit::Millis;
+        } else if (totalNanos >= NANOS_IN_MICROSEC) {
+            value = f64(totalNanos) / f64(NANOS_IN_MICROSEC);
+            unit = DurationUnit::Micros;
         } else {
-            oss << totalNanos << "ns";
+            return std::make_pair(asp::local_format(buf, "{}", totalNanos), DurationUnit::Nanos);
         }
 
-        return oss.str();
+        auto num = asp::local_format(buf, "{:.{}f}", value, precision);
+        trimTrailingZeros(num);
+        return std::make_pair(num, unit);
+    }
+
+    template <bool H>
+    static std::string formatDur(const Duration& dur, u8 precision) {
+        std::array<char, 32> buf;
+        auto [num, unit] = formatDurationNum(buf, dur, precision);
+        return fmt::format("{}{}", num, suffixForUnit(unit, H));
+    }
+
+    std::string Duration::toString(u8 precision) const {
+        return formatDur<false>(*this, precision);
     }
 
     std::string Duration::toHumanString(u8 precision) const {
-        // Format duration to a human-readable string, for example 1.484 milliseconds, 3.141 hours, 1.234 seconds
-        u64 totalNanos = time_detail::secs_to_nanos(m_seconds) + m_nanos;
-        f64 totalSeconds = static_cast<f64>(totalNanos) / static_cast<f64>(time_detail::NANOS_IN_SEC);
-
-        std::ostringstream oss;
-
-        if (totalSeconds >= time_detail::SECS_IN_DAY) {
-            f64 days = totalSeconds / time_detail::SECS_IN_DAY;
-            oss << std::fixed << std::setprecision(precision) << days << " days";
-        } else if (totalSeconds >= time_detail::SECS_IN_HOUR) {
-            f64 hours = totalSeconds / time_detail::SECS_IN_HOUR;
-            oss << std::fixed << std::setprecision(precision) << hours << " hours";
-        } else if (totalSeconds >= time_detail::SECS_IN_MIN) {
-            f64 mins = totalSeconds / time_detail::SECS_IN_MIN;
-            oss << std::fixed << std::setprecision(precision) << mins << " minutes";
-        } else if (totalSeconds >= 1.0) {
-            oss << std::fixed << std::setprecision(precision) << totalSeconds << " seconds";
-        } else if (totalNanos >= time_detail::NANOS_IN_MILLISEC) {
-            f64 millis = (f64)totalNanos / (f64)time_detail::NANOS_IN_MILLISEC;
-            oss << std::fixed << std::setprecision(precision) << millis << " milliseconds";
-        } else if (totalNanos >= time_detail::NANOS_IN_MICROSEC) {
-            f64 micros = (f64)totalNanos / (f64)time_detail::NANOS_IN_MICROSEC;
-            oss << std::fixed << std::setprecision(precision) << micros << " microseconds";
-        } else {
-            oss << totalNanos << " nanoseconds";
+        auto out = formatDur<true>(*this, precision);
+        // this is very silly core
+        if (out.starts_with("1 ") && out.ends_with("s")) {
+            out.pop_back();
         }
-
-        return oss.str();
+        return out;
     }
 }
 

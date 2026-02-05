@@ -3,6 +3,8 @@
 #include <asp/detail/config.hpp>
 #include <optional>
 #include <string>
+#include <array>
+#include <fmt/format.h>
 
 #include "detail.hpp"
 
@@ -127,9 +129,6 @@ namespace asp::inline time {
         constexpr inline u64 subsecMicros() const { return time_detail::nanos_to_micros(m_nanos); }
         constexpr inline u64 subsecNanos() const { return m_nanos; }
 
-        // Return the amount of seconds as a float, including
-
-
         // Various operations
 
         [[nodiscard]] constexpr inline Duration absDiff(const Duration& other) const {
@@ -205,6 +204,7 @@ namespace asp::inline time {
         std::string toString(u8 precision = 3) const;
 
         // Format duration to a human-readable string, for example 1.484 milliseconds, 3.141 hours, 1.234 seconds
+        // Precision by default is 0, so only the integer part is formatted unless precision is specified
         std::string toHumanString(u8 precision = 0) const;
 
         // Operators
@@ -314,4 +314,47 @@ namespace asp::inline time {
     constexpr inline bool operator!=(const Duration& lhs, const Duration& rhs) {
         return !(lhs == rhs);
     }
+
+    enum class DurationUnit {
+        Nanos,
+        Micros,
+        Millis,
+        Secs,
+        Mins,
+        Hours,
+    };
+
+    std::string_view suffixForUnit(DurationUnit unit, bool human);
+
+    std::pair<std::string_view, DurationUnit> formatDurationNum(
+        std::array<char, 32>& buf, const asp::Duration& dur, int precision
+    );
 }
+
+
+template <>
+struct fmt::formatter<asp::Duration> {
+    int precision = 3;
+
+    auto parse(format_parse_context& ctx) -> format_parse_context::iterator {
+        auto it = ctx.begin();
+        auto end = ctx.end();
+
+        if (it != end && *it == '.') {
+            ++it;
+            precision = 0;
+            while (it != end && *it >= '0' && *it <= '9') {
+                precision = precision * 10 + (*it - '0');
+                ++it;
+            }
+        }
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const asp::time::Duration& dur, FormatContext& ctx) const -> FormatContext::iterator {
+        std::array<char, 32> buf;
+        auto [num, unit] = asp::formatDurationNum(buf, dur, precision);
+        return fmt::format_to(ctx.out(), "{}{}", num, asp::suffixForUnit(unit, false));
+    }
+};
