@@ -53,7 +53,7 @@ if (NOT TARGET fmt)
     CPMAddPackage("gh:fmtlib/fmt#12.1.0")
 endif()
 if (NOT TARGET GeodeResult)
-    CPMAddPackage("gh:geode-sdk/result@1.4.0")
+    CPMAddPackage("gh:geode-sdk/result@1.4.1")
 endif()
 
 target_link_libraries(asp PUBLIC GeodeResult fmt)
