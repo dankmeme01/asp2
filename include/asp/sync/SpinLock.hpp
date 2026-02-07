@@ -74,17 +74,17 @@ public:
         Guard(const Guard&) = delete;
         Guard& operator=(const Guard&) = delete;
 
-        Guard(const SpinLock& mtx) : mtx(mtx) {
+        Guard(const SpinLock& mtx) noexcept : mtx(mtx) {
             mtx._lock();
         }
 
-        inline ~Guard() {
+        inline ~Guard() noexcept {
             this->unlock();
         }
 
         // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
         // unless it is relocked again with `.relock()`.
-        inline void unlock() {
+        inline void unlock() noexcept {
             if (!alreadyUnlocked) {
                 mtx._unlock();
 
@@ -94,7 +94,7 @@ public:
 
         // Relocks the mutex after being unlocked with `unlock()`.
         // If the mutex was already locked, this does nothing.
-        inline void relock() {
+        inline void relock() noexcept {
             if (alreadyUnlocked) {
                 mtx._lock();
                 alreadyUnlocked = false;
@@ -131,7 +131,7 @@ public:
         bool alreadyUnlocked = false;
     };
 
-    Guard lock() const {
+    Guard lock() const noexcept {
         return Guard(*this);
     }
 
@@ -144,11 +144,11 @@ private:
     mutable Inner data;
     mutable uint8_t mtx = 0;
 
-    void _lock() const {
+    void _lock() const noexcept {
         acquireAtomicLock(&mtx);
     }
 
-    void _unlock() const {
+    void _unlock() const noexcept {
         releaseAtomicLock(&mtx);
     }
 };
@@ -167,17 +167,17 @@ public:
 
     class Guard {
     public:
-        inline Guard(const SpinLock& mtx) : mtx(mtx) {
+        inline Guard(const SpinLock& mtx) noexcept : mtx(mtx) {
             mtx._lock();
         }
 
-        inline ~Guard() {
+        inline ~Guard() noexcept {
             this->unlock();
         }
 
         // Unlocks the mutex. Any access to this `Guard` afterwards invokes undefined behavior,
         // unless it is relocked again with `.relock()`.
-        inline void unlock() {
+        inline void unlock() noexcept {
             if (!alreadyUnlocked) {
                 mtx._unlock();
                 alreadyUnlocked = true;
@@ -186,7 +186,7 @@ public:
 
         // Relocks the mutex after being unlocked with `unlock()`.
         // If the mutex was already locked, this does nothing.
-        inline void relock() {
+        inline void relock() noexcept {
             if (alreadyUnlocked) {
                 mtx._lock();
                 alreadyUnlocked = false;
@@ -200,17 +200,17 @@ public:
         bool alreadyUnlocked = false;
     };
 
-    inline Guard lock() const {
+    inline Guard lock() const noexcept {
         return Guard(*this);
     }
 private:
     mutable uint8_t mtx = 0;
 
-    void _lock() const {
+    void _lock() const noexcept {
         acquireAtomicLock(&mtx);
     }
 
-    void _unlock() const {
+    void _unlock() const noexcept {
         releaseAtomicLock(&mtx);
     }
 };
