@@ -13,7 +13,7 @@ namespace asp::inline time {
 
 #ifdef ASP_IS_WIN
 
-static LARGE_INTEGER getFrequency() {
+static LARGE_INTEGER getFrequency() noexcept {
     static auto freq = []() -> LARGE_INTEGER {
         LARGE_INTEGER f;
         QueryPerformanceFrequency(&f);
@@ -23,13 +23,13 @@ static LARGE_INTEGER getFrequency() {
     return freq;
 }
 
-static i64 qpc() {
+static i64 qpc() noexcept {
     LARGE_INTEGER tx;
     QueryPerformanceCounter(&tx);
     return tx.QuadPart;
 }
 
-Instant Instant::now() {
+Instant Instant::now() noexcept {
     LARGE_INTEGER freq = getFrequency();
 
     u64 elapsed = qpc();
@@ -44,22 +44,22 @@ Instant Instant::now() {
 
 #else
 
-Instant Instant::now() {
+Instant Instant::now() noexcept {
     timespec tp;
-    if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp)) [[unlikely]] {
-        time_detail::_throwrt("failed to get the current time");
-    }
+    int rc = clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
+
+    if (rc != 0) [[unlikely]] std::abort();
 
     return Instant{(u64)tp.tv_sec, (u64)tp.tv_nsec};
 }
 
 #endif
 
-Instant Instant::farFuture() {
+Instant Instant::farFuture() noexcept {
     return Instant{u64(1ull << 48), 0};
 }
 
-Duration Instant::durationSince(const Instant& other) const {
+Duration Instant::durationSince(const Instant& other) const noexcept {
     i64 secs = m_secs - other.m_secs;
     i64 nanos = m_nanos - other.m_nanos;
 
@@ -77,17 +77,17 @@ Duration Instant::durationSince(const Instant& other) const {
     return Duration{static_cast<u64>(secs), static_cast<u32>(nanos)};
 }
 
-i64 Instant::rawNanos() const {
+i64 Instant::rawNanos() const noexcept {
     return (i64)(m_secs * time_detail::NANOS_IN_SEC + m_nanos);
 }
 
-Instant Instant::fromRawNanos(i64 nanos) {
+Instant Instant::fromRawNanos(i64 nanos) noexcept {
     u64 secs = (u64)nanos / time_detail::NANOS_IN_SEC;
     u64 subsecNanos = (u64)nanos % time_detail::NANOS_IN_SEC;
     return Instant{secs, subsecNanos};
 }
 
-std::optional<Instant> Instant::checkedAdd(const Duration& dur) const {
+std::optional<Instant> Instant::checkedAdd(const Duration& dur) const noexcept {
     u64 added;
     if (!asp::checkedAdd(added, m_secs, dur.seconds())) {
         return std::nullopt;
@@ -107,7 +107,7 @@ std::optional<Instant> Instant::checkedAdd(const Duration& dur) const {
     return Instant{added, nanos};
 }
 
-std::optional<Instant> Instant::checkedSub(const Duration& dur) const {
+std::optional<Instant> Instant::checkedSub(const Duration& dur) const noexcept {
     u64 subbed;
     if (!asp::checkedSub(subbed, m_secs, dur.seconds())) {
         return std::nullopt;
@@ -130,7 +130,7 @@ std::optional<Instant> Instant::checkedSub(const Duration& dur) const {
     return Instant{subbed, (u64)nanos};
 }
 
-Duration Instant::absDiff(const Instant& other) const {
+Duration Instant::absDiff(const Instant& other) const noexcept {
     if (*this >= other) {
         return this->durationSince(other);
     } else {
@@ -164,7 +164,7 @@ Instant& Instant::operator-=(const Duration& dur) {
     return *this;
 }
 
-std::strong_ordering Instant::operator<=>(const Instant& other) const {
+std::strong_ordering Instant::operator<=>(const Instant& other) const noexcept {
     auto scmp = m_secs <=> other.m_secs;
     auto ncmp = m_nanos <=> other.m_nanos;
 

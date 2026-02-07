@@ -49,13 +49,13 @@ namespace asp::time_detail {
 
     [[noreturn]] void _throwrt(const char* msg);
 
-    template <typename T> T floor(T x);
+    template <typename T> T floor(T x) noexcept;
 
 #ifdef __clang__
-    template<> inline f32 floor(f32 x) { return __builtin_floorf(x); }
-    template<> inline f64 floor(f64 x) { return __builtin_floor(x); }
+    template<> inline f32 floor(f32 x) noexcept { return __builtin_floorf(x); }
+    template<> inline f64 floor(f64 x) noexcept { return __builtin_floor(x); }
 #else
-    template<> inline f32 floor(f32 x) { return std::floor(x); }
-    template<> inline f64 floor(f64 x) { return std::floor(x); }
+    template<> inline f32 floor(f32 x) noexcept { return std::floor(x); }
+    template<> inline f64 floor(f64 x) noexcept { return std::floor(x); }
 #endif
 }

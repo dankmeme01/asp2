@@ -20,7 +20,7 @@ static void trimTrailingZeros(std::string_view& s) {
 }
 
 namespace asp::inline time {
-    std::string_view suffixForUnit(DurationUnit unit, bool human) {
+    std::string_view suffixForUnit(DurationUnit unit, bool human) noexcept {
         switch (unit) {
             case DurationUnit::Nanos:  return human ? " nanoseconds" : "ns";
             case DurationUnit::Micros: return human ? " microseconds" : "µs";

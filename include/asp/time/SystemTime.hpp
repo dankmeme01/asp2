@@ -10,8 +10,8 @@
 #include <time.h>
 
 namespace asp::inline time {
-    inline std::tm localtime(std::time_t time) {
-        struct std::tm tm{};
+    inline std::tm localtime(std::time_t time) noexcept {
+        std::tm tm{};
 #ifdef _WIN32
         localtime_s(&tm, &time);
 #else
@@ -22,56 +22,56 @@ namespace asp::inline time {
 
     class SystemTime {
     public:
-        constexpr SystemTime(const SystemTime& other) = default;
-        constexpr SystemTime& operator=(const SystemTime& other) = default;
-        constexpr SystemTime(SystemTime&& other) = default;
-        constexpr SystemTime& operator=(SystemTime&& other) = default;
+        constexpr SystemTime(const SystemTime& other) noexcept = default;
+        constexpr SystemTime& operator=(const SystemTime& other) noexcept = default;
+        constexpr SystemTime(SystemTime&& other) noexcept = default;
+        constexpr SystemTime& operator=(SystemTime&& other) noexcept = default;
 
         // Default constructor initializes the SystemTime to the UNIX epoch.
-        SystemTime();
+        SystemTime() noexcept;
 
-        static SystemTime now();
+        static SystemTime now() noexcept;
 
-        inline static SystemTime fromUnix(time_t t) {
+        static SystemTime fromUnix(time_t t) noexcept {
             return UNIX_EPOCH + Duration::fromSecs(t);
         }
 
-        inline static SystemTime fromUnixMillis(u64 ms) {
+        static SystemTime fromUnixMillis(u64 ms) noexcept {
             return UNIX_EPOCH + Duration::fromMillis(ms);
         }
 
         static SystemTime UNIX_EPOCH;
 
-        std::optional<Duration> durationSince(const SystemTime& other) const;
+        std::optional<Duration> durationSince(const SystemTime& other) const noexcept;
 
-        inline Duration timeSinceEpoch() const {
+        inline Duration timeSinceEpoch() const noexcept {
             // we assume that this operation is infallible
             return this->durationSince(UNIX_EPOCH).value();
         }
 
         // Return the amount of time passed since this measurement was taken until now, or a zero duration.
-        inline Duration elapsed() const {
+        inline Duration elapsed() const noexcept {
             return SystemTime::now().durationSince(*this).value_or(Duration{});
         }
 
         // Return the amount of time until this measurement is reached, or a zero duration.
-        inline Duration until() const {
+        inline Duration until() const noexcept {
             return this->durationSince(SystemTime::now()).value_or(Duration{});
         }
 
-        inline bool isFuture() const {
+        inline bool isFuture() const noexcept {
             return SystemTime::now() < *this;
         }
 
-        inline bool isPast() const {
+        inline bool isPast() const noexcept {
             return *this < SystemTime::now();
         }
 
-        time_t to_time_t() const;
+        time_t to_time_t() const noexcept;
 
-        Date dateUtc() const;
-        Time timeUtc() const;
-        DateTime dateTimeUtc() const;
+        Date dateUtc() const noexcept;
+        Time timeUtc() const noexcept;
+        DateTime dateTimeUtc() const noexcept;
 
         inline std::string format(std::string_view fmt) const {
             time_t curTime = this->to_time_t();
@@ -83,18 +83,17 @@ namespace asp::inline time {
             return this->format(millis ? "{:%Y-%m-%d %H:%M:%S}.{:03}" : "{:%Y-%m-%d %H:%M:%S}");
         }
 
-
-        std::optional<Duration> operator-(const SystemTime& other) const {
+        std::optional<Duration> operator-(const SystemTime& other) const noexcept {
             return this->durationSince(other);
         }
 
-        SystemTime operator+(const Duration& dur) const;
-        std::strong_ordering operator<=>(const SystemTime& other) const;
+        SystemTime operator+(const Duration& dur) const noexcept;
+        std::strong_ordering operator<=>(const SystemTime& other) const noexcept;
 
     private:
-        constexpr SystemTime(i64 _s, i64 _s2) : _storage1(_s), _storage2(_s2) {}
+        constexpr SystemTime(i64 _s, i64 _s2) noexcept : _storage1(_s), _storage2(_s2) {}
 
-        static SystemTime _epoch();
+        static SystemTime _epoch() noexcept;
 
         i64 _storage1;
         i64 _storage2;

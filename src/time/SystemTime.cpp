@@ -7,7 +7,7 @@
 # include <Windows.h>
 #endif
 
-static std::tm getTm(const asp::time::SystemTime& st) {
+static std::tm getTm(const asp::time::SystemTime& st) noexcept {
     std::tm tm{};
     auto timet = st.to_time_t();
 #ifdef ASP_IS_WIN
@@ -21,13 +21,13 @@ static std::tm getTm(const asp::time::SystemTime& st) {
 namespace asp::inline time {
     SystemTime SystemTime::UNIX_EPOCH = _epoch();
 
-    SystemTime::SystemTime() : SystemTime(UNIX_EPOCH) {}
+    SystemTime::SystemTime() noexcept : SystemTime(UNIX_EPOCH) {}
 
-    time_t SystemTime::to_time_t() const {
+    time_t SystemTime::to_time_t() const noexcept {
         return this->timeSinceEpoch().seconds();
     }
 
-    Date SystemTime::dateUtc() const {
+    Date SystemTime::dateUtc() const noexcept {
         auto tm = getTm(*this);
         return Date{
             static_cast<u32>(tm.tm_year + 1900),
@@ -37,7 +37,7 @@ namespace asp::inline time {
         };
     }
 
-    Time SystemTime::timeUtc() const {
+    Time SystemTime::timeUtc() const noexcept {
         auto tm = getTm(*this);
         return Time{
             static_cast<u8>(tm.tm_hour),
@@ -46,7 +46,7 @@ namespace asp::inline time {
         };
     }
 
-    DateTime SystemTime::dateTimeUtc() const {
+    DateTime SystemTime::dateTimeUtc() const noexcept {
         return DateTime{
             this->dateUtc(),
             this->timeUtc()
@@ -54,14 +54,14 @@ namespace asp::inline time {
     }
 
 #ifdef ASP_IS_WIN
-    SystemTime SystemTime::now() {
+    SystemTime SystemTime::now() noexcept {
         FILETIME s;
         GetSystemTimePreciseAsFileTime(&s);
 
         return SystemTime{s.dwHighDateTime, s.dwLowDateTime};
     }
 
-    SystemTime SystemTime::_epoch() {
+    SystemTime SystemTime::_epoch() noexcept {
         SYSTEMTIME epoch;
         epoch.wYear = 1970;
         epoch.wMonth = 1;
@@ -73,14 +73,13 @@ namespace asp::inline time {
         epoch.wSecond = 0;
 
         FILETIME ue;
-        if (!SystemTimeToFileTime(&epoch, &ue)) {
-            time_detail::_throwrt("failed to get unix epoch");
-        }
+
+        if (!SystemTimeToFileTime(&epoch, &ue)) [[unlikely]] std::abort();
 
         return SystemTime{ue.dwHighDateTime, ue.dwLowDateTime};
     }
 
-    std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
+    std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const noexcept {
         ULARGE_INTEGER lhs;
         lhs.LowPart = this->_storage2;
         lhs.HighPart = this->_storage1;
@@ -99,7 +98,7 @@ namespace asp::inline time {
         return Duration::fromNanos(diff * 100);
     }
 
-    SystemTime SystemTime::operator+(const Duration& dur) const {
+    SystemTime SystemTime::operator+(const Duration& dur) const noexcept {
         ULARGE_INTEGER uli;
         uli.LowPart = this->_storage2;
         uli.HighPart = this->_storage1;
@@ -110,7 +109,7 @@ namespace asp::inline time {
         return SystemTime{uli.HighPart, uli.LowPart};
     }
 
-    std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const {
+    std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const noexcept {
         ULARGE_INTEGER lhs;
         lhs.LowPart = this->_storage2;
         lhs.HighPart = this->_storage1;
@@ -123,20 +122,20 @@ namespace asp::inline time {
     }
 
 #else
-    SystemTime SystemTime::now() {
+    SystemTime SystemTime::now() noexcept {
         timespec tp;
-        if (0 != clock_gettime(CLOCK_REALTIME, &tp)) [[unlikely]] {
-            time_detail::_throwrt("failed to get the current time");
-        }
+        int rc = clock_gettime(CLOCK_REALTIME, &tp);
+
+        if (rc != 0) [[unlikely]] std::abort();
 
         return SystemTime{tp.tv_sec, tp.tv_nsec};
     }
 
-    SystemTime SystemTime::_epoch() {
+    SystemTime SystemTime::_epoch() noexcept {
         return SystemTime{0, 0};
     }
 
-    std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const {
+    std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const noexcept {
         i64 secs = this->_storage1 - other._storage1;
         i64 nanos = this->_storage2 - other._storage2;
 
@@ -152,7 +151,7 @@ namespace asp::inline time {
         return Duration{static_cast<u64>(secs), static_cast<u32>(nanos)};
     }
 
-    SystemTime SystemTime::operator+(const Duration& dur) const {
+    SystemTime SystemTime::operator+(const Duration& dur) const noexcept {
         i64 secs = this->_storage1 + dur.seconds();
         i64 nanos = this->_storage2 + dur.subsecNanos();
 
@@ -164,7 +163,7 @@ namespace asp::inline time {
         return SystemTime{secs, nanos};
     }
 
-    std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const {
+    std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const noexcept {
         if (this->_storage1 < other._storage1) {
             return std::strong_ordering::less;
         } else if (this->_storage1 > other._storage1) {
