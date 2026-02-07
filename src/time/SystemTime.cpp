@@ -1,7 +1,7 @@
 #include <asp/time/SystemTime.hpp>
 #include <asp/detail/config.hpp>
 #include <ctime>
-# include <time.h>
+#include <cstdlib>
 
 #ifdef ASP_IS_WIN
 # include <Windows.h>

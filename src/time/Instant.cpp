@@ -2,6 +2,7 @@
 #include <asp/time/detail.hpp>
 #include <asp/data/nums.hpp>
 #include <stdexcept>
+#include <cstdlib>
 
 #ifdef ASP_IS_WIN
 # include <Windows.h>
