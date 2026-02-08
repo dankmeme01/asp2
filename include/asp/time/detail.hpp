@@ -1,9 +1,6 @@
 #pragma once
 
 #include <asp/data/nums.hpp>
-#ifndef __clang__
-# include <cmath> // std::floor
-#endif
 
 namespace asp::time_detail {
     constexpr inline u64 NANOS_IN_SEC = 1'000'000'000;
@@ -49,13 +46,11 @@ namespace asp::time_detail {
 
     [[noreturn]] void _throwrt(const char* msg);
 
-    template <typename T> T floor(T x) noexcept;
-
-#ifdef __clang__
-    template<> inline f32 floor(f32 x) noexcept { return __builtin_floorf(x); }
-    template<> inline f64 floor(f64 x) noexcept { return __builtin_floor(x); }
-#else
-    template<> inline f32 floor(f32 x) noexcept { return std::floor(x); }
-    template<> inline f64 floor(f64 x) noexcept { return std::floor(x); }
-#endif
+    template <typename T>
+    constexpr T floor(T x) {
+        auto i = static_cast<long long>(x);
+        return (x < 0 && x != static_cast<T>(i))
+            ? static_cast<T>(i - 1)
+            : static_cast<T>(i);
+    }
 }

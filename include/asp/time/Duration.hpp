@@ -30,7 +30,7 @@ public:
 
 
     template <typename T>
-    ASP_CLANG_CONSTEXPR static auto fromSecs(T secs) noexcept {
+    constexpr static auto fromSecs(T secs) noexcept {
         if constexpr (std::is_integral_v<T>) {
             return _unchecked(static_cast<u64>(secs), 0);
         } else if constexpr (std::is_floating_point_v<T>) {
@@ -51,11 +51,11 @@ public:
         }
     }
 
-    ASP_CLANG_CONSTEXPR static std::optional<Duration> fromSecsF32(f32 secs) noexcept {
+    constexpr static std::optional<Duration> fromSecsF32(f32 secs) noexcept {
         return fromSecs(secs);
     }
 
-    ASP_CLANG_CONSTEXPR static std::optional<Duration> fromSecsF64(f64 secs) noexcept {
+    constexpr static std::optional<Duration> fromSecsF64(f64 secs) noexcept {
         return fromSecs(secs);
     }
 
