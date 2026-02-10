@@ -323,7 +323,7 @@ geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
     return Ok();
 }
 
-geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
     HANDLE file = CreateFileW(
         path.native().c_str(),
         GENERIC_WRITE,
@@ -385,7 +385,7 @@ geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
     return Ok();
 }
 
-geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
     int file = open(path.native().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     if (file < 0) {
