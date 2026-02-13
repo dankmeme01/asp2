@@ -15,7 +15,7 @@ namespace asp {
 
 #if !defined(_MSC_VER)
 
-void ASP_FORCE_INLINE acquireAtomicLock(volatile uint8_t* ptr) {
+void ASP_FORCE_INLINE inline acquireAtomicLock(volatile uint8_t* ptr) {
     uint8_t expected = 0;
 
     while (!__atomic_compare_exchange_n(ptr, &expected, 1, false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
@@ -29,13 +29,13 @@ void ASP_FORCE_INLINE acquireAtomicLock(volatile uint8_t* ptr) {
     }
 }
 
-void ASP_FORCE_INLINE releaseAtomicLock(volatile uint8_t* obj) {
+void ASP_FORCE_INLINE inline releaseAtomicLock(volatile uint8_t* obj) {
     __atomic_store_n(obj, 0, __ATOMIC_RELEASE);
 }
 
 #else
 
-void ASP_FORCE_INLINE acquireAtomicLock(volatile uint8_t* ptr) {
+void ASP_FORCE_INLINE inline acquireAtomicLock(volatile uint8_t* ptr) {
     while (true) {
         if (_InterlockedCompareExchange8((volatile char*)ptr, 1, 0) == 0) {
             return;
@@ -46,7 +46,7 @@ void ASP_FORCE_INLINE acquireAtomicLock(volatile uint8_t* ptr) {
     }
 }
 
-void ASP_FORCE_INLINE releaseAtomicLock(volatile uint8_t* obj) {
+void ASP_FORCE_INLINE inline releaseAtomicLock(volatile uint8_t* obj) {
     _ReadWriteBarrier();
     *obj = 0;
 }
