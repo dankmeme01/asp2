@@ -44,6 +44,42 @@ struct SharedPtrBlock : SharedPtrBlockBase {
 
         return mem.release();
     }
+
+    T* ptr() noexcept {
+        return &data;
+    }
+};
+
+template <typename T>
+struct SharedPtrBlock<T[]> : SharedPtrBlockBase {
+    size_t size;
+    T data[];
+
+    static SharedPtrBlock* create(size_t size) {
+        // wrap into unique_ptr for exception safety
+        std::unique_ptr<SharedPtrBlock, void(*)(void*)> mem{
+            reinterpret_cast<SharedPtrBlock*>(::operator new(sizeof(SharedPtrBlock) + sizeof(T) * size)),
+            +[](void* ptr) { ::operator delete(ptr); }
+        };
+
+        mem->strong.store(1);
+        mem->weak.store(1);
+        mem->dtor = [](void* ptr) {
+            reinterpret_cast<T*>(ptr)->~T();
+        };
+        mem->size = size;
+
+        // default initialize `size` elements
+        for (size_t i = 0; i < size; i++) {
+            new (&mem->data[i]) T();
+        }
+
+        return mem.release();
+    }
+
+    T* ptr() noexcept {
+        return &data[0];
+    }
 };
 
 template <typename T>
@@ -87,39 +123,47 @@ public:
         this->release();
     }
 
-    size_t strongCount() const {
+    size_t strongCount() const noexcept {
         return m_block ? m_block->strong.load(std::memory_order::relaxed) : 0;
     }
 
-    size_t weakCount() const {
+    size_t weakCount() const noexcept {
         return m_block ? m_block->weak.load(std::memory_order::relaxed) : 0;
     }
 
-    T* get() const {
-        return m_block ? &m_block->data : nullptr;
+    decltype(auto) get() const noexcept {
+        return m_block ? m_block->ptr() : nullptr;
     }
 
-    T& operator*() const {
-        return m_block->data;
+    size_t size() const noexcept requires (std::is_array_v<T>) {
+        return m_block ? m_block->size : 0;
     }
 
-    T* operator->() const {
-        return &m_block->data;
+    decltype(auto) operator*() const noexcept {
+        return *m_block->ptr();
     }
 
-    operator bool() const {
+    decltype(auto) operator[](size_t index) const noexcept requires std::is_array_v<T> {
+        return m_block->ptr()[index];
+    }
+
+    decltype(auto) operator->() const noexcept {
+        return m_block->ptr();
+    }
+
+    operator bool() const noexcept {
         return m_block != nullptr;
     }
 
-    bool operator==(std::nullptr_t) const {
+    bool operator==(std::nullptr_t) const noexcept {
         return m_block == nullptr;
     }
 
-    bool operator==(const SharedPtr& other) const {
+    bool operator==(const SharedPtr& other) const noexcept {
         return m_block == other.m_block;
     }
 
-    void leak() {
+    void leak() noexcept {
         m_block = nullptr;
     }
 
@@ -217,7 +261,9 @@ template <typename T, typename... Args>
 SharedPtr<T> make_shared(Args&&... args) {
     auto block = SharedPtrBlock<T>::create(std::forward<Args>(args)...);
     auto sp = SharedPtr<T>::adoptFromRaw(block);
-    sp._initSharedFromThis(sp.get());
+    if constexpr (!std::is_array_v<T>) {
+        sp._initSharedFromThis(sp.get());
+    }
     return sp;
 }
 
