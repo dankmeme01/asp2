@@ -99,28 +99,8 @@ public:
     template <typename As = u64>
     constexpr As millis() const noexcept;
 
-    template<> constexpr u64 millis() const noexcept {
-        return m_seconds * time_detail::MILLIS_IN_SEC + time_detail::nanos_to_millis(m_nanos);
-    }
-
-    template<> constexpr f32 millis() const noexcept {
-        return (f32)m_seconds * (f32)time_detail::MILLIS_IN_SEC + (f32)m_nanos / (f32)time_detail::NANOS_IN_MILLISEC;
-    }
-
-    template<> constexpr f64 millis() const noexcept {
-        return (f64)m_seconds * (f64)time_detail::MILLIS_IN_SEC + (f64)m_nanos / (f64)time_detail::NANOS_IN_MILLISEC;
-    }
-
     template <typename As = u64>
     constexpr As seconds() const noexcept;
-
-    template<> constexpr u64 seconds() const noexcept { return m_seconds; }
-    template<> constexpr f32 seconds() const noexcept {
-        return static_cast<f32>(m_seconds) + static_cast<f32>(m_nanos) / static_cast<f32>(time_detail::NANOS_IN_SEC);
-    }
-    template<> constexpr f64 seconds() const noexcept {
-        return static_cast<f64>(m_seconds) + static_cast<f64>(m_nanos) / static_cast<f64>(time_detail::NANOS_IN_SEC);
-    }
 
     constexpr u64 minutes() const noexcept { return time_detail::secs_to_minutes(m_seconds); }
     constexpr u64 hours() const noexcept { return time_detail::secs_to_hours(m_seconds); }
@@ -302,6 +282,37 @@ private:
         return dur;
     }
 };
+
+
+template<>
+constexpr u64 Duration::millis<u64>() const noexcept {
+    return m_seconds * time_detail::MILLIS_IN_SEC + time_detail::nanos_to_millis(m_nanos);
+}
+
+template<>
+constexpr f32 Duration::millis<f32>() const noexcept {
+    return (f32)m_seconds * (f32)time_detail::MILLIS_IN_SEC + (f32)m_nanos / (f32)time_detail::NANOS_IN_MILLISEC;
+}
+
+template<>
+constexpr f64 Duration::millis<f64>() const noexcept {
+    return (f64)m_seconds * (f64)time_detail::MILLIS_IN_SEC + (f64)m_nanos / (f64)time_detail::NANOS_IN_MILLISEC;
+}
+
+template<>
+constexpr u64 Duration::seconds<u64>() const noexcept {
+    return m_seconds;
+}
+
+template<>
+constexpr f32 Duration::seconds<f32>() const noexcept {
+    return static_cast<f32>(m_seconds) + static_cast<f32>(m_nanos) / static_cast<f32>(time_detail::NANOS_IN_SEC);
+}
+
+template<>
+constexpr f64 Duration::seconds<f64>() const noexcept {
+    return static_cast<f64>(m_seconds) + static_cast<f64>(m_nanos) / static_cast<f64>(time_detail::NANOS_IN_SEC);
+}
 
 ASP_CLANG_CONSTEXPR Duration operator*(u32 val, const Duration& dur) {
     return dur * val;
