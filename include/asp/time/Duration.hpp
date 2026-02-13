@@ -350,7 +350,7 @@ template <>
 struct fmt::formatter<asp::Duration> {
     int precision = 3;
 
-    auto parse(format_parse_context& ctx) -> format_parse_context::iterator {
+    constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator {
         auto it = ctx.begin();
         auto end = ctx.end();
 
