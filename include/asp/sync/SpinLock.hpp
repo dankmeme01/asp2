@@ -7,13 +7,13 @@
 # include <immintrin.h>
 #endif
 
-#ifndef __clang__
+#if defined(_MSC_VER)
 # include <intrin.h>
 #endif
 
 namespace asp {
 
-#ifdef __clang__
+#if !defined(_MSC_VER)
 
 void ASP_FORCE_INLINE acquireAtomicLock(volatile uint8_t* ptr) {
     uint8_t expected = 0;

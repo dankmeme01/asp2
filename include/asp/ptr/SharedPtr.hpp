@@ -293,7 +293,7 @@ private:
 template <typename T>
 void SharedPtr<T>::_initSharedFromThis(T* ptr) {
     if constexpr (std::is_base_of_v<EnableSharedFromThis<T>, T>) {
-        ptr->EnableSharedFromThis::m_weak = *this;
+        ptr->EnableSharedFromThis<T>::m_weak = *this;
     }
 }
 
