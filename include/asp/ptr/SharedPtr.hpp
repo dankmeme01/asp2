@@ -294,7 +294,7 @@ ASP_COLD void SharedPtr<T>::destroyData() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     auto weak = WeakPtr<T>::adoptFromRaw(m_block);
-    m_block->dtor(&m_block);
+    m_block->dtor(m_block);
 
     // dtor of weak will handle the actual deallocation, if necessary
 }
