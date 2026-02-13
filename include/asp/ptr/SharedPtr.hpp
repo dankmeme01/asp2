@@ -1,4 +1,5 @@
 #pragma once
+#include <asp/detail/config.hpp>
 #include <atomic>
 #include <utility>
 #include <memory>
@@ -191,6 +192,7 @@ private:
     SharedPtrBlock<T>* m_block;
 
     void release();
+    void destroyData();
     void _initSharedFromThis(T* ptr);
 };
 
@@ -258,6 +260,7 @@ private:
     SharedPtrBlockBase* m_block;
 
     void release();
+    void destroyBlock();
 };
 
 template <typename T, typename... Args>
@@ -280,10 +283,13 @@ template <typename T>
 void SharedPtr<T>::release() {
     if (!m_block) return;
 
-    if (m_block->strong.fetch_sub(1, std::memory_order::release) != 1) {
-        return;
+    if (m_block->strong.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
+        this->destroyData();
     }
+}
 
+template <typename T>
+ASP_COLD void SharedPtr<T>::destroyData() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     auto weak = WeakPtr<T>::adoptFromRaw(m_block);
@@ -296,10 +302,13 @@ template <typename T>
 void WeakPtr<T>::release() {
     if (!m_block) return;
 
-    if (m_block->weak.fetch_sub(1, std::memory_order::release) != 1) {
-        return;
+    if (m_block->weak.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
+        this->destroyBlock();
     }
+}
 
+template <typename T>
+ASP_COLD void WeakPtr<T>::destroyBlock() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     ::operator delete(m_block);

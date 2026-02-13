@@ -62,6 +62,10 @@ namespace asp::detail {
 
 #ifdef _WIN32
 # define ASP_FORCE_INLINE __forceinline
+# define ASP_NOINLINE __declspec(noinline)
+# define ASP_COLD ASP_NOINLINE
 #else
 # define ASP_FORCE_INLINE inline __attribute__((always_inline))
+# define ASP_NOINLINE __attribute__((noinline))
+# define ASP_COLD __attribute__((cold))
 #endif
