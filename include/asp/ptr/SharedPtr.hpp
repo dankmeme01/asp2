@@ -65,7 +65,10 @@ struct SharedPtrBlock<T[]> : SharedPtrBlockBase {
         mem->strong.store(1);
         mem->weak.store(1);
         mem->dtor = [](void* ptr) {
-            reinterpret_cast<T*>(ptr)->~T();
+            auto self = reinterpret_cast<SharedPtrBlock*>(ptr);
+            for (size_t i = 0; i < self->size; i++) {
+                self->data[i].~T();
+            }
         };
         mem->size = size;
 
