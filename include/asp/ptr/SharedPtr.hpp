@@ -39,7 +39,8 @@ struct SharedPtrBlock : SharedPtrBlockBase {
         mem->strong.store(1);
         mem->weak.store(1);
         mem->dtor = [](void* ptr) {
-            reinterpret_cast<T*>(ptr)->~T();
+            auto block = reinterpret_cast<SharedPtrBlock*>(ptr);
+            block->data.~T();
         };
         new (&mem->data) T(std::forward<Args>(args)...);
 
@@ -66,9 +67,9 @@ struct SharedPtrBlock<T[]> : SharedPtrBlockBase {
         mem->strong.store(1);
         mem->weak.store(1);
         mem->dtor = [](void* ptr) {
-            auto self = reinterpret_cast<SharedPtrBlock*>(ptr);
-            for (size_t i = 0; i < self->size; i++) {
-                self->data[i].~T();
+            auto block = reinterpret_cast<SharedPtrBlock*>(ptr);
+            for (size_t i = 0; i < block->size; i++) {
+                block->data[i].~T();
             }
         };
         mem->size = size;
@@ -293,7 +294,7 @@ ASP_COLD void SharedPtr<T>::destroyData() {
     std::atomic_thread_fence(std::memory_order::acquire);
 
     auto weak = WeakPtr<T>::adoptFromRaw(m_block);
-    m_block->dtor(&m_block->data);
+    m_block->dtor(&m_block);
 
     // dtor of weak will handle the actual deallocation, if necessary
 }
