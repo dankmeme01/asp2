@@ -43,12 +43,17 @@ public:
     /// Returns the absolute difference between this instant and another instant.
     Duration absDiff(const Instant& other) const noexcept;
 
-    /// Adds the given duration to this instant, throwing on overflow.
-    Instant operator+(const Duration& dur) const;
-    /// Subtracts the given duration from this instant, throwing on overflow.
-    Instant operator-(const Duration& dur) const;
-    Instant& operator+=(const Duration& dur);
-    Instant& operator-=(const Duration& dur);
+    /// Adds the given duration to this instant, returning `farFuture()` on overflow.
+    Instant saturatingAdd(const Duration& dur) const noexcept;
+    /// Subtracts the given duration from this instant, returning `Instant()` on overflow.
+    Instant saturatingSub(const Duration& dur) const noexcept;
+
+    /// Shorthand for `saturatingAdd()`, adds the given duration to this instant, returning `farFuture()` on overflow.
+    Instant operator+(const Duration& dur) const noexcept;
+    /// Shorthand for `saturatingSub()`, subtracts the given duration from this instant, returning `Instant()` on overflow.
+    Instant operator-(const Duration& dur) const noexcept;
+    Instant& operator+=(const Duration& dur) noexcept;
+    Instant& operator-=(const Duration& dur) noexcept;
 
     std::strong_ordering operator<=>(const Instant& other) const noexcept;
     bool operator==(const Instant& other) const noexcept = default;

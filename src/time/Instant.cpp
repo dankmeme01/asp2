@@ -139,28 +139,28 @@ Duration Instant::absDiff(const Instant& other) const noexcept {
     }
 }
 
-Instant Instant::operator+(const Duration& dur) const {
-    auto out = this->checkedAdd(dur);
-    if (!out.has_value()) {
-        throw std::overflow_error("Instant addition overflowed");
-    }
-    return *out;
+Instant Instant::saturatingAdd(const Duration& dur) const noexcept {
+    return this->checkedAdd(dur).value_or(Instant::farFuture());
 }
 
-Instant Instant::operator-(const Duration& dur) const {
-    auto out = this->checkedSub(dur);
-    if (!out.has_value()) {
-        throw std::overflow_error("Instant subtraction overflowed");
-    }
-    return *out;
+Instant Instant::saturatingSub(const Duration& dur) const noexcept {
+    return this->checkedSub(dur).value_or(Instant{});
 }
 
-Instant& Instant::operator+=(const Duration& dur) {
+Instant Instant::operator+(const Duration& dur) const noexcept {
+    return this->saturatingAdd(dur);
+}
+
+Instant Instant::operator-(const Duration& dur) const noexcept {
+    return this->saturatingSub(dur);
+}
+
+Instant& Instant::operator+=(const Duration& dur) noexcept {
     *this = *this + dur;
     return *this;
 }
 
-Instant& Instant::operator-=(const Duration& dur) {
+Instant& Instant::operator-=(const Duration& dur) noexcept {
     *this = *this - dur;
     return *this;
 }
