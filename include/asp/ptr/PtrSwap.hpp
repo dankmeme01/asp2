@@ -1,5 +1,6 @@
 #pragma once
 #include "SharedPtr.hpp"
+#include <asp/detail/config.hpp>
 
 namespace asp {
 
@@ -60,6 +61,31 @@ public:
         ptr.leak();
 
         return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
+    }
+
+    /// Performs an atomic Read-Copy-Update operation. The provided function may be called multiple times, with the current value (const Ptr&),
+    /// and is expected to return a new SharedPtr to store.
+    Ptr rcu(auto&& f) noexcept requires (std::is_invocable_r_v<Ptr, decltype(f), const Ptr&>) {
+        Ptr oldPtr = this->load();
+
+        while (true) {
+            auto newPtr = f(oldPtr);
+
+            auto oldBlock = reinterpret_cast<size_t>(oldPtr.m_block);
+            auto newBlock = reinterpret_cast<size_t>(newPtr.m_block);
+
+            if (m_block.compare_exchange_weak(oldBlock, newBlock, std::memory_order::acq_rel, std::memory_order::acquire)) {
+                this->retain(newPtr);
+
+                // need to release the old ptr twice (once for the load and once for the swap)
+                auto _ = Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldBlock));
+
+                return newPtr;
+            }
+
+            // cas fail, reload
+            oldPtr = this->load();
+        }
     }
 
 private:

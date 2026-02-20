@@ -90,20 +90,20 @@ struct SharedPtrBlock<T[]> : SharedPtrBlockBase {
 template <typename T>
 class SharedPtr {
 public:
-    SharedPtr() : m_block(nullptr) {}
-    SharedPtr(std::nullptr_t) : m_block(nullptr) {}
+    SharedPtr() noexcept : m_block(nullptr) {}
+    SharedPtr(std::nullptr_t) noexcept : m_block(nullptr) {}
 
-    static SharedPtr adoptFromRaw(SharedPtrBlock<T>* block) {
+    static SharedPtr adoptFromRaw(SharedPtrBlock<T>* block) noexcept {
         SharedPtr ptr;
         ptr.m_block = block;
         return ptr;
     }
 
-    SharedPtr(SharedPtrBlock<T>* block) : m_block(block) {
+    SharedPtr(SharedPtrBlock<T>* block) noexcept : m_block(block) {
         if (m_block) m_block->strong.fetch_add(1, std::memory_order::relaxed);
     }
 
-    SharedPtr(const SharedPtr& other) : SharedPtr(other.m_block) {}
+    SharedPtr(const SharedPtr& other) noexcept : SharedPtr(other.m_block) {}
 
     SharedPtr& operator=(const SharedPtr& other) {
         if (this != &other) {
