@@ -116,3 +116,20 @@ TEST(SmallVecTest, InsertErase) {
     EXPECT_EQ(vec[1], 6);
     EXPECT_EQ(vec[6], 5);
 }
+
+TEST(SmallVecTest, Capacity0) {
+    SmallVec<int, 0> vec;
+    EXPECT_EQ(vec.size(), 0);
+    EXPECT_EQ(vec.capacity(), 0);
+    EXPECT_TRUE(vec.empty());
+
+    vec.push_back(1);
+    EXPECT_EQ(vec.size(), 1);
+    EXPECT_GE(vec.capacity(), 1);
+    EXPECT_FALSE(vec.empty());
+    EXPECT_EQ(vec[0], 1);
+
+    vec.pop_back();
+    EXPECT_EQ(vec.size(), 0);
+    EXPECT_TRUE(vec.empty());
+}

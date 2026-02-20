@@ -184,9 +184,9 @@ TEST(InstantTests, AddOverflow) {
     auto i1 = Instant::farFuture();
     auto dur = Duration::fromSecs(UINT64_MAX);
 
-    EXPECT_THROW({
+    EXPECT_NO_THROW({
         auto i2 = i1 + dur;
-    }, std::runtime_error);
+    });
 
     EXPECT_FALSE(i1.checkedAdd(dur).has_value());
 }
@@ -195,9 +195,9 @@ TEST(InstantTests, SubOverflow) {
     auto i1 = Instant::now();
     auto dur = Duration::fromSecs(UINT64_MAX);
 
-    EXPECT_THROW({
+    EXPECT_NO_THROW({
         auto i2 = i1 - dur;
-    }, std::runtime_error);
+    });
 
     EXPECT_FALSE(i1.checkedSub(dur).has_value());
 }

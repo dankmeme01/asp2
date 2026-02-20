@@ -107,3 +107,27 @@ TEST(PtrSwapTest, Vec) {
     EXPECT_EQ(ptr2->size(), 3);
     EXPECT_EQ((*ptr2)[0], 1);
 }
+
+TEST(PtrSwapTest, Rcu) {
+    PtrSwap<std::vector<int>> swap;
+    std::vector<std::thread> threads;
+
+    for (size_t i = 0; i < 4; i++) {
+        threads.emplace_back([&] {
+            for (size_t j = 0; j < 64; j++) {
+                swap.rcu([](const asp::SharedPtr<std::vector<int>>& vec) {
+                    auto copy = vec ? *vec : std::vector<int>{};
+                    copy.push_back(42);
+                    return asp::make_shared<std::vector<int>>(std::move(copy));
+                });
+            }
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    /// should be guaranteed to have 32*128 pushes, since rcu is atomic
+    EXPECT_EQ(swap.load()->size(), 4 * 64);
+}
