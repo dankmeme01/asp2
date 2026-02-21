@@ -22,6 +22,38 @@ struct SharedPtrBlockBase {
     std::atomic<size_t> strong;
     std::atomic<size_t> weak;
     SharedPtrDtor dtor;
+
+    void retainStrong() {
+        strong.fetch_add(1, std::memory_order::relaxed);
+    }
+
+    void releaseStrong() {
+        if (strong.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
+            this->destroyData();
+        }
+    }
+
+    ASP_COLD void destroyData() {
+        std::atomic_thread_fence(std::memory_order::acquire);
+        // dtor of weak will handle the actual deallocation, if necessary
+        dtor(this);
+        this->releaseWeak();
+    }
+
+    void retainWeak() {
+        weak.fetch_add(1, std::memory_order::relaxed);
+    }
+
+    void releaseWeak() {
+        if (weak.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
+            this->destroyBlock();
+        }
+    }
+
+    ASP_COLD void destroyBlock() {
+        std::atomic_thread_fence(std::memory_order::acquire);
+        ::operator delete(this);
+    }
 };
 
 template <typename T>
@@ -100,7 +132,7 @@ public:
     }
 
     SharedPtr(SharedPtrBlock<T>* block) noexcept : m_block(block) {
-        if (m_block) m_block->strong.fetch_add(1, std::memory_order::relaxed);
+        if (m_block) m_block->retainStrong();
     }
 
     SharedPtr(const SharedPtr& other) noexcept : SharedPtr(other.m_block) {}
@@ -109,7 +141,7 @@ public:
         if (this != &other) {
             this->release();
             m_block = other.m_block;
-            if (m_block) m_block->strong.fetch_add(1, std::memory_order::relaxed);
+            if (m_block) m_block->retainStrong();
         }
         return *this;
     }
@@ -193,7 +225,6 @@ private:
     SharedPtrBlock<T>* m_block;
 
     void release();
-    void destroyData();
     void _initSharedFromThis(T* ptr);
 };
 
@@ -210,18 +241,18 @@ public:
     }
 
     WeakPtr(const SharedPtr<T>& shared) : m_block(shared.m_block) {
-        if (m_block) m_block->weak.fetch_add(1, std::memory_order::relaxed);
+        if (m_block) m_block->retainWeak();
     }
 
     WeakPtr(const WeakPtr& other) : m_block(other.m_block) {
-        if (m_block) m_block->weak.fetch_add(1, std::memory_order::relaxed);
+        if (m_block) m_block->retainWeak();
     }
 
     WeakPtr& operator=(const WeakPtr& other) {
         if (this != &other) {
             this->release();
             m_block = other.m_block;
-            if (m_block) m_block->weak.fetch_add(1, std::memory_order::relaxed);
+            if (m_block) m_block->retainWeak();
         }
         return *this;
     }
@@ -261,7 +292,6 @@ private:
     SharedPtrBlockBase* m_block;
 
     void release();
-    void destroyBlock();
 };
 
 template <typename T, typename... Args>
@@ -282,37 +312,12 @@ SharedPtr<T> makeShared(Args&&... args) {
 
 template <typename T>
 void SharedPtr<T>::release() {
-    if (!m_block) return;
-
-    if (m_block->strong.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
-        this->destroyData();
-    }
-}
-
-template <typename T>
-ASP_COLD void SharedPtr<T>::destroyData() {
-    std::atomic_thread_fence(std::memory_order::acquire);
-
-    auto weak = WeakPtr<T>::adoptFromRaw(m_block);
-    m_block->dtor(m_block);
-
-    // dtor of weak will handle the actual deallocation, if necessary
+    if (m_block) m_block->releaseStrong();
 }
 
 template <typename T>
 void WeakPtr<T>::release() {
-    if (!m_block) return;
-
-    if (m_block->weak.fetch_sub(1, std::memory_order::release) == 1) [[unlikely]] {
-        this->destroyBlock();
-    }
-}
-
-template <typename T>
-ASP_COLD void WeakPtr<T>::destroyBlock() {
-    std::atomic_thread_fence(std::memory_order::acquire);
-
-    ::operator delete(m_block);
+    if (m_block) m_block->releaseWeak();
 }
 
 // Shared from this impl

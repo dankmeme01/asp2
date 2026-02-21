@@ -19,22 +19,42 @@ public:
 
     PtrSwap(const PtrSwap&) = delete;
     PtrSwap& operator=(const PtrSwap&) = delete;
-    PtrSwap(PtrSwap&& other) noexcept : m_block(other.m_block.load(std::memory_order::relaxed)) {}
+    PtrSwap(PtrSwap&& other) noexcept {
+        m_block.store(other.m_block.exchange(0, std::memory_order::acq_rel), std::memory_order::relaxed);
+    }
 
     PtrSwap& operator=(PtrSwap&& other) noexcept {
         if (this != &other) {
-            this->release();
-            m_block.store(other.m_block.load(std::memory_order::relaxed), std::memory_order::relaxed);
+            auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::relaxed));
+            if (block) block->releaseStrong();
+            m_block.store(other.m_block.exchange(0, std::memory_order::acq_rel), std::memory_order::relaxed);
         }
         return *this;
     }
 
     ~PtrSwap() {
-        this->release();
+        auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::relaxed));
+        if (block) block->releaseStrong();
     }
 
     Ptr load() const {
-        return Ptr{this->block<true>()};
+        while (true) {
+            auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::acquire));
+            if (!block) {
+                return Ptr{};
+            }
+
+            block->retainStrong();
+
+            // check if the block is still the same
+            if (block == reinterpret_cast<Block*>(m_block.load(std::memory_order::acquire))) {
+                return Ptr::adoptFromRaw(block);
+            }
+
+            // changed
+            block->releaseStrong();
+        }
+        std::unreachable();
     }
 
     void store(const Ptr& ptr) {
@@ -47,15 +67,16 @@ public:
 
     Ptr swap(const Ptr& ptr) {
         size_t newB = reinterpret_cast<size_t>(ptr.m_block);
-        size_t oldB = m_block.exchange(newB, std::memory_order::seq_cst);
-        this->retain(ptr);
+        if (ptr.m_block) ptr.m_block->retainStrong();
+        
+        size_t oldB = m_block.exchange(newB, std::memory_order::acq_rel);
 
         return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
     }
 
     Ptr swap(Ptr&& ptr) {
         size_t newB = reinterpret_cast<size_t>(ptr.m_block);
-        size_t oldB = m_block.exchange(newB, std::memory_order::seq_cst);
+        size_t oldB = m_block.exchange(newB, std::memory_order::acq_rel);
 
         // skip the retain and just null out the moved-from ptr
         ptr.leak();
@@ -74,14 +95,15 @@ public:
             auto oldBlock = reinterpret_cast<size_t>(oldPtr.m_block);
             auto newBlock = reinterpret_cast<size_t>(newPtr.m_block);
 
-            if (m_block.compare_exchange_weak(oldBlock, newBlock, std::memory_order::acq_rel, std::memory_order::acquire)) {
-                this->retain(newPtr);
+            if (newBlock) reinterpret_cast<Block*>(newBlock)->retainStrong();
 
+            if (m_block.compare_exchange_weak(oldBlock, newBlock, std::memory_order::acq_rel, std::memory_order::acquire)) {
                 // need to release the old ptr twice (once for the load and once for the swap)
-                auto _ = Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldBlock));
+                if (oldBlock) reinterpret_cast<Block*>(oldBlock)->releaseStrong();
 
                 return newPtr;
             }
+            if (newBlock) reinterpret_cast<Block*>(newBlock)->releaseStrong();
 
             // cas fail, reload
             oldPtr = this->load();
@@ -89,25 +111,8 @@ public:
     }
 
 private:
+    // use highest 
     std::atomic<size_t> m_block{0};
-
-    template <bool Acquire = true>
-    Block* block() const {
-        return reinterpret_cast<Block*>(m_block.load(
-            Acquire ? std::memory_order::acquire : std::memory_order::relaxed
-        ));
-    }
-
-    void release() {
-        // we just let SharedPtr handle this
-        auto _ = Ptr::adoptFromRaw(this->block<false>());
-    }
-
-    void retain(const Ptr& ptr) {
-        if (ptr.m_block) {
-            ptr.m_block->strong.fetch_add(1, std::memory_order::relaxed);
-        }
-    }
 };
 
 }
