@@ -25,7 +25,7 @@ public:
 
     PtrSwap& operator=(PtrSwap&& other) noexcept {
         if (this != &other) {
-            auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::relaxed));
+            auto block = unpackPtr(m_block.load(std::memory_order::relaxed));
             if (block) block->releaseStrong();
             m_block.store(other.m_block.exchange(0, std::memory_order::acq_rel), std::memory_order::relaxed);
         }
@@ -33,28 +33,28 @@ public:
     }
 
     ~PtrSwap() {
-        auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::relaxed));
+        auto block = unpackPtr(m_block.load(std::memory_order::relaxed));
         if (block) block->releaseStrong();
     }
 
     Ptr load() const {
         while (true) {
-            auto block = reinterpret_cast<Block*>(m_block.load(std::memory_order::acquire));
+            auto raw = m_block.load(std::memory_order::acquire);
+            auto block = unpackPtr(raw);
             if (!block) {
                 return Ptr{};
             }
 
             block->retainStrong();
 
-            // check if the block is still the same
-            if (block == reinterpret_cast<Block*>(m_block.load(std::memory_order::acquire))) {
+            // check if the block is still the same, compare including the tag
+            if (raw == m_block.load(std::memory_order::acquire)) {
                 return Ptr::adoptFromRaw(block);
             }
 
             // changed
             block->releaseStrong();
         }
-        std::unreachable();
     }
 
     void store(const Ptr& ptr) {
@@ -66,53 +66,92 @@ public:
     }
 
     Ptr swap(const Ptr& ptr) {
-        size_t newB = reinterpret_cast<size_t>(ptr.m_block);
-        if (ptr.m_block) ptr.m_block->retainStrong();
-        
-        size_t oldB = m_block.exchange(newB, std::memory_order::acq_rel);
+        uintptr_t oldRaw = m_block.load(std::memory_order::acquire);
+        Block* newBlock = ptr.m_block;
 
-        return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
+        if (ptr.m_block) ptr.m_block->retainStrong();
+
+        while (true) {
+            if (m_block.compare_exchange_weak(oldRaw, 
+                pack(newBlock, nextAba(unpackAba(oldRaw))), std::memory_order::acq_rel, std::memory_order::acquire
+            )) {
+                return Ptr::adoptFromRaw(unpackPtr(oldRaw));
+            }
+        }
     }
 
     Ptr swap(Ptr&& ptr) {
-        size_t newB = reinterpret_cast<size_t>(ptr.m_block);
-        size_t oldB = m_block.exchange(newB, std::memory_order::acq_rel);
+        uintptr_t oldRaw = m_block.load(std::memory_order::acquire);
+        Block* newBlock = ptr.m_block;
 
-        // skip the retain and just null out the moved-from ptr
-        ptr.leak();
+        while (true) {
+            if (m_block.compare_exchange_weak(oldRaw, 
+                pack(newBlock, nextAba(unpackAba(oldRaw))), std::memory_order::acq_rel, std::memory_order::acquire
+            )) {
+                // skip the retain and just null out the moved-from ptr
+                ptr.leak();
 
-        return Ptr::adoptFromRaw(reinterpret_cast<Block*>(oldB));
+                return Ptr::adoptFromRaw(unpackPtr(oldRaw));
+            }
+        }
     }
 
     /// Performs an atomic Read-Copy-Update operation. The provided function may be called multiple times, with the current value (const Ptr&),
     /// and is expected to return a new SharedPtr to store.
     Ptr rcu(auto&& f) noexcept requires (std::is_invocable_r_v<Ptr, decltype(f), const Ptr&>) {
-        Ptr oldPtr = this->load();
-
         while (true) {
-            auto newPtr = f(oldPtr);
+            uintptr_t oldRaw = m_block.load(std::memory_order::acquire);
+            Block* oldBlock = unpackPtr(oldRaw);
 
-            auto oldBlock = reinterpret_cast<size_t>(oldPtr.m_block);
-            auto newBlock = reinterpret_cast<size_t>(newPtr.m_block);
+            Ptr oldPtr = Ptr::adoptFromRaw(oldBlock);
+            if (oldBlock) oldBlock->retainStrong();
 
-            if (newBlock) reinterpret_cast<Block*>(newBlock)->retainStrong();
+            Ptr newPtr = f(oldPtr);
+            Block* newBlock = newPtr.m_block;
+            uintptr_t newRaw = pack(newBlock, nextAba(unpackAba(oldRaw)));
 
-            if (m_block.compare_exchange_weak(oldBlock, newBlock, std::memory_order::acq_rel, std::memory_order::acquire)) {
+            // early return if the block is the same, no need to swap
+            if (oldBlock == newBlock) {
+                return newPtr;
+            }
+
+            if (newBlock) newBlock->retainStrong();
+
+            if (m_block.compare_exchange_weak(oldRaw, newRaw, std::memory_order::acq_rel, std::memory_order::acquire)) {
                 // need to release the old ptr twice (once for the load and once for the swap)
-                if (oldBlock) reinterpret_cast<Block*>(oldBlock)->releaseStrong();
+                if (oldBlock) oldBlock->releaseStrong();
 
                 return newPtr;
             }
-            if (newBlock) reinterpret_cast<Block*>(newBlock)->releaseStrong();
 
-            // cas fail, reload
-            oldPtr = this->load();
+            if (newBlock) newBlock->releaseStrong();
         }
     }
 
 private:
-    // use highest 
-    std::atomic<size_t> m_block{0};
+    // use highest 8 bits for aba in 64 bit platforms
+    // or use lower 4 bits for aba in 32 bit platforms
+    std::atomic<uintptr_t> m_block{0};
+
+    static constexpr uintptr_t AbaMask = (sizeof(uintptr_t) == 8) ? (0xFFull << 56) : 0xFul;
+    static constexpr uintptr_t AbaShift = (sizeof(uintptr_t) == 8) ? 56 : 0;
+    static constexpr uintptr_t PtrMask = ~AbaMask;
+
+    static uintptr_t pack(Block* ptr, uintptr_t aba) noexcept {
+        return (reinterpret_cast<uintptr_t>(ptr) & PtrMask) | ((aba << AbaShift) & AbaMask);
+    }
+
+    static Block* unpackPtr(uintptr_t packed) noexcept {
+        return reinterpret_cast<Block*>(packed & PtrMask);
+    }
+
+    static uintptr_t unpackAba(uintptr_t packed) noexcept {
+        return (packed & AbaMask) >> AbaShift;
+    }
+
+    static uintptr_t nextAba(uintptr_t aba) noexcept {
+        return (aba + 1) & (AbaMask >> AbaShift);
+    }
 };
 
 }

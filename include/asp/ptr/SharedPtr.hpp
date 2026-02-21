@@ -6,6 +6,8 @@
 
 namespace asp {
 
+static constexpr size_t SharedPtrBlockAlignment = 16;
+
 template <typename T>
 class WeakPtr;
 template <typename T>
@@ -18,7 +20,7 @@ SharedPtr<T> make_shared(Args&&... args);
 
 using SharedPtrDtor = void(*)(void*);
 
-struct SharedPtrBlockBase {
+struct alignas(SharedPtrBlockAlignment) SharedPtrBlockBase {
     std::atomic<size_t> strong;
     std::atomic<size_t> weak;
     SharedPtrDtor dtor;
