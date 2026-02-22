@@ -52,7 +52,7 @@ bool Notify::wait(const time::Duration& timeout) {
     return result == 0;
 }
 
-bool Notify::wait(const time::Duration& timeout, const std::function<bool()>& predicate) {
+bool Notify::wait(const time::Duration& timeout, asp::FunctionRef<bool()> predicate) {
     pthread_mutex_lock(_mutex());
 
     if (timeout.isZero()) {

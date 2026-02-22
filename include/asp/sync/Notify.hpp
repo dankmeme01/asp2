@@ -1,8 +1,8 @@
 #pragma once
 
 #include <asp/detail/config.hpp>
+#include <asp/detail/Function.hpp>
 #include <asp/time/Duration.hpp>
-#include <functional>
 #include <cstddef>
 
 #ifdef ASP_IS_WIN
@@ -34,7 +34,7 @@ public:
     /// Waits for a predicate to become true, or until a timeout occurs.
     /// Returns true if the predicate is true, false if timeout occurred.
     /// Specify the timeout as 0 to wait indefinitely.
-    bool wait(const time::Duration& timeout, const std::function<bool()>& predicate);
+    bool wait(const time::Duration& timeout, asp::FunctionRef<bool()> predicate);
 
     /// Notifies one waiting thread
     void notifyOne();

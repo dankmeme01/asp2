@@ -2,12 +2,13 @@
 
 #include "Thread.hpp"
 #include "../sync/Channel.hpp"
+#include <asp/detail/Function.hpp>
 
 namespace asp {
 
 class ThreadPool {
 public:
-    using Task = std::function<void()>;
+    using Task = asp::MoveOnlyFunction<void()>;
 
     // Initialize the thread pool with the given amount of threads.
     ThreadPool(size_t workers);
@@ -22,7 +23,6 @@ public:
     ThreadPool(ThreadPool&&) = default;
     ThreadPool& operator=(ThreadPool&&) = default;
 
-    void pushTask(const Task& task);
     void pushTask(Task&& task);
 
     // Block the calling thread until all tasks have been completed.
@@ -35,7 +35,7 @@ public:
     bool isDoingWork();
 
     // Set the function that will be called when a thread throws an exception.
-    void setExceptionFunction(const std::function<void(const std::exception&)>& f);
+    void setExceptionFunction(asp::CopyableFunction<void(const std::exception&)> f);
 
 private:
     struct Worker {
@@ -51,7 +51,7 @@ private:
     struct Storage {
         std::vector<Worker> workers;
         Channel<Task> taskQueue;
-        std::function<void(const std::exception&)> onException;
+        asp::CopyableFunction<void(const std::exception&)> onException;
     };
 
     std::shared_ptr<Storage> _storage;

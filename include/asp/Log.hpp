@@ -1,22 +1,17 @@
 #pragma once
 
 #include "detail/config.hpp"
-#include <functional>
+#include "detail/Function.hpp"
 #include <string_view>
-
-#ifdef ASP_ENABLE_FORMAT
-# include <format>
-#else
-# include <string>
-#endif
+#include <fmt/core.h>
 
 namespace asp {
     enum class LogLevel {
         Trace, Debug, Info, Warn, Error
     };
 
-    void setLogFunction(std::function<void(LogLevel, const std::string_view)>&& f);
-    std::function<void(LogLevel, const std::string_view)>& getLogFunction();
+    void setLogFunction(asp::MoveOnlyFunction<void(LogLevel, const std::string_view)>&& f);
+    asp::MoveOnlyFunction<void(LogLevel, const std::string_view)>& getLogFunction();
 
     void doLog(LogLevel level, const std::string_view message);
 
@@ -32,19 +27,17 @@ namespace asp {
         log(LogLevel::Trace, message);
     }
 
-#ifdef ASP_ENABLE_FORMAT
     template <class... Args>
-    inline void log(LogLevel level, std::format_string<Args...> fmt, Args&&... args) {
+    inline void log(LogLevel level, fmt::format_string<Args...> fmt, Args&&... args) {
     #ifndef ASP_DEBUG
         // disable trace logs in release
         if (level == LogLevel::Trace) return;
     #endif
-        doLog(level, std::format(fmt, std::forward<Args>(args)...));
+        doLog(level, fmt::format(fmt, std::forward<Args>(args)...));
     }
 
     template <class... Args>
-    inline void trace(std::format_string<Args...> fmt, Args&&... args) {
+    inline void trace(fmt::format_string<Args...> fmt, Args&&... args) {
         log(LogLevel::Trace, fmt, std::forward<Args>(args)...);
     }
-#endif
 }

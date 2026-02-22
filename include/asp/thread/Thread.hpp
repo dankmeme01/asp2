@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../detail/config.hpp"
+#include "../detail/Function.hpp"
 #include "../Log.hpp"
 
-#include <functional>
 #include <memory>
 #include <thread>
 #include <stdexcept>
@@ -35,7 +35,7 @@ public:
         std::shared_ptr<Storage> storage;
     };
 
-    using TFunc = std::function<void (TFuncArgs&..., StopToken&)>;
+    using TFunc = asp::MoveOnlyFunction<void (TFuncArgs&..., StopToken&)>;
 
     Thread() {
         _storage = std::make_shared<Storage>();
@@ -196,33 +196,18 @@ public:
     }
 
     // Set the function that will be called when the thread is started. It will be called from within the created thread.
-    void setStartFunction(std::function<void()>&& f) {
+    void setStartFunction(asp::MoveOnlyFunction<void()>&& f) {
         _storage->onStart = std::move(f);
     }
 
-    // Set the function that will be called when the thread is started. It will be called from within the created thread.
-    void setStartFunction(const std::function<void()>& f) {
-        _storage->onStart = f;
-    }
-
     // Set the function that will be called when an exception is thrown. If not set, the exception will be rethrown and the program will be terminated.
-    void setExceptionFunction(std::function<void(const std::exception&)>&& f) {
+    void setExceptionFunction(asp::MoveOnlyFunction<void(const std::exception&)>&& f) {
         _storage->onException = std::move(f);
     }
 
-    // Set the function that will be called when an exception is thrown. If not set, the exception will be rethrown and the program will be terminated.
-    void setExceptionFunction(const std::function<void(const std::exception&)>& f) {
-        _storage->onException = f;
-    }
-
     // Set the function that will be called when the thread is about to terminate. It will be called from within the created thread.
-    void setTerminationFunction(std::function<void()>&& f) {
+    void setTerminationFunction(asp::MoveOnlyFunction<void()>&& f) {
         _storage->onTermination = std::move(f);
-    }
-
-    // Set the function that will be called when the thread is about to terminate. It will be called from within the created thread.
-    void setTerminationFunction(const std::function<void()>& f) {
-        _storage->onTermination = f;
     }
 
     bool isStopped() {
@@ -239,9 +224,9 @@ public:
         std::atomic_flag _stopped;
         std::string name = "asp::Thread";
         TFunc loopFunc;
-        std::function<void()> onStart;
-        std::function<void()> onTermination;
-        std::function<void(const std::exception&)> onException;
+        asp::MoveOnlyFunction<void()> onStart;
+        asp::MoveOnlyFunction<void()> onTermination;
+        asp::MoveOnlyFunction<void(const std::exception&)> onException;
     };
 
 private:

@@ -86,12 +86,6 @@ ThreadPool::~ThreadPool() {
     }
 }
 
-void ThreadPool::pushTask(const Task& task) {
-    this->_checkValid();
-
-    _storage->taskQueue.push(task);
-}
-
 void ThreadPool::pushTask(Task&& task) {
     this->_checkValid();
 
@@ -193,14 +187,14 @@ bool ThreadPool::isDoingWork() {
     return false;
 }
 
-void ThreadPool::setExceptionFunction(const std::function<void(const std::exception&)>& f) {
+void ThreadPool::setExceptionFunction(CopyableFunction<void(const std::exception&)> f) {
     this->_checkValid();
-
-    _storage->onException = f;
 
     for (auto& worker : _storage->workers) {
         worker.thread.setExceptionFunction(f);
     }
+
+    _storage->onException = std::move(f);
 }
 
 void ThreadPool::_checkValid() {

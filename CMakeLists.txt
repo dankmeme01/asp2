@@ -55,8 +55,11 @@ endif()
 if (NOT TARGET GeodeResult)
     CPMAddPackage("gh:geode-sdk/result@1.4.1")
 endif()
+if (NOT TARGET std23::nontype_functional)
+    CPMAddPackage("gh:geode-sdk/nontype_functional#6d1d08c")
+endif()
 
-target_link_libraries(asp PUBLIC GeodeResult fmt)
+target_link_libraries(asp PUBLIC GeodeResult fmt std23::nontype_functional)
 target_compile_definitions(asp PRIVATE NOMINMAX=1)
 
 target_include_directories(asp PUBLIC

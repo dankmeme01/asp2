@@ -34,7 +34,7 @@ bool Notify::wait(const time::Duration& timeout) {
     return result;
 }
 
-bool Notify::wait(const time::Duration& timeout, const std::function<bool()>& predicate) {
+bool Notify::wait(const time::Duration& timeout, asp::FunctionRef<bool()> predicate) {
     EnterCriticalSection(_crit());
 
     if (timeout.isZero()) {
