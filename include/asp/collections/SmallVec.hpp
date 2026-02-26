@@ -63,6 +63,13 @@ class SmallVec {
 public:
     SmallVec() = default;
 
+    SmallVec(std::initializer_list<T> list) {
+        this->reserve(list.size());
+        for (const auto& item : list) {
+            this->emplace_back(item);
+        }
+    }
+
     ~SmallVec() {
         this->clear();
         if (isLarge()) {
