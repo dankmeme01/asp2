@@ -21,19 +21,7 @@ static void microYield() {
 
 namespace asp {
 
-ThreadPool::Worker::Worker(Thread<> thread) : thread(std::move(thread)), doingWork(false) {}
-
-ThreadPool::Worker::Worker(Worker&& other) noexcept {
-    *this = std::move(other);
-}
-
-ThreadPool::Worker& ThreadPool::Worker::operator=(Worker&& other) noexcept {
-    if (this != &other) {
-        thread = std::move(other.thread);
-        doingWork = other.doingWork.load();
-    }
-    return *this;
-}
+ThreadPool::Worker::Worker(Thread<> thread) : thread(std::move(thread)) {}
 
 ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
     for (size_t i = 0; i < tc; i++) {
@@ -45,11 +33,13 @@ ThreadPool::ThreadPool(size_t tc) : _storage(std::make_shared<Storage>()) {
 
             if (!task) return;
 
-            worker.doingWork = true;
+            try {
+                (*task)();
+            } catch (const std::exception& e) {
+                storage->onException(e);
+            }
 
-            task.value()();
-
-            worker.doingWork = false;
+            storage->remainingWork.fetch_sub(1, std::memory_order::acq_rel);
         });
 
         _storage->workers.emplace_back(std::move(thread));
@@ -89,6 +79,7 @@ ThreadPool::~ThreadPool() {
 void ThreadPool::pushTask(Task&& task) {
     this->_checkValid();
 
+    _storage->remainingWork.fetch_add(1, std::memory_order::relaxed);
     _storage->taskQueue.push(std::move(task));
 }
 
@@ -111,80 +102,31 @@ bool ThreadPool::allDead() {
 void ThreadPool::join() {
     this->_checkValid();
 
-    while (!_storage->taskQueue.empty()) {
+    _storage->notifyWaiter.store(true, std::memory_order::release);
+
+    auto isDone = [&] {
         // if we are destructing, it's possible that all threads are dead now, just terminate
         if (m_destructing && this->allDead()) {
-            return;
+            return true;
         }
 
-        std::this_thread::sleep_for(std::chrono::microseconds(25));
+        return _storage->remainingWork.load(std::memory_order::acquire) == 0;
+    };
+
+    while (!isDone()) {
+        if (_storage->waiterSem.try_acquire_for(std::chrono::milliseconds{25})) {
+            break;
+        }
     }
-
-    // wait for working threads to finish
-    bool stillWorking;
-
-    do {
-        // if we are destructing, it's possible that all threads are dead now, just terminate
-        if (m_destructing && this->allDead()) {
-            return;
-        }
-
-        std::this_thread::sleep_for(std::chrono::microseconds(25));
-        stillWorking = false;
-        for (const auto& worker : _storage->workers) {
-            if (worker.doingWork) {
-                stillWorking = true;
-                break;
-            }
-        }
-    } while (stillWorking);
 }
 
 void ThreadPool::joinSpin() {
-    this->_checkValid();
-
-    while (!_storage->taskQueue.empty()) {
-        // if we are destructing, it's possible that all threads are dead now, just terminate
-        if (m_destructing && this->allDead()) {
-            return;
-        }
-
-        microYield();
-    }
-
-    // wait for working threads to finish
-    bool stillWorking;
-
-    do {
-        // if we are destructing, it's possible that all threads are dead now, just terminate
-        if (m_destructing && this->allDead()) {
-            return;
-        }
-
-        microYield();
-
-        stillWorking = false;
-        for (const auto& worker : _storage->workers) {
-            if (worker.doingWork) {
-                stillWorking = true;
-                break;
-            }
-        }
-    } while (stillWorking);
+    this->join();
 }
 
 bool ThreadPool::isDoingWork() {
     this->_checkValid();
-
-    if (!_storage->taskQueue.empty()) return true;
-
-    for (const auto& worker : _storage->workers) {
-        if (worker.doingWork) {
-            return true;
-        }
-    }
-
-    return false;
+    return _storage->remainingWork.load(std::memory_order::acquire) > 0;
 }
 
 void ThreadPool::setExceptionFunction(CopyableFunction<void(const std::exception&)> f) {

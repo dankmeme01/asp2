@@ -29,7 +29,7 @@ public:
     void join();
 
     // Like `join`, but will spin instead of sleeping. Useful if the work is to be completed very quickly (milliseconds or less).
-    void joinSpin();
+    [[deprecated]] void joinSpin();
 
     // Returns `true` if the thread pool is currently doing any work, `false` if all threads are sleeping.
     bool isDoingWork();
@@ -40,17 +40,19 @@ public:
 private:
     struct Worker {
         Thread<> thread;
-        std::atomic<bool> doingWork = false;
 
         Worker() = default;
         Worker(Thread<> thread);
-        Worker(Worker&&) noexcept;
-        Worker& operator=(Worker&&) noexcept;
+        Worker(Worker&&) noexcept = default;
+        Worker& operator=(Worker&&) noexcept = default;
     };
 
     struct Storage {
         std::vector<Worker> workers;
         Channel<Task> taskQueue;
+        std::atomic<size_t> remainingWork{0};
+        std::atomic<bool> notifyWaiter{false};
+        std::binary_semaphore waiterSem{0};
         asp::CopyableFunction<void(const std::exception&)> onException;
     };
 
