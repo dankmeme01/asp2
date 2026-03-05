@@ -3,6 +3,8 @@
 #include "Thread.hpp"
 #include "../sync/Channel.hpp"
 #include <asp/detail/Function.hpp>
+#include <atomic>
+#include <semaphore>
 
 namespace asp {
 
