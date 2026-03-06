@@ -76,7 +76,7 @@ private:
 
     Storage<K, Entry> m_storage;
     Duration m_ttl{};
-    Duration m_workInterval{};
+    Duration m_workInterval = Duration::fromMinutes(1);
     Instant m_lastWork{};
     size_t m_maxEntries = 0;
 
