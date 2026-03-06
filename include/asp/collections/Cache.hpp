@@ -30,7 +30,7 @@ public:
         }
 
         auto now = Instant::now();
-        m_storage.emplace(std::move(key), Entry{std::move(value), now, now});
+        m_storage.insert_or_assign(std::move(key), Entry{std::move(value), now, now});
 
         if (now.durationSince(m_lastWork) > m_workInterval) {
             this->doWork();
@@ -59,8 +59,12 @@ public:
             return nullptr;
         }
 
-        it->second.m_usedAt = Instant::now();
+        it->second.m_usedAt = now;
         return &it->second.m_value;
+    }
+
+    void reserve(size_t n) {
+        m_storage.reserve(n);
     }
 
 private:
