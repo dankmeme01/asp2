@@ -133,3 +133,56 @@ TEST(SmallVecTest, Capacity0) {
     EXPECT_EQ(vec.size(), 0);
     EXPECT_TRUE(vec.empty());
 }
+
+TEST(CacheTest, Basic) {
+    Cache<std::string, int> a;
+    a.insert("test", 1);
+    a.insert("test2", 2);
+
+    auto v1 = a.get("test");
+    auto v2 = a.get("test2");
+
+    EXPECT_TRUE(v1);
+    EXPECT_TRUE(v2);
+    EXPECT_EQ(*v1, 1);
+    EXPECT_EQ(*v2, 2);
+    EXPECT_EQ(a.size(), 2);
+
+    EXPECT_EQ(a.get("non-existent"), nullptr);
+}
+
+TEST(CacheTest, MaxEntries) {
+    Cache<std::string, int> cache;
+    cache.setMaxEntries(2);
+
+    cache.insert("a", 1);
+    cache.insert("b", 2);
+    cache.insert("c", 3);
+
+    EXPECT_EQ(cache.size(), 2);
+    EXPECT_EQ(cache.get("a"), nullptr);
+    cache.get("b");
+
+    cache.insert("d", 4);
+
+    EXPECT_NE(cache.get("b"), nullptr);
+    EXPECT_NE(cache.get("d"), nullptr);
+
+    EXPECT_EQ(*cache.get("b"), 2);
+    EXPECT_EQ(*cache.get("d"), 4);
+}
+
+TEST(CacheTest, TTL) {
+    Cache<int, int> cache;
+    cache.setTimeToLive(asp::Duration::fromMicros(100));
+
+    cache.insert(1, 1);
+    cache.insert(2, 2);
+    cache.insert(3, 3);
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
+
+    EXPECT_EQ(cache.get(1), nullptr);
+    EXPECT_EQ(cache.get(2), nullptr);
+    EXPECT_EQ(cache.get(3), nullptr);
+    EXPECT_EQ(cache.size(), 0);
+}
