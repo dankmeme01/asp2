@@ -5,6 +5,9 @@
 #include <optional>
 #include <functional>
 #include <limits>
+#include <string>
+#include <iterator>
+#include <fmt/format.h>
 
 namespace asp::iter {
 
@@ -115,6 +118,20 @@ public:
             }
         }
         return cont;
+    }
+
+    std::string join(std::string_view separator) && {
+        std::string result;
+        bool first = true;
+        while (auto item = this->derived().next()) {
+            if (!first) {
+                result += separator;
+            } else {
+                first = false;
+            }
+            fmt::format_to(std::back_inserter(result), "{}", *item);
+        }
+        return result;
     }
 
     auto enumerate() && {
