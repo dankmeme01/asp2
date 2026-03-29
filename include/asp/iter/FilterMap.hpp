@@ -23,8 +23,10 @@ public:
     FilterMap(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 
     std::optional<Item> next() {
-        if (auto item = m_iter.next()) {
-            return std::invoke(m_func, std::move(*item));
+        while (auto item = m_iter.next()) {
+            if (auto ret = std::invoke(m_func, std::move(*item))) {
+                return ret;
+            }
         }
 
         return std::nullopt;
