@@ -10,6 +10,9 @@
 
 namespace asp::inline time {
 
+template <typename T>
+concept Arithmetic = std::integral<T> || std::floating_point<T>;
+
 class Duration {
 public:
     constexpr Duration() noexcept : m_seconds(0), m_nanos(0) {}
@@ -89,18 +92,22 @@ public:
     }
 
     constexpr u64 micros() const noexcept {
-        return static_cast<u64>(m_seconds) * static_cast<u64>(time_detail::MICROS_IN_SEC) + static_cast<u64>(time_detail::nanos_to_micros(m_nanos));
+        return m_seconds * time_detail::MICROS_IN_SEC + time_detail::nanos_to_micros(m_nanos);
     }
 
     constexpr u64 nanos() const noexcept {
-        return static_cast<u64>(m_seconds) * static_cast<u64>(time_detail::NANOS_IN_SEC) + static_cast<u64>(m_nanos);
+        return m_seconds * time_detail::NANOS_IN_SEC + m_nanos;
     }
 
-    template <typename As = u64>
-    constexpr As millis() const noexcept;
+    template <Arithmetic As = u64>
+    constexpr As millis() const noexcept {
+        return (As)m_seconds * (As)time_detail::MILLIS_IN_SEC + (As)m_nanos / (As)time_detail::NANOS_IN_MILLISEC;
+    }
 
-    template <typename As = u64>
-    constexpr As seconds() const noexcept;
+    template <Arithmetic As = u64>
+    constexpr As seconds() const noexcept {
+        return (As)m_seconds + (As)m_nanos / (As)time_detail::NANOS_IN_SEC;
+    }
 
     constexpr u64 minutes() const noexcept { return time_detail::secs_to_minutes(m_seconds); }
     constexpr u64 hours() const noexcept { return time_detail::secs_to_hours(m_seconds); }
@@ -282,37 +289,6 @@ private:
         return dur;
     }
 };
-
-
-template<>
-constexpr u64 Duration::millis<u64>() const noexcept {
-    return m_seconds * time_detail::MILLIS_IN_SEC + time_detail::nanos_to_millis(m_nanos);
-}
-
-template<>
-constexpr f32 Duration::millis<f32>() const noexcept {
-    return (f32)m_seconds * (f32)time_detail::MILLIS_IN_SEC + (f32)m_nanos / (f32)time_detail::NANOS_IN_MILLISEC;
-}
-
-template<>
-constexpr f64 Duration::millis<f64>() const noexcept {
-    return (f64)m_seconds * (f64)time_detail::MILLIS_IN_SEC + (f64)m_nanos / (f64)time_detail::NANOS_IN_MILLISEC;
-}
-
-template<>
-constexpr u64 Duration::seconds<u64>() const noexcept {
-    return m_seconds;
-}
-
-template<>
-constexpr f32 Duration::seconds<f32>() const noexcept {
-    return static_cast<f32>(m_seconds) + static_cast<f32>(m_nanos) / static_cast<f32>(time_detail::NANOS_IN_SEC);
-}
-
-template<>
-constexpr f64 Duration::seconds<f64>() const noexcept {
-    return static_cast<f64>(m_seconds) + static_cast<f64>(m_nanos) / static_cast<f64>(time_detail::NANOS_IN_SEC);
-}
 
 ASP_CLANG_CONSTEXPR Duration operator*(u32 val, const Duration& dur) {
     return dur * val;
