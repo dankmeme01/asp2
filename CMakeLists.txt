@@ -44,11 +44,6 @@ endif()
 
 add_library(asp STATIC ${HEADERS} ${SOURCES})
 
-if (WIN32)
-    # fix debug builds
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _HAS_ITERATOR_DEBUGGING=0)
-endif()
-
 if (NOT TARGET fmt)
     CPMAddPackage("gh:fmtlib/fmt#12.1.0")
 endif()
