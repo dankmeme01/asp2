@@ -362,4 +362,25 @@ TEST(IterTests, IterMap) {
     ASSERT_EQ(val, 20);
 }
 
+TEST(IterTests, EnumerateSteal) {
+    constexpr auto long1 = "very long string to bypass sso1";
+    constexpr auto long2 = "very long string to bypass sso2";
+    constexpr auto long3 = "very long string to bypass sso3";
 
+    std::vector<std::string> strings{ long1, long2, long3 };
+
+    size_t iters = 0;
+    for (auto& [idx, str] : from(strings).enumerate()) {
+        EXPECT_EQ(str, "very long string to bypass sso" + std::to_string(idx + 1));
+        iters++;
+    }
+
+    ASSERT_EQ(iters, 3);
+
+    // check that the original vector didnt get mutated
+    ASSERT_EQ(strings.size(), 3);
+
+    EXPECT_EQ(strings[0], long1);
+    EXPECT_EQ(strings[1], long2);
+    EXPECT_EQ(strings[2], long3);
+}

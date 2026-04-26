@@ -192,13 +192,13 @@ public:
 
         iterator(Iter& iter, bool end) : m_iter(iter) {
             if (!end) {
-                m_item = m_iter.derived().next();
+                this->getNext();
             }
         }
 
         iterator& operator++() {
             ASP_ASSERT(m_item, "Incrementing end iterator");
-            m_item = m_iter.derived().next();
+            this->getNext();
             return *this;
         }
 
@@ -218,6 +218,18 @@ public:
     private:
         std::optional<Item> m_item;
         Iter& m_iter;
+
+        void getNext() {
+            // we do this silly stuff instead of a simple equals assignment,
+            // because we want to ensure we create a *new* Item object instead of calling operator= on the previous one.
+            // this is crucial if Item is e.g. pair<T, Y&>, we want to rebind instead of moving the object into the one pointed to by Y&.
+            auto next = m_iter.derived().next();
+            if (next) {
+                m_item.emplace(std::move(*next));
+            } else {
+                m_item = std::nullopt;
+            }
+        }
     };
 
     auto begin() {
