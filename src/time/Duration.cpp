@@ -28,8 +28,10 @@ namespace asp::inline time {
             case DurationUnit::Secs:   return human ? " seconds" : "s";
             case DurationUnit::Mins:   return human ? " minutes" : "min";
             case DurationUnit::Hours:  return human ? " hours" : "h";
-            default:                   return "";
+            case DurationUnit::Days:   return human ? " days" : "d";
         }
+
+        return "";
     }
 
     std::pair<std::string_view, DurationUnit> formatDurationNum(
