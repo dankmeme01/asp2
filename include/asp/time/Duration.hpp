@@ -311,6 +311,7 @@ enum class DurationUnit {
     Secs,
     Mins,
     Hours,
+    Days,
 };
 
 std::string_view suffixForUnit(DurationUnit unit, bool human) noexcept;

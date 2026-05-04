@@ -43,7 +43,10 @@ namespace asp::inline time {
         f64 value;
         DurationUnit unit;
 
-        if (totalNanos >= SECS_IN_HOUR * NANOS_IN_SEC) {
+        if (totalNanos >= SECS_IN_DAY * NANOS_IN_SEC) {
+            value = f64(totalNanos) / f64(SECS_IN_DAY * NANOS_IN_SEC);
+            unit = DurationUnit::Days;
+        } else if (totalNanos >= SECS_IN_HOUR * NANOS_IN_SEC) {
             value = f64(totalNanos) / f64(SECS_IN_HOUR * NANOS_IN_SEC);
             unit = DurationUnit::Hours;
         } else if (totalNanos >= SECS_IN_MIN * NANOS_IN_SEC) {
