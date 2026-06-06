@@ -70,4 +70,10 @@ auto values(const Map& map) {
     });
 }
 
+/// Shorthand for iter::from(c).enumerate()
+template <typename Cont>
+auto enumerate(Cont&& cont) {
+    return iter::from(cont).enumerate();
+}
+
 }
