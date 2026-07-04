@@ -9,6 +9,7 @@
 #include "iter/Map.hpp"
 #include "iter/Skip.hpp"
 #include "iter/Split.hpp"
+#include "iter/Lines.hpp"
 #include "iter/std.hpp"
 #include "iter/Take.hpp"
 #include "iter/Zip.hpp"

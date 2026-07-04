@@ -384,3 +384,114 @@ TEST(IterTests, EnumerateSteal) {
     EXPECT_EQ(strings[1], long2);
     EXPECT_EQ(strings[2], long3);
 }
+
+TEST(IterTests, LinesEmpty) {
+    auto iter = lines("");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesOne) {
+    auto iter = lines("line");
+    ASSERT_EQ(iter.next(), "line");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleLF) {
+    auto iter = lines("\n");
+    ASSERT_EQ(iter.next(), "");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleCR) {
+    auto iter = lines("\r");
+    ASSERT_EQ(iter.next(), "\r");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleCRLF) {
+    auto iter = lines("\r\n");
+    ASSERT_EQ(iter.next(), "");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleWithLF) {
+    auto iter = lines("line\n");
+    ASSERT_EQ(iter.next(), "line");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleWithCRLF) {
+    auto iter = lines("line\r\n");
+    ASSERT_EQ(iter.next(), "line");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesSingleWithCR) {
+    auto iter = lines("line\r");
+    ASSERT_EQ(iter.next(), "line\r");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByLF) {
+    auto iter = lines("line1\nline2");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByLFWithTrailing) {
+    auto iter = lines("line1\nline2\n");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByCRLF) {
+    auto iter = lines("line1\r\nline2");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByCRLFWithTrailing) {
+    auto iter = lines("line1\r\nline2\r\n");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByCRLFWithTrailingLF) {
+    auto iter = lines("line1\r\nline2\n");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleSplitByTwoLF) {
+    auto iter = lines("line1\n\nline2");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesMultipleWrappedInLF) {
+    auto iter = lines("\nline1\nline2\n");
+    ASSERT_EQ(iter.next(), "");
+    ASSERT_EQ(iter.next(), "line1");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesConsecutiveCR) {
+    auto iter = lines("line1\r\r\nline2");
+    ASSERT_EQ(iter.next(), "line1\r");
+    ASSERT_EQ(iter.next(), "line2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, LinesConsecutiveCRWithNoBreak) {
+    auto iter = lines("line1\r\r\rline2");
+    ASSERT_EQ(iter.next(), "line1\r\r\rline2");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
