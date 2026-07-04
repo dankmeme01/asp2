@@ -3,7 +3,7 @@
 #include <asp/Log.hpp>
 #include <utility>
 #include <mutex>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace asp {
 

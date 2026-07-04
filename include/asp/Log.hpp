@@ -3,7 +3,7 @@
 #include "detail/config.hpp"
 #include "detail/Function.hpp"
 #include <string_view>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace asp {
     enum class LogLevel {
