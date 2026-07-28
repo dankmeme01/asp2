@@ -495,3 +495,100 @@ TEST(IterTests, LinesConsecutiveCRWithNoBreak) {
     ASSERT_EQ(iter.next(), "line1\r\r\rline2");
     ASSERT_EQ(iter.next(), std::nullopt);
 }
+
+TEST(IterTests, Range) {
+    auto r1 = range(0, 5);
+    ASSERT_EQ(r1.next(), 0);
+    ASSERT_EQ(r1.next(), 1);
+    ASSERT_EQ(r1.next(), 2);
+    ASSERT_EQ(r1.next(), 3);
+    ASSERT_EQ(r1.next(), 4);
+    ASSERT_EQ(r1.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenEmpty) {
+    std::vector<std::vector<int>> vec = {};
+    auto iter = from(vec).flatten();
+    static_assert(std::is_same_v<decltype(iter)::Item, int>);
+
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenOneVector) {
+    std::vector<std::vector<int>> vec = {{1, 2, 3}};
+    auto iter = from(vec).flatten();
+
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 3);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenTwoVectors) {
+    std::vector<std::vector<int>> vec = {{1, 2}, {3, 4}};
+    auto iter = from(vec).flatten();
+
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 3);
+    ASSERT_EQ(iter.next(), 4);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenMixedEmptyCollections) {
+    std::vector<std::vector<int>> vec = {{}, {1, 2}, {}, {3, 4}, {}};
+    auto iter = from(vec).flatten();
+
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 3);
+    ASSERT_EQ(iter.next(), 4);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenIterMix) {
+    // 3 ranges:
+    // * 0..0 - empty and yields nothing
+    // * 0..1 - yields 0
+    // * 0..2 - yields 0, 1
+    auto iter = range(0, 3)
+        .map([](int x) { return range(0, x); })
+        .flatten();
+
+    ASSERT_EQ(iter.next(), 0);
+    ASSERT_EQ(iter.next(), 0);
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlattenTextSplit) {
+    // Split the following string by whitespace using solely flatMap,
+    // even if this isn't super efficient, it is incredibly easy
+    std::string text = "1\t2 3\n4 5\t6";
+
+    auto iter = split(text, '\t')
+        .flatMap([](auto sv) { return split(sv, ' '); })
+        .flatMap([](auto sv) { return split(sv, '\n'); });
+
+    ASSERT_EQ(iter.next(), "1");
+    ASSERT_EQ(iter.next(), "2");
+    ASSERT_EQ(iter.next(), "3");
+    ASSERT_EQ(iter.next(), "4");
+    ASSERT_EQ(iter.next(), "5");
+    ASSERT_EQ(iter.next(), "6");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FlatMapIterMix) {
+    // 3 ranges:
+    // * 0..0 - empty and yields nothing
+    // * 0..1 - yields 0
+    // * 0..2 - yields 0, 1
+    auto iter = range(0, 3)
+        .flatMap([](int x) { return range(0, x); });
+
+    ASSERT_EQ(iter.next(), 0);
+    ASSERT_EQ(iter.next(), 0);
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}

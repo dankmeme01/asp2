@@ -17,8 +17,10 @@ class Map;
 template <typename, typename>
 class Filter;
 
+struct IterBase {};
+
 template <typename Concrete, typename Item_>
-class Iter {
+class Iter : public IterBase {
 public:
     using Item = Item_;
 
@@ -61,6 +63,14 @@ public:
     // defined in ArrayChunks.hpp
     template <size_t N>
     auto arrayChunks() &&;
+
+    // defined in Flatten.hpp
+    auto flatten() &&;
+
+    template <typename F>
+    auto flatMap(F&& f) && {
+        return std::move(*this).map(std::forward<F>(f)).flatten();
+    }
 
     template <typename F>
     bool all(F&& f) && {

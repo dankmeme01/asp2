@@ -11,3 +11,7 @@ Some highlights include:
 * `asp::SpinLock<T>` - same as Mutex but using a spinlock instead
 * `asp::Notify` - synchronous notifications aka simpler condition variable
 * `asp::Channel<T>` a simple thread-safe message channel
+
+## TODO
+
+* Add custom iterator for `asp::fs::iterdir` to avoid exceptions in operator++
