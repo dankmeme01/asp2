@@ -134,6 +134,20 @@ TEST(SmallVecTest, Capacity0) {
     EXPECT_TRUE(vec.empty());
 }
 
+
+TEST(SmallVecTest, ConstOperations) {
+    SmallVec<int, 4> vec;
+    vec.push_back(1);
+    vec.push_back(2);
+
+    const auto& cvec = vec;
+    EXPECT_EQ(cvec.size(), 2);
+    EXPECT_EQ(cvec[0], 1);
+    EXPECT_EQ(cvec[1], 2);
+    EXPECT_EQ(cvec.front(), 1);
+    EXPECT_EQ(cvec.back(), 2);
+}
+
 TEST(CacheTest, Basic) {
     Cache<std::string, int> a;
     a.insert("test", 1);

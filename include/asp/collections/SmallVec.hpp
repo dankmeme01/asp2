@@ -143,23 +143,22 @@ public:
         return m_size == 0;
     }
 
-    T* data() noexcept {
-        return this->isLarge() ? m_large->ptr() : m_small[0].ptr();
+    template <typename Self>
+    auto* data(this Self&& self) noexcept {
+        return self.isLarge() ? self.m_large->ptr() : self.m_small[0].ptr();
     }
 
-    const T* data() const noexcept {
-        return this->isLarge() ? m_large->ptr() : m_small[0].ptr();
+    template <typename Self>
+    decltype(auto) operator[](this Self&& self, size_t index) noexcept {
+        return self.data()[index];
     }
 
-    T& operator[](size_t index) noexcept {
-        return data()[index];
-    }
-
-    T& at(size_t index) {
-        if (index >= m_size) {
+    template <typename Self>
+    decltype(auto) at(this Self&& self, size_t index) {
+        if (index >= self.m_size) {
             throw std::out_of_range("SmallVec::at: index out of range");
         }
-        return data()[index];
+        return self.data()[index];
     }
 
     void reserve(size_t newCap) {
@@ -246,34 +245,24 @@ public:
         idata()[m_size].destroy();
     }
 
-    T* begin() noexcept {
-        return data();
+    template <typename Self>
+    auto* begin(this Self&& self) noexcept {
+        return self.data();
     }
 
-    T* end() noexcept {
-        return data() + m_size;
+    template <typename Self>
+    auto* end(this Self&& self) noexcept {
+        return self.data() + self.m_size;
     }
 
-    const T* begin() const noexcept {
-        return data();
+    template <typename Self>
+    decltype(auto) front(this Self&& self) noexcept {
+        return self.data()[0];
     }
 
-    const T* end() const noexcept {
-        return data() + m_size;
-    }
-
-    T& front() {
-        if (m_size == 0) {
-            throw std::out_of_range("SmallVec::front: empty vector");
-        }
-        return data()[0];
-    }
-
-    T& back() {
-        if (m_size == 0) {
-            throw std::out_of_range("SmallVec::back: empty vector");
-        }
-        return data()[m_size - 1];
+    template <typename Self>
+    decltype(auto) back(this Self&& self) noexcept {
+        return self.data()[self.m_size - 1];
     }
 
     void clear() noexcept {
