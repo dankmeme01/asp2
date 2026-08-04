@@ -9,6 +9,9 @@ template <typename T, typename D>
 T _nextSplit(T& inp, const D& delim);
 
 template <typename T, typename D>
+T _nextSplitAny(T& inp, const D& delim);
+
+template <typename T, typename D>
 class Split : public Iter<Split<T, D>, T> {
 public:
     using Item = T;
@@ -29,16 +32,65 @@ private:
     Delim m_delim;
 };
 
+template <typename T, typename D>
+class SplitAny : public Iter<SplitAny<T, D>, T> {
+public:
+    using Item = T;
+    using Delim = D;
+
+    SplitAny(T input, Delim delim, bool skipEmpty) : m_input(std::move(input)), m_delim(std::move(delim)), m_skipEmpty(skipEmpty) {}
+
+    std::optional<Item> next() {
+        while (!m_input.empty()) {
+            auto ret = _nextSplitAny(m_input, m_delim);
+            if (!m_skipEmpty || !ret.empty()) {
+                return ret;
+            }
+        }
+
+        return std::nullopt;
+    }
+
+private:
+    T m_input;
+    Delim m_delim;
+    bool m_skipEmpty;
+};
+
+/// Returns an iterator over subtrings of the string, split by the given character.
+/// If the delimiter is not found, the entire string is yielded as a single element.
+/// If the string is empty, no elements are yielded.
 inline auto split(std::string_view sv, char delim) {
-    return Split<std::string_view, char>(std::move(sv), std::move(delim));
+    return Split<std::string_view, char>(sv, delim);
 }
 
+/// Returns an iterator over subtrings of the string, split by the given substring.
+/// If the delimiter is not found, the entire string is yielded as a single element.
+/// If the string is empty, no elements are yielded.
 inline auto split(std::string_view sv, std::string_view delim) {
-    return Split<std::string_view, std::string_view>(std::move(sv), std::move(delim));
+    return Split<std::string_view, std::string_view>(sv, delim);
 }
 
+/// Returns an iterator over subspans of a vector, split by the given byte.
+/// If the delimiter is not found, the entire span is yielded as a single element.
+/// If the vector is empty, no elements are yielded.
 inline auto split(const std::vector<unsigned char>& sv, unsigned char delim) {
-    return Split<std::span<const unsigned char>, unsigned char>(std::span<const unsigned char>(sv.begin(), sv.end()), std::move(delim));
+    return Split<std::span<const unsigned char>, unsigned char>(std::span<const unsigned char>(sv.begin(), sv.end()), delim);
+}
+
+/// Returns an iterator over substrings of the string, split by any of the characters in the given string.
+/// For example, `splitAny("a,b;c", ",;")` will yield `"a"`, `"b"`, and `"c"`.
+/// If the string is empty, no elements are yielded.
+/// If `skipEmpty` is `true`, then this will not yield empty substrings if two delimeters are adjacent.
+inline auto splitAny(std::string_view sv, std::string_view delims, bool skipEmpty = false) {
+    return SplitAny<std::string_view, std::string_view>(sv, delims, skipEmpty);
+}
+
+/// Returns an iterator over substrings of the string, split by one of the whitespace characters:
+/// newline, carriage return, tab, or space. This is equivalent to `splitAny(sv, " \t\n\r", true)`.
+/// If the string is empty, no elements are yielded.
+inline auto splitWhitespace(std::string_view sv) {
+    return splitAny(sv, " \t\n\r", true);
 }
 
 template <>
@@ -83,6 +135,20 @@ inline std::span<const unsigned char> _nextSplit(std::span<const unsigned char>&
         inp = {};
     }
 
+    return out;
+}
+
+template <>
+inline std::string_view _nextSplitAny(std::string_view& inp, const std::string_view& delim) {
+    size_t pos = inp.find_first_of(delim);
+    if (pos == inp.npos) {
+        std::string_view out = inp;
+        inp = {};
+        return out;
+    }
+
+    std::string_view out = inp.substr(0, pos);
+    inp.remove_prefix(pos + 1);
     return out;
 }
 

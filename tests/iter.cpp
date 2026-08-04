@@ -231,6 +231,53 @@ TEST(IterTests, SplitIntVec) {
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, SplitAny) {
+    auto iter = splitAny("1,2:3;;4|5-6", ",:;|");
+
+    ASSERT_EQ(iter.next(), "1");
+    ASSERT_EQ(iter.next(), "2");
+    ASSERT_EQ(iter.next(), "3");
+    ASSERT_EQ(iter.next(), "");
+    ASSERT_EQ(iter.next(), "4");
+    ASSERT_EQ(iter.next(), "5-6");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, SplitAnyNonEmpty) {
+    auto iter = splitAny("1,2:3;;4|5-6", ",:;|", true);
+
+    ASSERT_EQ(iter.next(), "1");
+    ASSERT_EQ(iter.next(), "2");
+    ASSERT_EQ(iter.next(), "3");
+    ASSERT_EQ(iter.next(), "4");
+    ASSERT_EQ(iter.next(), "5-6");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+
+TEST(IterTests, SplitAnyEmptyStr) {
+    auto iter = splitAny("", ",:;|");
+
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, SplitAnyEmptyDelim) {
+    auto iter = splitAny("hi", "");
+
+    ASSERT_EQ(iter.next(), "hi");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, SplitWhitespace) {
+    auto iter = splitWhitespace("hi   test\n hello\r\nyay");
+
+    ASSERT_EQ(iter.next(), "hi");
+    ASSERT_EQ(iter.next(), "test");
+    ASSERT_EQ(iter.next(), "hello");
+    ASSERT_EQ(iter.next(), "yay");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
 TEST(IterTests, Empty) {
     auto iter = empty<int*>();
     ASSERT_EQ(iter.next(), std::nullopt);
