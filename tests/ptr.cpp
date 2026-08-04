@@ -1,5 +1,6 @@
 #include <asp/ptr.hpp>
 #include <gtest/gtest.h>
+#include <thread>
 
 using namespace asp;
 
