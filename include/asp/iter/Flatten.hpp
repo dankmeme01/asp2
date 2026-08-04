@@ -28,7 +28,7 @@ struct WrapContainerOrIterator {
 template <
     typename It,
     typename InnerValue = typename It::Item,
-    typename InnerIterator = WrapContainerOrIterator<InnerValue>::type,
+    typename InnerIterator = typename WrapContainerOrIterator<InnerValue>::type,
     typename Item_ = typename InnerIterator::Item
 >
 class Flatten : public Iter<Flatten<It>, Item_> {

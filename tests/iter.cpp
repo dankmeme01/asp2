@@ -1,5 +1,6 @@
 #include <asp/iter.hpp>
 #include <gtest/gtest.h>
+#include <array>
 #include <cmath>
 
 using namespace asp::iter;

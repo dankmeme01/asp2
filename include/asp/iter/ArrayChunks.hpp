@@ -1,6 +1,7 @@
 #pragma once
 #include <utility>
 #include <optional>
+#include <array>
 #include <functional>
 #include "Iter.hpp"
 

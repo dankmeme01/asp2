@@ -2,6 +2,7 @@
 #include <asp/detail/config.hpp>
 #include <stddef.h>
 #include <utility>
+#include <algorithm>
 #include <stdexcept>
 #include <memory>
 #include <new>
