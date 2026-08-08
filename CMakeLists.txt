@@ -54,7 +54,7 @@ if (NOT TARGET std23::nontype_functional)
     CPMAddPackage("gh:geode-sdk/nontype_functional#6d1d08c")
 endif()
 
-target_link_libraries(asp PUBLIC GeodeResult fmt std23::nontype_functional)
+target_link_libraries(asp PUBLIC GeodeResult fmt::fmt std23::nontype_functional)
 target_compile_definitions(asp PRIVATE NOMINMAX=1)
 
 target_include_directories(asp PUBLIC
