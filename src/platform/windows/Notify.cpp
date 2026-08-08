@@ -1,14 +1,21 @@
 #include <asp/sync/Notify.hpp>
 #include <asp/time/Instant.hpp>
 
+#ifndef WIN32_LEAN_AND_MEAN
+# define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+
 namespace asp {
 
 CRITICAL_SECTION* Notify::_crit() {
-    return &_critStorage;
+    static_assert(sizeof(_critStorage) == sizeof(CRITICAL_SECTION));
+    return (CRITICAL_SECTION*)&_critStorage[0];
 }
 
 CONDITION_VARIABLE* Notify::_cond() {
-    return &_condStorage;
+    static_assert(sizeof(_condStorage) == sizeof(CONDITION_VARIABLE));
+    return (CONDITION_VARIABLE*)&_condStorage[0];
 }
 
 Notify::Notify() {

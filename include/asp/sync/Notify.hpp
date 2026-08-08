@@ -3,12 +3,16 @@
 #include <asp/detail/config.hpp>
 #include <asp/detail/Function.hpp>
 #include <asp/time/Duration.hpp>
-#include <cstddef>
 
-#ifdef ASP_IS_WIN
-# include <Windows.h>
-#else
+#ifndef ASP_IS_WIN
 # include <pthread.h>
+#else
+
+struct _RTL_CRITICAL_SECTION;
+typedef struct _RTL_CRITICAL_SECTION CRITICAL_SECTION;
+struct _RTL_CONDITION_VARIABLE;
+typedef struct _RTL_CONDITION_VARIABLE CONDITION_VARIABLE;
+
 #endif
 
 namespace asp {
@@ -44,8 +48,8 @@ public:
 
 private:
 #ifdef ASP_IS_WIN
-    CRITICAL_SECTION _critStorage;
-    CONDITION_VARIABLE _condStorage;
+    alignas(8) char _critStorage[40];
+    alignas(8) char _condStorage[8];
 
     CRITICAL_SECTION* _crit();
     CONDITION_VARIABLE* _cond();
