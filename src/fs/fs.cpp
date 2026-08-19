@@ -177,9 +177,9 @@ Result<std::filesystem::file_time_type> asp::fs::lastWriteTime(const path& p) {
     }, p);
 }
 
-Result<uintmax_t> asp::fs::fileSize(const path& p) {
+Result<uint64_t> asp::fs::fileSize(const path& p) {
     return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::file_size(p, ec);
+        return static_cast<uint64_t>(std::filesystem::file_size(p, ec));
     }, p);
 }
 

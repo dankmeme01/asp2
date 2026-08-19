@@ -66,7 +66,7 @@ namespace asp::fs {
     Result<bool> equivalent(const path& path1, const path& path2);
 
     Result<std::filesystem::file_time_type> lastWriteTime(const path& path);
-    Result<uintmax_t> fileSize(const path& path);
+    Result<uint64_t> fileSize(const path& path);
 
     // Removes a file or an empty directory by the given path.
     Result<void> remove(const path& path);
