@@ -2,7 +2,7 @@
 #include <Geode/Result.hpp>
 
 namespace asp {
-    template <typename T, typename E>
+    template <typename T = void, typename E = std::string>
     using Result = geode::Result<T, E>;
 
     using geode::Ok;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <asp/detail/config.hpp>
-#include "Error.hpp"
+#include "path.hpp"
 #include <filesystem>
 #include <vector>
 #include <string>
@@ -9,28 +9,6 @@
 
 namespace asp::fs {
     using path = std::filesystem::path;
-
-#ifdef ASP_IS_WIN
-    using FdType = void*;
-    inline FdType InvalidFd = (FdType)(-1); // INVALID_HANDLE_VALUE
-#else
-    using FdType = int;
-    constexpr inline FdType InvalidFd = (FdType)(-1);
-#endif
-
-    // class Path : public std::filesystem::path {
-    //     using Base = std::filesystem::path;
-
-    // public:
-    //     // using Base::Base;
-    //     // using Base::operator=;
-    //     // using Base::operator/=;
-    //     // using Base::operator+=;
-    //     // using Base::assign;
-    //     // using Base::append;
-    //     // using Base::clear;
-    //     // using Base::concat;
-    // };
 
     class FileStatus {
     public:
