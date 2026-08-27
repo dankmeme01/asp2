@@ -259,32 +259,6 @@ Result<std::filesystem::directory_iterator> asp::fs::iterdir(const path& p) {
 }
 
 #ifdef _WIN32
-static std::string formatError(DWORD error = GetLastError()) {
-    LPSTR buffer = nullptr;
-    DWORD size = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        error,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        (LPSTR)&buffer,
-        0,
-        nullptr
-    );
-
-    if (size == 0 || !buffer) {
-        return fmt::format("Win error {}", error);
-    }
-
-    std::string message(buffer, size);
-    LocalFree(buffer);
-
-    while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
-        message.pop_back();
-    }
-
-    return message;
-}
-#else
 static std::string formatError(int error = errno) {
     return strerror(error); // thank you posix for making it simple
 }
