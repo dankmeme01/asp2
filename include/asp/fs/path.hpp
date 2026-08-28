@@ -4,6 +4,7 @@
 #include <asp/iter/Iter.hpp>
 #include <Geode/Result.hpp>
 #include <fmt/format.h>
+#include <filesystem>
 #include <string>
 #include "metadata.hpp"
 
@@ -23,6 +24,7 @@ class Path;
 class PathView;
 
 namespace _impl {
+    Result<Path> fromStdPath(const std::filesystem::path& path);
     Result<NativePath> native(std::string_view path);
     size_t hash(std::string_view path) noexcept;
     bool isAbsolute(std::string_view path) noexcept;
@@ -193,6 +195,12 @@ public:
     Path() = default;
     Path(PathView path) : m_path(path) {}
     Path(std::string&& path) noexcept : m_path(std::move(path)) {}
+
+    template <typename T> requires std::same_as<std::decay<T>, std::filesystem::path>
+    Path(T&& path) {
+        GEODE_UNWRAP_INTO(auto utf8, _impl::fromStdPath(path));
+        *this = std::move(utf8).unwrapOrDefault();
+    }
 
 #ifdef _WIN32
     /// Converts the given UTF-16 wide string to a UTF-8 path, may fail if conversion fails.

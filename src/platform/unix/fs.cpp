@@ -5,6 +5,10 @@
 
 namespace asp::fs {
 
+Result<Path> _impl::fromStdPath(const std::filesystem::path& path) {
+    return Ok(Path{ path.string() });
+}
+
 Result<NativePath> _impl::native(std::string_view path) {
     return Ok(NativePath{std::string(path)});
 }

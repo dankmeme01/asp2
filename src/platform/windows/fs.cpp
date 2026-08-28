@@ -60,6 +60,10 @@ static Result<std::wstring> utf8ToWide(std::string_view utf8) {
     return Ok(std::move(wide));
 }
 
+Result<Path> _impl::fromStdPath(const std::filesystem::path& path) {
+    return Path::fromWide(path.native());
+}
+
 Result<NativePath> _impl::native(std::string_view path) {
     return utf8ToWide(path);
 }
