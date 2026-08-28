@@ -12,13 +12,11 @@
 # include <cerrno>
 #endif
 
-template <typename T = void, typename E = asp::fs::Error>
-using Result = asp::fs::Result<T, E>;
+// TODO: replace std fs here
 
-using asp::Ok;
-using asp::Err;
-
-using path = asp::fs::path;
+using geode::Result;
+using geode::Ok;
+using geode::Err;
 
 // wraps a lambda and returns a result depending on error code
 template <typename F, typename... Args, typename IRes = std::invoke_result_t<F, Args..., std::error_code&>> requires (std::invocable<F, Args..., std::error_code&>)
@@ -29,7 +27,7 @@ static Result<IRes> _fswrap(F&& function, Args&&... args) {
     if (ec == std::error_code{}) {
         return Ok(std::move(result));
     } else {
-        return Err(ec);
+        return Err(fmt::format("Filesystem operation failed: {}", ec.message()));
     }
 }
 
@@ -42,223 +40,149 @@ static Result<void> _fswrapvoid(F&& function, Args&&... args) {
     if (ec == std::error_code{}) {
         return Ok();
     } else {
-        return Err(ec);
+        return Err(fmt::format("Filesystem operation failed: {}", ec.message()));
     }
 }
 
-// File status
-
-namespace asp::fs {
-
-FileStatus::FileStatus(std::filesystem::file_status s) : m_status(s) {}
-
-std::filesystem::file_type FileStatus::type() const {
-    return m_status.type();
-}
-
-std::filesystem::perms FileStatus::permissions() const {
-    return m_status.permissions();
-}
-
-bool FileStatus::isBlockFile() const {
-    return std::filesystem::is_block_file(m_status);
-}
-
-bool FileStatus::isCharacterFile() const {
-    return std::filesystem::is_character_file(m_status);
-}
-
-bool FileStatus::isDirectory() const {
-    return std::filesystem::is_directory(m_status);
-}
-
-bool FileStatus::isFifo() const {
-    return std::filesystem::is_fifo(m_status);
-}
-
-bool FileStatus::isOther() const {
-    return std::filesystem::is_other(m_status);
-}
-
-bool FileStatus::isFile() const {
-    return std::filesystem::is_regular_file(m_status);
-}
-
-bool FileStatus::isSocket() const {
-    return std::filesystem::is_socket(m_status);
-}
-
-bool FileStatus::isSymlink() const {
-    return std::filesystem::is_symlink(m_status);
-}
-
-bool FileStatus::isUnknown() const {
-    return !std::filesystem::status_known(m_status);
-}
-
-} // namespace asp::fs
-
 // Copy
 
-Result<void> asp::fs::copy(const path& o, const path& d) {
-    return _fswrapvoid([](const path& o, const path& d, std::error_code& ec) {
-        std::filesystem::copy(o, d, ec);
+Result<void> asp::fs::copy(PathView o, PathView d) {
+    return _fswrapvoid([](PathView o, PathView d, std::error_code& ec) {
+        std::filesystem::copy(o.view(), d.view(), ec);
     }, o, d);
 }
 
-Result<void> asp::fs::copy(const path& o, const path& d, std::filesystem::copy_options opts) {
-    return _fswrapvoid([](const path& o, const path& d, std::filesystem::copy_options opts, std::error_code& ec) {
-        std::filesystem::copy(o, d, opts, ec);
+Result<void> asp::fs::copy(PathView o, PathView d, std::filesystem::copy_options opts) {
+    return _fswrapvoid([](PathView o, PathView d, std::filesystem::copy_options opts, std::error_code& ec) {
+        std::filesystem::copy(o.view(), d.view(), opts, ec);
     }, o, d, opts);
 }
 
 // Rename
 
-Result<void> asp::fs::rename(const path& oldPath, const path& newPath) {
-    return _fswrapvoid([](const path& oldPath, const path& newPath, std::error_code& ec) {
-        std::filesystem::rename(oldPath, newPath, ec);
+Result<void> asp::fs::rename(PathView oldPath, PathView newPath) {
+    return _fswrapvoid([](PathView oldPath, PathView newPath, std::error_code& ec) {
+        std::filesystem::rename(oldPath.view(), newPath.view(), ec);
     }, oldPath, newPath);
-}
-
-// Exists
-
-bool asp::fs::exists(const path& p) {
-    std::error_code ec;
-    return std::filesystem::exists(p, ec);
 }
 
 // Create directory
 
-Result<void> asp::fs::createDir(const path& p) {
-    return _fswrapvoid([](const path& p, std::error_code& ec) {
-        std::filesystem::create_directory(p, ec);
+Result<void> asp::fs::createDir(PathView p) {
+    return _fswrapvoid([](PathView p, std::error_code& ec) {
+        std::filesystem::create_directory(p.view(), ec);
     }, p);
 }
 
-Result<void> asp::fs::createDirAll(const path& p) {
-    return _fswrapvoid([](const path& p, std::error_code& ec) {
-        std::filesystem::create_directories(p, ec);
-    }, p);
-}
-
-// Query file/directory/status/equivalence
-
-Result<asp::fs::FileStatus> asp::fs::status(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::status(p, ec);
-    }, p).map([](auto s) {
-        return FileStatus(s);
-    });
-}
-
-Result<bool> asp::fs::isFile(const path& p) {
-    return asp::fs::status(p).map([](FileStatus status) {
-        return status.isFile();
-    });
-}
-
-Result<bool> asp::fs::isDirectory(const path& p) {
-    return asp::fs::status(p).map([](FileStatus status) {
-        return status.isDirectory();
-    });
-}
-
-Result<bool> asp::fs::equivalent(const path& path1, const path& path2) {
-    return _fswrap([](const path& path1, const path& path2, std::error_code& ec) {
-        return std::filesystem::equivalent(path1, path2, ec);
-    }, path1, path2);
-}
-
-// File metadata
-
-Result<std::filesystem::file_time_type> asp::fs::lastWriteTime(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::last_write_time(p, ec);
-    }, p);
-}
-
-Result<uint64_t> asp::fs::fileSize(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return static_cast<uint64_t>(std::filesystem::file_size(p, ec));
+Result<void> asp::fs::createDirAll(PathView p) {
+    return _fswrapvoid([](PathView p, std::error_code& ec) {
+        std::filesystem::create_directories(p.view(), ec);
     }, p);
 }
 
 // Remove file/directory
 
-Result<void> asp::fs::remove(const path& p) {
-    return _fswrapvoid([](const path& p, std::error_code& ec) {
-        std::filesystem::remove(p, ec);
+Result<void> asp::fs::remove(PathView p) {
+    return _fswrapvoid([](PathView p, std::error_code& ec) {
+        std::filesystem::remove(p.view(), ec);
     }, p);
 }
 
-Result<void> asp::fs::removeFile(const path& p) {
-    auto statusr = asp::fs::status(p);
+Result<void> asp::fs::removeFile(PathView p) {
+    auto statusr = p.metadata();
     if (!statusr) {
         return Err(std::move(statusr).unwrapErr());
     }
 
     auto status = std::move(statusr).unwrap();
 
-    if (status.isDirectory()) {
-        return Err(std::make_error_code(std::errc::is_a_directory));
+    if (status.isDir()) {
+        return Err("Is a directory");
     } else if (!status.isFile()) {
-        return Err(std::make_error_code(std::errc::no_such_file_or_directory));
+        return Err("No such file");
     }
 
-    return _fswrapvoid([](const path& p, std::error_code& ec) {
-        std::filesystem::remove(p, ec);
+    return _fswrapvoid([](PathView p, std::error_code& ec) {
+        std::filesystem::remove(p.view(), ec);
     }, p);
 }
 
-Result<void> asp::fs::removeDir(const path& p) {
-    auto statusr = asp::fs::status(p);
+Result<void> asp::fs::removeDir(PathView p) {
+    auto statusr = p.metadata();
     if (!statusr) {
         return Err(std::move(statusr).unwrapErr());
     }
 
     auto status = std::move(statusr).unwrap();
 
-    if (!status.isDirectory()) {
-        return Err(std::make_error_code(std::errc::not_a_directory));
+    if (!status.isDir()) {
+        return Err("Not a directory");
     }
 
-    return _fswrapvoid([](const path& p, std::error_code& ec) {
-        std::filesystem::remove(p, ec);
+    return _fswrapvoid([](PathView p, std::error_code& ec) {
+        std::filesystem::remove(p.view(), ec);
     }, p);
 }
 
-Result<uintmax_t> asp::fs::removeDirAll(const path& p) {
-    auto statusr = asp::fs::status(p);
+Result<uintmax_t> asp::fs::removeDirAll(PathView p) {
+    auto statusr = p.metadata();
     if (!statusr) {
         return Err(std::move(statusr).unwrapErr());
     }
 
     auto status = std::move(statusr).unwrap();
 
-    if (!status.isDirectory()) {
-        return Err(std::make_error_code(std::errc::not_a_directory));
+    if (!status.isDir()) {
+        return Err("Not a directory");
     }
 
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::remove_all(p, ec);
+    return _fswrap([](PathView p, std::error_code& ec) {
+        return std::filesystem::remove_all(p.view(), ec);
     }, p);
 }
 
-Result<uintmax_t> asp::fs::removeAll(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::remove_all(p, ec);
+Result<uintmax_t> asp::fs::removeAll(PathView p) {
+    return _fswrap([](PathView p, std::error_code& ec) {
+        return std::filesystem::remove_all(p.view(), ec);
     }, p);
 }
 
 // Iteration
 
-Result<std::filesystem::directory_iterator> asp::fs::iterdir(const path& p) {
-    return _fswrap([](const path& p, std::error_code& ec) {
-        return std::filesystem::directory_iterator(p, ec);
+Result<std::filesystem::directory_iterator> asp::fs::iterdir(PathView p) {
+    return _fswrap([](PathView p, std::error_code& ec) {
+        return std::filesystem::directory_iterator(p.view(), ec);
     }, p);
 }
 
 #ifdef _WIN32
+
+static std::string formatError(DWORD error = GetLastError()) {
+    LPSTR buffer = nullptr;
+    DWORD size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        error,
+        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        (LPSTR)&buffer,
+        0,
+        nullptr
+    );
+
+    if (size == 0 || !buffer) {
+        return fmt::format("Win error {}", error);
+    }
+
+    std::string message(buffer, size);
+    LocalFree(buffer);
+
+    while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
+        message.pop_back();
+    }
+
+    return message;
+}
+#else
 static std::string formatError(int error = errno) {
     return strerror(error); // thank you posix for making it simple
 }
@@ -266,9 +190,9 @@ static std::string formatError(int error = errno) {
 
 #ifdef _WIN32
 template <typename T>
-geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
+geode::Result<> readFileInto(asp::fs::PathView path, T& out) {
     HANDLE file = CreateFileW(
-        path.native().c_str(),
+        path.native().unwrap().c_str(),
         GENERIC_READ,
         FILE_SHARE_READ,
         nullptr,
@@ -303,9 +227,9 @@ geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
     return Ok();
 }
 
-static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
+static Result<> writeFileFrom(asp::fs::PathView path, void* data, size_t size) {
     HANDLE file = CreateFileW(
-        path.native().c_str(),
+        path.native().unwrap().c_str(),
         GENERIC_WRITE,
         0,
         nullptr,
@@ -337,8 +261,8 @@ static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* da
 #else
 
 template <typename T>
-geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
-    int file = open(path.native().c_str(), O_RDONLY);
+geode::Result<> readFileInto(asp::fs::PathView path, T& out) {
+    int file = open(path.string().c_str(), O_RDONLY);
 
     if (file == -1) {
         return Err(fmt::format("Unable to open file: {}", formatError()));
@@ -365,8 +289,8 @@ geode::Result<> readFileInto(std::filesystem::path const& path, T& out) {
     return Ok();
 }
 
-static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* data, size_t size) {
-    int file = open(path.native().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+static geode::Result<> writeFileFrom(asp::fs::PathView path, void* data, size_t size) {
+    int file = open(path.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     if (file < 0) {
         return Err(fmt::format("Unable to open file: {}", formatError()));
@@ -392,13 +316,13 @@ static geode::Result<> writeFileFrom(std::filesystem::path const& path, void* da
 
 // Reading
 
-geode::Result<std::vector<uint8_t>> asp::fs::read(const path& path) {
+geode::Result<std::vector<uint8_t>> asp::fs::read(PathView path) {
     std::vector<uint8_t> data;
     GEODE_UNWRAP(readFileInto(path, data));
     return Ok(std::move(data));
 }
 
-geode::Result<std::string> asp::fs::readToString(const path& path) {
+geode::Result<std::string> asp::fs::readToString(PathView path) {
     std::string data;
     GEODE_UNWRAP(readFileInto(path, data));
     return Ok(std::move(data));
@@ -406,18 +330,18 @@ geode::Result<std::string> asp::fs::readToString(const path& path) {
 
 // Writing
 
-geode::Result<void> asp::fs::write(const path& path, const std::vector<uint8_t>& data) {
+geode::Result<void> asp::fs::write(PathView path, const std::vector<uint8_t>& data) {
     return write(path, reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-geode::Result<void> asp::fs::write(const path& path, const std::string& data) {
+geode::Result<void> asp::fs::write(PathView path, const std::string& data) {
     return write(path, data.c_str(), data.size());
 }
 
-geode::Result<void> asp::fs::write(const path& path, const unsigned char* data, size_t size) {
+geode::Result<void> asp::fs::write(PathView path, const unsigned char* data, size_t size) {
     return write(path, reinterpret_cast<const char*>(data), size);
 }
 
-geode::Result<void> asp::fs::write(const path& path, const char* data, size_t size) {
+geode::Result<void> asp::fs::write(PathView path, const char* data, size_t size) {
     return writeFileFrom(path, (void*)data, size);
 }

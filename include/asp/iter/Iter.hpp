@@ -113,6 +113,14 @@ public:
         return false;
     }
 
+    std::optional<Item> last() && {
+        std::optional<Item> lastItem;
+        while (auto item = this->derived().next()) {
+            lastItem = std::move(*item);
+        }
+        return lastItem;
+    }
+
     /// Returns the first item that matches the given predicate, or `std::nullopt` if no item matches.
     template <typename F>
     std::optional<Item> find(F&& f) && {

@@ -2,6 +2,9 @@
 #include <fmt/format.h>
 #include <array>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 namespace asp::fs {
 
@@ -18,6 +21,9 @@ bool _impl::isAbsolute(std::string_view path) noexcept {
 }
 
 std::optional<std::string_view> _impl::rootName(std::string_view path) noexcept {
+    if (isAbsolute(path)) {
+        return "/";
+    }
     return std::nullopt;
 }
 
@@ -53,9 +59,11 @@ static asp::SystemTime toSystemTime(struct timespec ts) {
     return asp::SystemTime::UNIX_EPOCH + dur;
 }
 
-Result<Metadata> _impl::metadata(std::string_view path) noexcept {
+Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) noexcept {
     struct stat st;
-    if (stat(path.data(), &st) != 0) {
+
+    int errc = followSymlink ? stat(path.data(), &st) : lstat(path.data(), &st);
+    if (errc != 0) {
         return Err(fmt::format("Unable to get file metadata: {}", strerror(errno)));
     }
 
@@ -83,7 +91,6 @@ Result<Metadata> _impl::metadata(std::string_view path) noexcept {
     meta.size = st.st_size;
 
     auto filename = _impl::filename(path);
-    meta.hidden = filename && filename->starts_with('.') && *filename != "." && *filename != "..";
 
 #if defined(__APPLE__)
     meta.modifiedAt = toSystemTime(st.st_mtimespec);

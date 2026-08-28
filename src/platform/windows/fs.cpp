@@ -79,8 +79,14 @@ bool _impl::isAbsolute(std::string_view path) noexcept {
 
 std::optional<std::string_view> _impl::rootName(std::string_view path) noexcept {
     if (path.size() >= 2 && std::isalpha(path[0]) && path[1] == ':') {
+        // path like C:/...
+        if (path.size() >= 3 && (path[2] == '/' || path[2] == '\\')) {
+            return path.substr(0, 3);
+        }
+        // path like C:stuff/
         return path.substr(0, 2);
     }
+    // relative?
     return std::nullopt;
 }
 
@@ -171,12 +177,28 @@ static asp::SystemTime toSystemTime(FILETIME ft) {
     return asp::SystemTime::fromUnixMillis(ms);
 }
 
-Result<Metadata> _impl::metadata(std::string_view path) noexcept {
+Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) noexcept {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
-    WIN32_FILE_ATTRIBUTE_DATA data;
-    if (!GetFileAttributesExW(native.c_str(), GetFileExInfoStandard, &data)) {
-        return Err(fmt::format("Unable to get file attributes: {}", formatError()));
+    auto h = CreateFileW(
+        native.c_str(),
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | (followSymlink ? 0 : FILE_FLAG_OPEN_REPARSE_POINT),
+        nullptr
+    );
+    if (h == INVALID_HANDLE_VALUE) {
+        return Err(fmt::format("Unable to open file: {}", formatError()));
+    }
+
+    BY_HANDLE_FILE_INFORMATION data;
+    auto res = GetFileInformationByHandle(h, &data);
+    CloseHandle(h);
+
+    if (!res) {
+        return Err(fmt::format("Unable to get file information: {}", formatError()));
     }
 
     Metadata meta;

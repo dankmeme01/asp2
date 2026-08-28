@@ -9,16 +9,27 @@ size_t _impl::hash(std::string_view path) noexcept {
 }
 
 std::optional<PathView> _impl::parent(std::string_view path) noexcept {
-    auto slash = path.find_last_of("/\\");
+    auto slash = path.find_last_of(SupportedSep);
     if (slash == std::string::npos) {
         return std::nullopt;
     }
+
+    // "/" has no parent
+    if (slash == 0 && slash + 1 >= path.size()) {
+        return std::nullopt;
+    }
+
+    // "/foo": strip last component
+    if (slash == 0) {
+        return PathView(path.substr(0, 1));
+    }
+
     return PathView(path.substr(0, slash));
 }
 
 std::optional<std::string_view> _impl::filename(std::string_view path) noexcept {
-    auto slash = path.find_last_of("/\\");
-    if (slash == std::string::npos) {
+    auto slash = path.find_last_of(SupportedSep);
+    if (slash == std::string::npos && !path.empty()) {
         return path;
     }
     if (slash + 1 >= path.size()) {
@@ -43,6 +54,13 @@ bool _impl::equal(std::string_view lhs, std::string_view rhs) noexcept {
 
 std::strong_ordering _impl::compare(std::string_view lhs, std::string_view rhs) noexcept {
     return lhs <=> rhs;
+}
+
+bool _impl::equivalent(std::string_view lhs, std::string_view rhs) noexcept {
+    auto lp = canonicalize(lhs);
+    auto rp = canonicalize(rhs);
+
+    return lp && rp && _impl::equal(lp.unwrap().view(), rp.unwrap().view());
 }
 
 // PathView
@@ -79,16 +97,24 @@ Path& Path::operator/=(PathView path) {
     return this->append(path);
 }
 
+static auto startsWithOneOf(std::string_view str, std::string_view chars) {
+    return !str.empty() && chars.find(str.front()) != std::string_view::npos;
+}
+
+static auto endsWithOneOf(std::string_view str, std::string_view chars) {
+    return !str.empty() && chars.find(str.back()) != std::string_view::npos;
+}
+
 Path& Path::append(PathView path) {
     if (path.empty()) return *this;
 
-    bool startsWithSep = path.view().starts_with("/") || path.view().starts_with("\\");
+    bool startsWithSep = startsWithOneOf(path.view(), SupportedSep);
     if (path.isAbsolute() || startsWithSep) {
         m_path.assign(path);
         return *this;
     }
 
-    if (!m_path.empty() && !m_path.ends_with("/") && !m_path.ends_with("\\")) {
+    if (!m_path.empty() && !endsWithOneOf(m_path, SupportedSep)) {
         m_path += "/";
     }
     m_path += path.view();
@@ -195,6 +221,32 @@ Path operator+(const PathView& lhs, const PathView& rhs) {
 Path operator+(Path&& lhs, const PathView& rhs) {
     lhs += rhs;
     return std::move(lhs);
+}
+
+std::optional<std::string_view> PathComponentIterator::next() noexcept {
+    if (m_first) {
+        m_first = false;
+        if (auto rn = PathView{m_path}.rootName()) {
+            m_path.remove_prefix(rn->size());
+            return *rn;
+        }
+    }
+
+    while (!m_path.empty()) {
+        auto slash = m_path.find_first_of(SupportedSep);
+        if (slash == std::string::npos) {
+            return std::exchange(m_path, {});
+        }
+
+        auto component = m_path.substr(0, slash);
+        m_path.remove_prefix(slash + 1);
+
+        if (!component.empty()) {
+            return component;
+        }
+    }
+
+    return std::nullopt;
 }
 
 }

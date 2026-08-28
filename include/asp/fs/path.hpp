@@ -13,9 +13,11 @@ namespace asp::fs {
 #ifdef _WIN32
 using NativeChar = wchar_t;
 constexpr inline char PreferredSep = '\\';
+constexpr inline auto SupportedSep = "/\\";
 #else
 using NativeChar = char;
 constexpr inline char PreferredSep = '/';
+constexpr inline auto SupportedSep = "/";
 #endif
 
 using NativePath = std::basic_string<NativeChar>;
@@ -38,10 +40,11 @@ namespace _impl {
     Result<Path> absolute(std::string_view path);
 
     bool equal(std::string_view lhs, std::string_view rhs) noexcept;
+    bool equivalent(std::string_view lhs, std::string_view rhs) noexcept;
     std::strong_ordering compare(std::string_view lhs, std::string_view rhs) noexcept;
 
     bool exists(std::string_view path) noexcept;
-    Result<Metadata> metadata(std::string_view path) noexcept;
+    Result<Metadata> metadata(std::string_view path, bool followSymlink) noexcept;
 }
 
 template <typename Derived>
@@ -95,7 +98,7 @@ struct PathInterface {
     std::optional<std::string_view> extension(this auto&& self) noexcept;
 
     /// Returns the root name of the path, or `std::nullopt` if the path has no root name.
-    /// On Windows, this returns "C:" or similar, on other platforms, this returns `std::nullopt`.
+    /// On Windows, this returns "C:" or "C:/", on other platforms, this returns `/`. For relative paths, returns `std::nullopt`.
     std::optional<std::string_view> rootName(this auto&& self) noexcept;
 
 
@@ -113,9 +116,12 @@ struct PathInterface {
 
 
     /// Compares two paths for equality. This is a simple string comparison, and does not take into account any filesystem semantics.
-    bool operator==(this auto&& self, PathView other) noexcept;
+    bool operator==(this const Derived& self, const Derived& other) noexcept;
     /// Compares two paths. This is a simple string comparison, and does not take into account any filesystem semantics.
-    std::strong_ordering operator<=>(this auto&& self, PathView other) noexcept;
+    std::strong_ordering operator<=>(this const Derived& self, const Derived& other) noexcept;
+    /// Checks if two paths are equivalent and point to the same file in the filesystem.
+    /// If either does not exist, or any other error occurred, returns false.
+    bool equivalent(this const Derived& self, PathView other) noexcept;
 
 
     // -- fs operations -- //
@@ -131,7 +137,16 @@ struct PathInterface {
     /// * Path is a symlink and the target does not exist
     /// * Lack of permissions
     Result<Metadata> metadata(this auto&& self) noexcept {
-        return _impl::metadata(self.m_path);
+        return _impl::metadata(self.m_path, true);
+    }
+
+    /// Obtains the metadata of the file or symlink at this path. If the final component is a symlink, unlike `metadata`,
+    /// this does NOT follow the symlink and instead returns metadata of the actual final symlink.
+    /// Returns an error in the following situations (but not limited to):
+    /// * Path does not exist (but symlink target may or may not exist)
+    /// * Lack of permissions
+    Result<Metadata> symlinkMetadata(this auto&& self) noexcept {
+        return _impl::metadata(self.m_path, false);
     }
 
     /// Checks whether this path exists and is a regular file. Returns `false` on failures. For detailed error information, call `metadata()`.
@@ -164,12 +179,33 @@ struct PathInterface {
     /// * Absolute path contains `rootName()` as the first component. This means, `/foo/bar` yields `["/", "foo", "bar"]`,
     /// and `C:/foo/bar` yields `["C:", "foo", "bar"]` on Windows.
     auto components(this auto&& self) noexcept;
+
+    /// Returns whether the first component of this path is equal to the given prefix.
+    /// This is NOT equivalent to a string `starts_with` check, it checks components specifically.
+    /// For example:
+    /// * `"/foo/bar".startsWith("/")` is true
+    /// * `"/foo/bar".startsWith("/foo")` is false
+    /// * `"/foo/bar".startsWith("foo")` is false
+    /// * `"foo/bar".startsWith("foo")` is true
+    /// * `"foo/bar".startsWith("foo/")` is false
+    bool startsWith(this auto&& self, std::string_view prefix) noexcept {
+        auto first = self.components().next();
+        return first && *first == prefix;
+    }
+
+    /// Returns whether the last component of this path is equal to the given suffix.
+    /// This is NOT equivalent to a string `ends_with` check, it checks components specifically.
+    bool endsWith(this auto&& self, std::string_view suffix) noexcept {
+        auto last = self.components().last();
+        return last && *last == suffix;
+    }
 };
 
 class PathView : public PathInterface<PathView> {
 public:
     PathView() = default;
     PathView(std::string_view path) : m_path(path) {}
+    PathView(const char* path) : m_path(path) {}
 
     PathView(const PathView&) noexcept = default;
     PathView(PathView&&) noexcept = default;
@@ -194,9 +230,11 @@ class Path : public PathInterface<Path> {
 public:
     Path() = default;
     Path(PathView path) : m_path(path) {}
-    Path(std::string&& path) noexcept : m_path(std::move(path)) {}
 
-    template <typename T> requires std::same_as<std::decay<T>, std::filesystem::path>
+    template <typename T> requires std::same_as<std::decay_t<T>, std::string>
+    Path(T&& path) : m_path(std::forward<T>(path)) {}
+
+    template <typename T> requires std::same_as<std::decay_t<T>, std::filesystem::path>
     Path(T&& path) {
         GEODE_UNWRAP_INTO(auto utf8, _impl::fromStdPath(path));
         *this = std::move(utf8).unwrapOrDefault();
@@ -305,8 +343,6 @@ public:
 
     operator PathView() const noexcept;
 
-    /// TODO: iterators, starts/ends with, symlink target?, tests
-
 private:
     friend class PathInterface<Path>;
     std::string m_path;
@@ -316,6 +352,22 @@ Path operator/(const PathView& lhs, const PathView& rhs);
 Path operator/(Path&& lhs, const PathView& rhs);
 Path operator+(const PathView& lhs, const PathView& rhs);
 Path operator+(Path&& lhs, const PathView& rhs);
+
+inline bool operator==(const Path& lhs, const PathView& rhs) noexcept {
+    return lhs.view() == rhs;
+}
+
+inline bool operator==(const PathView& lhs, const Path& rhs) noexcept {
+    return lhs == rhs.view();
+}
+
+inline std::strong_ordering operator<=>(const Path& lhs, const PathView& rhs) noexcept {
+    return lhs.view() <=> rhs;
+}
+
+inline std::strong_ordering operator<=>(const PathView& lhs, const Path& rhs) noexcept {
+    return lhs <=> rhs.view();
+}
 
 inline auto format_as(const Path& path) {
     return fmt::format("{}", path.view().view());
@@ -374,13 +426,18 @@ Result<Path> PathInterface<D>::absolute(this auto&& self) {
 }
 
 template <typename D>
-bool PathInterface<D>::operator==(this auto&& self, PathView other) noexcept {
-    return _impl::equal(self.m_path, other.view());
+bool PathInterface<D>::operator==(this const D& self, const D& other) noexcept {
+    return _impl::equal(self.m_path, other.m_path);
 }
 
 template <typename D>
-std::strong_ordering PathInterface<D>::operator<=>(this auto&& self, PathView other) noexcept {
-    return _impl::compare(self.m_path, other.view());
+std::strong_ordering PathInterface<D>::operator<=>(this const D& self, const D& other) noexcept {
+    return _impl::compare(self.m_path, other.m_path);
+}
+
+template <typename D>
+bool PathInterface<D>::equivalent(this const D& self, PathView other) noexcept {
+    return _impl::equivalent(self.m_path, other.view());
 }
 
 template <typename D>
