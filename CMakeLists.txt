@@ -79,7 +79,7 @@ if (ASP_BUILD_TESTS)
 
     CPMAddPackage("gh:google/googletest@1.16.0")
 
-    file(GLOB TEST_SOURCES tests/*.cpp)
+    file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
     add_executable(asp_tests ${TEST_SOURCES})
 
     if (NOT WIN32)

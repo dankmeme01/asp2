@@ -8,62 +8,34 @@
 #include <stdint.h>
 
 namespace asp::fs {
-    using path = std::filesystem::path;
+    Result<void> copy(PathView origin, PathView dest);
+    Result<void> copy(PathView origin, PathView dest, std::filesystem::copy_options opts);
+    Result<void> rename(PathView oldPath, PathView newPath);
 
-    class FileStatus {
-    public:
-        FileStatus(std::filesystem::file_status s);
+    Result<void> createDir(PathView path);
+    Result<void> createDirAll(PathView path);
 
-        std::filesystem::file_type type() const;
-        std::filesystem::perms permissions() const;
-        bool isBlockFile() const;
-        bool isCharacterFile() const;
-        bool isDirectory() const;
-        bool isFifo() const;
-        bool isOther() const;
-        bool isFile() const;
-        bool isSocket() const;
-        bool isSymlink() const;
-        bool isUnknown() const;
-
-    private:
-        std::filesystem::file_status m_status;
-    };
-
-    Result<void> copy(const path& origin, const path& dest);
-    Result<void> copy(const path& origin, const path& dest, std::filesystem::copy_options opts);
-    Result<void> rename(const path& oldPath, const path& newPath);
-
-    bool exists(const path& path);
-    Result<void> createDir(const path& path);
-    Result<void> createDirAll(const path& path);
-
-    Result<FileStatus> status(const path& path);
-    Result<bool> isFile(const path& path);
-    Result<bool> isDirectory(const path& path);
-    Result<bool> equivalent(const path& path1, const path& path2);
-
-    Result<std::filesystem::file_time_type> lastWriteTime(const path& path);
-    Result<uint64_t> fileSize(const path& path);
+    Result<std::filesystem::file_time_type> lastWriteTime(PathView path);
+    Result<uint64_t> fileSize(PathView path);
 
     // Removes a file or an empty directory by the given path.
-    Result<void> remove(const path& path);
+    Result<void> remove(PathView path);
     // Removes a file by the given path, fails if it is not a file.
-    Result<void> removeFile(const path& path);
+    Result<void> removeFile(PathView path);
     // Removes a directory by the given path, fails if it is not a directory.
-    Result<void> removeDir(const path& path);
+    Result<void> removeDir(PathView path);
     // Removes a directory by the given path, recursively. Fails if it is not a directory
-    Result<uintmax_t> removeDirAll(const path& path);
+    Result<uintmax_t> removeDirAll(PathView path);
     // Removes a directory recursively, or a file.
-    Result<uintmax_t> removeAll(const path& path);
+    Result<uintmax_t> removeAll(PathView path);
 
-    Result<std::filesystem::directory_iterator> iterdir(const path& path);
+    Result<std::filesystem::directory_iterator> iterdir(PathView path);
 
-    geode::Result<std::vector<uint8_t>> read(const path& path);
-    geode::Result<std::string> readToString(const path& path);
+    geode::Result<std::vector<uint8_t>> read(PathView path);
+    geode::Result<std::string> readToString(PathView path);
 
-    geode::Result<void> write(const path& path, const std::vector<uint8_t>& data);
-    geode::Result<void> write(const path& path, const std::string& data);
-    geode::Result<void> write(const path& path, const char*, size_t size);
-    geode::Result<void> write(const path& path, const unsigned char*, size_t size);
+    geode::Result<void> write(PathView path, const std::vector<uint8_t>& data);
+    geode::Result<void> write(PathView path, const std::string& data);
+    geode::Result<void> write(PathView path, const char*, size_t size);
+    geode::Result<void> write(PathView path, const unsigned char*, size_t size);
 }
