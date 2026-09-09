@@ -34,17 +34,23 @@ namespace _impl {
     std::optional<PathView> parent(std::string_view path) noexcept;
     std::optional<std::string_view> filename(std::string_view path) noexcept;
     std::optional<std::string_view> extension(std::string_view path) noexcept;
+    std::optional<std::string_view> stem(std::string_view path) noexcept;
     std::optional<std::string_view> rootName(std::string_view path) noexcept;
 
     Result<Path> canonicalize(std::string_view path);
     Result<Path> absolute(std::string_view path);
+    Path lexicallyNormal(std::string_view path);
+    std::optional<Path> lexicallyRelative(std::string_view path, std::string_view base);
+    Result<Path> weaklyCanonical(std::string_view path);
 
     bool equal(std::string_view lhs, std::string_view rhs) noexcept;
     bool equivalent(std::string_view lhs, std::string_view rhs) noexcept;
     std::strong_ordering compare(std::string_view lhs, std::string_view rhs) noexcept;
 
     bool exists(std::string_view path) noexcept;
-    Result<Metadata> metadata(std::string_view path, bool followSymlink) noexcept;
+    Result<Metadata> metadata(std::string_view path, bool followSymlink);
+
+    // TODO: readLink
 }
 
 template <typename Derived>
@@ -54,6 +60,12 @@ struct PathInterface {
     /// On other systems, this simply copies the path and is equivalent to `string()`.
     Result<NativePath> native(this auto&& self) {
         return _impl::native(self.m_path);
+    }
+
+    /// Converts this path to a `std::filesystem::path`. This may fail if the UTF-16 conversion fails on Windows.
+    Result<std::filesystem::path> toStdPath(this auto&& self) {
+        GEODE_UNWRAP_INTO(auto p, self.native());
+        return Ok(std::filesystem::path(p));
     }
 
     bool empty(this auto&& self) noexcept {
@@ -89,18 +101,46 @@ struct PathInterface {
     /// This performs no filesystem operations, and for example `/foo/.` will return `/foo` as parent instead of `/`.
     std::optional<PathView> parent(this auto&& self) noexcept;
 
+    /// Returns whether this path has a parent path. This is equivalent to `parent().has_value()`.
+    inline bool hasParent(this auto&& self) noexcept {
+        return self.parent(self.m_path).has_value();
+    }
+
     /// Returns the filename component of this path, or `std::nullopt` if this path has no filename.
     std::optional<std::string_view> filename(this auto&& self) noexcept;
+
+    /// Returns whether the path has a filename. This is equivalent to `filename().has_value()`.
+    inline bool hasFilename(this auto&& self) noexcept {
+        return self.filename(self.m_path).has_value();
+    }
 
     /// Returns the extension of the filename, or `std::nullopt` if the filename has no extension.
     /// The extension is defined as the substring after the last dot in the filename, and does not include the dot itself.
     /// If the filename ends with a dot, returns an empty view.
     std::optional<std::string_view> extension(this auto&& self) noexcept;
 
+    /// Returns whether the filename has an extension. This is equivalent to `extension().has_value()`.
+    inline bool hasExtension(this auto&& self) noexcept {
+        return self.extension(self.m_path).has_value();
+    }
+
+    /// Returns the stem of the path, which is the filename without the extension. If the filename has no '.' or begins with a '.' (with no other '.'), returns the entire filename.
+    /// If there is no file name, returns `std::nullopt`.
+    std::optional<std::string_view> stem(this auto&& self) noexcept;
+
+    /// Returns whether the path has a stem. This is equivalent to `stem().has_value()`.
+    inline bool hasStem(this auto&& self) noexcept {
+        return self.stem(self.m_path).has_value();
+    }
+
     /// Returns the root name of the path, or `std::nullopt` if the path has no root name.
     /// On Windows, this returns "C:" or "C:/", on other platforms, this returns `/`. For relative paths, returns `std::nullopt`.
     std::optional<std::string_view> rootName(this auto&& self) noexcept;
 
+    /// Returns whether the path has a root name. This is equivalent to `rootName().has_value()`.
+    inline bool hasRootName(this auto&& self) noexcept {
+        return self.rootName(self.m_path).has_value();
+    }
 
     /// Returns the canonical, absolute form of the path, resolving all symlinks and normalizing relative components.
     /// This will error if the path does not exist, or any intermediate components are not directories.
@@ -111,6 +151,22 @@ struct PathInterface {
     /// This may or may not error if the path does not exist, depending on the platform.
     Result<Path> absolute(this auto&& self);
 
+    /// Returns the lexically normal form of the path, resolving components like `.` and `..`.
+    /// This performs no fs operations, so may produce undesired results when symlinks are used.
+    Path lexicallyNormal(this auto&& self);
+
+    /// Returns the lexically relative form of the path, relative to the given base path. If the path is not relative to the base, returns `std::nullopt`.
+    /// This performs no fs operations, and simply calls `lexicallyNormal` on both paths and checks if they share a common prefix.
+    std::optional<Path> lexicallyRelative(this auto&& self, PathView base);
+
+    /// Returns the lexically proximate form of the path, similar to `lexicallyRelative`,
+    /// but it simply returns the input path if `lexicallyRelative` returns `std::nullopt`.
+    Path lexicallyProximate(this auto&& self, PathView base);
+
+    /// Like `canonicalize`, but does not have to fail if the path does not exist.
+    /// This will resolve all possible symlinks and relative components on the way,
+    /// but once a non-existing component is reached, the remainder of the path is appended as-is.
+    Result<Path> weaklyCanonical(this auto&& self);
 
     // -- comparison -- //
 
@@ -136,7 +192,7 @@ struct PathInterface {
     /// * Path does not exist
     /// * Path is a symlink and the target does not exist
     /// * Lack of permissions
-    Result<Metadata> metadata(this auto&& self) noexcept {
+    Result<Metadata> metadata(this auto&& self) {
         return _impl::metadata(self.m_path, true);
     }
 
@@ -145,13 +201,13 @@ struct PathInterface {
     /// Returns an error in the following situations (but not limited to):
     /// * Path does not exist (but symlink target may or may not exist)
     /// * Lack of permissions
-    Result<Metadata> symlinkMetadata(this auto&& self) noexcept {
+    Result<Metadata> symlinkMetadata(this auto&& self) {
         return _impl::metadata(self.m_path, false);
     }
 
     /// Checks whether this path exists and is a regular file. Returns `false` on failures. For detailed error information, call `metadata()`.
     /// This will resolve intermediate symlinks, but NOT the final symlink, and will return false if the final component is a symlink.
-    bool isFile(this auto&& self) noexcept {
+    bool isFile(this auto&& self) {
         return self.metadata().map([](auto&& meta) {
             return meta.isFile();
         }).unwrapOr(false);
@@ -159,14 +215,14 @@ struct PathInterface {
 
     /// Checks whether this path exists and is a directory. Returns `false` on failures. For detailed error information, call `metadata()`.
     /// This will resolve intermediate symlinks, but NOT the final symlink, and will return false if the final component is a symlink.
-    bool isDir(this auto&& self) noexcept {
+    bool isDir(this auto&& self) {
         return self.metadata().map([](auto&& meta) {
             return meta.isDir();
         }).unwrapOr(false);
     }
 
     /// Checks whether this path exists and is a symlink. Returns `false` on failures. For detailed error information, call `metadata()`.
-    bool isSymlink(this auto&& self) noexcept {
+    bool isSymlink(this auto&& self) {
         return self.metadata().map([](auto&& meta) {
             return meta.isSymlink();
         }).unwrapOr(false);
@@ -411,6 +467,11 @@ std::optional<std::string_view> PathInterface<D>::extension(this auto&& self) no
 }
 
 template <typename D>
+std::optional<std::string_view> PathInterface<D>::stem(this auto&& self) noexcept {
+    return _impl::stem(self.m_path);
+}
+
+template <typename D>
 std::optional<std::string_view> PathInterface<D>::rootName(this auto&& self) noexcept {
     return _impl::rootName(self.m_path);
 }
@@ -423,6 +484,28 @@ Result<Path> PathInterface<D>::canonicalize(this auto&& self) {
 template <typename D>
 Result<Path> PathInterface<D>::absolute(this auto&& self) {
     return _impl::absolute(self.m_path);
+}
+
+template <typename D>
+Path PathInterface<D>::lexicallyNormal(this auto&& self) {
+    return _impl::lexicallyNormal(self.m_path);
+}
+
+template <typename D>
+std::optional<Path> PathInterface<D>::lexicallyRelative(this auto&& self, PathView base) {
+    return _impl::lexicallyRelative(self.m_path, base.view());
+}
+
+template <typename D>
+Path PathInterface<D>::lexicallyProximate(this auto&& self, PathView base) {
+    return self.lexicallyRelative(base).or_else([&]() {
+        return Path{self};
+    });
+}
+
+template <typename D>
+Result<Path> PathInterface<D>::weaklyCanonical(this auto&& self) {
+    return _impl::weaklyCanonical(self.m_path);
 }
 
 template <typename D>

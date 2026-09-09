@@ -1,8 +1,17 @@
 #include <asp/fs/path.hpp>
+#include <asp/iter.hpp>
 
 namespace asp::fs {
 
 // Shared impl
+
+static auto startsWithOneOf(std::string_view str, std::string_view chars) {
+    return !str.empty() && chars.find(str.front()) != std::string_view::npos;
+}
+
+static auto endsWithOneOf(std::string_view str, std::string_view chars) {
+    return !str.empty() && chars.find(str.back()) != std::string_view::npos;
+}
 
 size_t _impl::hash(std::string_view path) noexcept {
     return std::hash<std::string_view>()(path);
@@ -48,6 +57,16 @@ std::optional<std::string_view> _impl::extension(std::string_view path) noexcept
     return fn->substr(dot + 1);
 }
 
+std::optional<std::string_view> _impl::stem(std::string_view path) noexcept {
+    auto fn = _impl::filename(path);
+    if (!fn) return std::nullopt;
+
+    auto dot = fn->find_last_of('.');
+    if (dot == std::string::npos || dot == 0) return *fn;
+
+    return fn->substr(0, dot);
+}
+
 bool _impl::equal(std::string_view lhs, std::string_view rhs) noexcept {
     return lhs == rhs;
 }
@@ -61,6 +80,96 @@ bool _impl::equivalent(std::string_view lhs, std::string_view rhs) noexcept {
     auto rp = canonicalize(rhs);
 
     return lp && rp && _impl::equal(lp.unwrap().view(), rp.unwrap().view());
+}
+
+Path _impl::lexicallyNormal(std::string_view path) {
+    bool trailing = endsWithOneOf(path, SupportedSep);
+    bool absolute = isAbsolute(path);
+
+    std::vector<std::string_view> components;
+    bool hasRoot = false;
+
+    for (auto comp : PathComponentIterator { path }) {
+        if (comp == ".") continue;
+        if (comp == "..") {
+            if (!components.empty() && components.back() != ".." && !(hasRoot && components.size() == 1)) {
+                components.pop_back();
+            } else if (!hasRoot) {
+                components.push_back("..");
+            }
+        } else {
+            if (absolute && !hasRoot) {
+                hasRoot = true;
+            }
+            components.push_back(comp);
+        }
+    }
+
+    Path result;
+    for (auto comp : components) {
+        result /= comp;
+    }
+
+    if (trailing && !result.empty() && !endsWithOneOf(result.view(), SupportedSep)) {
+        result += "/";
+    }
+    return result;
+}
+
+std::optional<Path> _impl::lexicallyRelative(std::string_view path, std::string_view base) {
+    auto a = _impl::lexicallyNormal(path);
+    auto b = _impl::lexicallyNormal(base);
+
+    if (a.rootName() != b.rootName()) {
+        return std::nullopt; // no common root, e.g.
+    }
+
+    // compute how many matching components there are
+    size_t i = 0;
+    for (auto [compA, compB] : a.components().zip(b.components())) {
+        if (compA != compB) {
+            break;
+        }
+        i++;
+    }
+
+    Path out;
+    for (size_t j = i; j < b.components().count(); j++) {
+        out /= "..";
+    }
+    for (auto c : a.components().skip(i)) {
+        out /= c;
+    }
+
+    return out;
+}
+
+Result<Path> _impl::weaklyCanonical(std::string_view path) {
+    GEODE_UNWRAP_INTO(auto abs, absolute(path).map([](Path p) { return p.lexicallyNormal(); }));
+    std::vector<std::string_view> suffix;
+
+    Path prefix = abs;
+    while (~prefix.empty() && !prefix.exists()) {
+        if (auto fn = prefix.filename()) {
+            suffix.push_back(*fn);
+        }
+        if (auto par = prefix.parent()) {
+            prefix = *par;
+        } else {
+            break;
+        }
+    }
+
+    if (prefix.empty()) {
+        return Err("no existing ancestor");
+    }
+
+    GEODE_UNWRAP_INTO(auto canon, prefix.canonicalize());
+    for (auto s : asp::iter::fromReverse(suffix)) {
+        canon /= s;
+    }
+
+    return Ok(canon.lexicallyNormal());
 }
 
 // PathView
@@ -95,14 +204,6 @@ Path& Path::assign(std::string&& path) noexcept {
 
 Path& Path::operator/=(PathView path) {
     return this->append(path);
-}
-
-static auto startsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.find(str.front()) != std::string_view::npos;
-}
-
-static auto endsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.find(str.back()) != std::string_view::npos;
 }
 
 Path& Path::append(PathView path) {
