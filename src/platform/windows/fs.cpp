@@ -177,7 +177,7 @@ static asp::SystemTime toSystemTime(FILETIME ft) {
     return asp::SystemTime::fromUnixMillis(ms);
 }
 
-Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) noexcept {
+Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     auto h = CreateFileW(

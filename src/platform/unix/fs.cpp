@@ -59,7 +59,7 @@ static asp::SystemTime toSystemTime(struct timespec ts) {
     return asp::SystemTime::UNIX_EPOCH + dur;
 }
 
-Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) noexcept {
+Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
     struct stat st;
 
     int errc = followSymlink ? stat(path.data(), &st) : lstat(path.data(), &st);
