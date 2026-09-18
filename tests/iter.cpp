@@ -1,5 +1,6 @@
 #include <asp/iter.hpp>
 #include <gtest/gtest.h>
+#include <unordered_set>
 #include <array>
 #include <cmath>
 
@@ -639,4 +640,23 @@ TEST(IterTests, FlatMapIterMix) {
     ASSERT_EQ(iter.next(), 0);
     ASSERT_EQ(iter.next(), 1);
     ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FoldSum) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    int sum = from(vec).fold(0, [](int& acc, int x) { acc += x; });
+    ASSERT_EQ(sum, 15);
+}
+
+TEST(IterTests, FoldSet) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    auto result = from(vec).fold(
+        std::unordered_set<int>{},
+        [](std::unordered_set<int>& acc, int x) { acc.insert(x); }
+    );
+
+    EXPECT_EQ(result.size(), 5);
+    for (int i = 1; i <= 5; ++i) {
+        EXPECT_TRUE(result.contains(i));
+    }
 }

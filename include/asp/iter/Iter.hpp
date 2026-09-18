@@ -19,59 +19,83 @@ class Filter;
 
 struct IterBase {};
 
+/// The base template for all iterators, which has many transformational and terminal methods and utilities.
+/// Every iterator instance can also be iterated over using a plain C++ range-based for loop.
+/// The main method of consuming items is `next()`, and that's what you should implement in your own iterators.
+///
+/// Intermediate operations are *lazy*, meaning they do not do any work until an actual terminal operation is called,
+/// such as `count()`, `max()`, `collect()`, etc. This means a `map()` call does not immediately map any element, only the final terminal operation does.
 template <typename Concrete, typename Item_>
 class Iter : public IterBase {
 public:
     using Item = Item_;
 
-    // defined in Map.hpp
+    /// Returns an iterator that invokes the given function on every item and returns the result, mapping the items.
     template <typename F>
-    auto map(F&& f) &&;
+    auto map(F&& f) &&; // defined in Map.hpp
 
-    // defined in Copied.hpp
-    auto copied() &&;
+    /// Returns an iterator that copies data from references into owned objects.
+    /// For example, if this is an iterator of `std::string&` or `reference_wrapper<std::string>`,
+    /// `copied()` will return an iterator that produces `std::string` by copying the referenced object.
+    auto copied() &&; // defined in Copied.hpp
 
-    // defined in Inspect.hpp
+    /// Returns the iterator that invokes the given function on every item before yielding that item again.
+    /// Note that this is not a terminal operation, so the function will not be eagerly invoked.
     template <typename F>
-    auto inspect(F&& f) &&;
+    auto inspect(F&& f) &&; // defined in Inspect.hpp
 
-    // defined in Filter.hpp
+    /// Returns an iterator that only yields items for which the given predicate returns true.
     template <typename F>
-    auto filter(F&& f) &&;
+    auto filter(F&& f) &&; // defined in Filter.hpp
 
-    // defined in FilterMap.hpp
+    /// Similar to filter, but using `std::optional`: the provided function takes an item and
+    /// must return an `std::optional<T>`. If the function returns `std::nullopt`, the item is skipped.
     template <typename F>
-    auto filterMap(F&& f) &&;
+    auto filterMap(F&& f) &&; // defined in FilterMap.hpp
 
-    // defined in Chain.hpp
+    /// Returns a concatenation of this iterator and `it2`.
+    /// It will yield elements of this iterator until they run out, before switching to `it2`.
     template <typename It2>
-    auto chain(It2&& it2) &&;
+    auto chain(It2&& it2) &&; // defined in Chain.hpp
 
-    // defined in Take.hpp
-    auto take(size_t n) &&;
+    /// Limits how many items can be yielded by this iterator.
+    /// The iterator will not yield any more items after `n` items have been yielded.
+    auto take(size_t n) &&; // defined in Take.hpp
 
-    // defined in Zip.hpp
+    /// Returns an iterator that merges the elements yielded by this iterator and the provided iterator `it2`.
+    /// The resulting iterator will yield `std::pair<T, Y>` where `T` is the item type of this iterator and `Y` is the item type of `it2`.
+    /// Stops yielding items once any of the two iterator runs out.
     template <typename It2>
-    auto zip(It2&& it2) &&;
+    auto zip(It2&& it2) &&; // defined in Zip.hpp
 
-    // defined in Skip.hpp
-    auto skip(size_t n) &&;
+    /// Returns an iterator that skips yielding the first `n` items of this iterator.
+    auto skip(size_t n) &&; // defined in Skip.hpp
 
-    // defined in Cycle.hpp
-    auto cycle() &&;
+    /// Returns an iterator that yields the items of this iterator in a cycle, repeating indefinitely.
+    auto cycle() &&; // defined in Cycle.hpp
 
-    // defined in ArrayChunks.hpp
+    /// Returns an iterator that groups items of this iterator into statically sized chunks of size `N`.
+    /// For example, if this iterator has 10 items and `arrayChunks<3>()` is called,
+    /// the resulting iterator will yield `std::array<T, 3>` three times before being exhausted.
+    ///
+    /// If the amount of items in this iterator is not divisible by `N`, the last few items will be dropped.
     template <size_t N>
-    auto arrayChunks() &&;
+    auto arrayChunks() &&; // defined in ArrayChunks.hpp
 
-    // defined in Flatten.hpp
-    auto flatten() &&;
+    /// Returns an iterator that yields the elements of the nested iterators.
+    /// For example, if this is an iterator of `std::vector<int>`, then the resulting iterator
+    /// will first yield integers from the first vector, then the next, and so on.
+    /// Only valid with iterators that yield containers or other iterators.
+    auto flatten() &&; // defined in Flatten.hpp
 
+    /// Shorthand for `map(f).flatten()`, this allows you to map each item to a container or iterator,
+    /// and have the resulting iterator produce the underlying items of those containers/iterators.
     template <typename F>
     auto flatMap(F&& f) && {
         return std::move(*this).map(std::forward<F>(f)).flatten();
     }
 
+    /// Returns whether all items in this iterator match the given predicate, or `true` if there are no items.
     template <typename F>
     bool all(F&& f) && {
         while (auto item = this->derived().next()) {
@@ -83,6 +107,7 @@ public:
         return true;
     }
 
+    /// Returns whether any item in this iterator matches the given predicate, or `false` if there are no items.
     template <typename F>
     bool any(F&& f) && {
         while (auto item = this->derived().next()) {
@@ -94,6 +119,7 @@ public:
         return false;
     }
 
+    /// Returns the first item that matches the given predicate, or `std::nullopt` if no item matches.
     template <typename F>
     std::optional<Item> find(F&& f) && {
         while (auto item = this->derived().next()) {
@@ -105,6 +131,7 @@ public:
         return std::nullopt;
     }
 
+    /// Consumes the iterator and returns the number of items yielded.
     size_t count() && {
         size_t cnt = 0;
         while (this->derived().next()) {
@@ -113,8 +140,11 @@ public:
         return cnt;
     }
 
+    /// Collects the items of this iterator into the provided collection, by default `std::vector<T>`.
+    /// The collection must support one of the methods: `push_back(T)`, `insert(T)` or `push(T)`.
     template <typename Cont = std::vector<Item>>
     auto collect() && {
+        // TODO: use some custom collector interface
         Cont cont;
         while (auto item = this->derived().next()) {
             if constexpr (requires { cont.push_back(*item); }) {
@@ -130,6 +160,8 @@ public:
         return cont;
     }
 
+    /// Joins the items of this iterator into a string, using the provided separator between items.
+    /// The items must be formattable with `fmt`, for example by defining `format_as(const T&) -> std::string_view`
     std::string join(std::string_view separator) && {
         std::string result;
         bool first = true;
@@ -144,12 +176,24 @@ public:
         return result;
     }
 
+    /// Returns an iterator that yields pairs of (index, item) for each item in this iterator.
     auto enumerate() && {
         return std::move(*this).map([n = size_t{0}](auto item) mutable {
             return std::make_pair(n++, std::move(item));
         });
     }
 
+    /// Folds every element into an accumulator by applying an operation, and returns the final result.
+    /// A mutable reference to the `init` argument will be passed as the first argument to the operation, together with the item.
+    template <typename B, typename F>
+    B fold(B init, F&& f) && {
+        while (auto item = this->derived().next()) {
+            std::invoke(f, init, *item);
+        }
+        return init;
+    }
+
+    /// Shorthand for `map()` with a `static_cast` inside, casts each item to the given type `Y`.
     template <typename Y>
     auto mapCast() && {
         return std::move(*this).map([](auto item) {
@@ -157,12 +201,14 @@ public:
         });
     }
 
+    /// Consumes the iterator and invokes the given function on every item.
     void forEach(auto&& f) && {
         while (auto item = this->derived().next()) {
             std::invoke(f, *item);
         }
     }
 
+    /// Consumes the iterator and returns the minimum item, or `std::nullopt` if there are no items.
     std::optional<Item> min() && requires(requires (Item x, Item y) { x < y; }){
         std::optional<Item> minItem;
         while (auto item = this->derived().next()) {
@@ -173,6 +219,7 @@ public:
         return minItem;
     }
 
+    /// Consumes the iterator and returns the maximum item, or `std::nullopt` if there are no items.
     std::optional<Item> max() && requires(requires (Item x, Item y) { x < y; }) {
         std::optional<Item> maxItem;
         while (auto item = this->derived().next()) {
@@ -183,6 +230,7 @@ public:
         return maxItem;
     }
 
+    /// Consumes the iterator and returns the sum of all items, or `Item{}` if there are no items.
     auto sum() && requires(requires { Item{} + Item{}; }) {
         Item total{};
         while (auto item = this->derived().next()) {
