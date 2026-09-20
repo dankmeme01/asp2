@@ -11,17 +11,11 @@
 
 namespace asp::iter {
 
-template <typename, typename>
-class Map;
-
-template <typename, typename>
-class Filter;
-
 struct IterBase {};
 
 /// The base template for all iterators, which has many transformational and terminal methods and utilities.
 /// Every iterator instance can also be iterated over using a plain C++ range-based for loop.
-/// The main method of consuming items is `next()`, and that's what you should implement in your own iterators.
+/// The main method of consuming items is `std::optional<Item> next()`, and that's what you should implement in your own iterators.
 ///
 /// Intermediate operations are *lazy*, meaning they do not do any work until an actual terminal operation is called,
 /// such as `count()`, `max()`, `collect()`, etc. This means a `map()` call does not immediately map any element, only the final terminal operation does.
