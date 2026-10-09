@@ -55,7 +55,11 @@ if (NOT TARGET std23::nontype_functional)
 endif()
 
 target_link_libraries(asp PUBLIC GeodeResult fmt::fmt std23::nontype_functional)
-target_compile_definitions(asp PRIVATE NOMINMAX=1)
+
+if (WIN32)
+    target_compile_definitions(asp PRIVATE NOMINMAX=1)
+    target_link_libraries(asp PRIVATE userenv.lib)
+endif()
 
 target_include_directories(asp PUBLIC
     ${PROJECT_SOURCE_DIR}/include
