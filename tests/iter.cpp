@@ -7,6 +7,10 @@
 using namespace asp::iter;
 using namespace asp;
 
+static constexpr auto STRING_1 = "This is a long string 1 to bypass SSO";
+static constexpr auto STRING_2 = "This is a long string 2 to bypass SSO";
+static constexpr auto STRING_3 = "This is a long string 3 to bypass SSO";
+
 TEST(IterTests, VectorIter) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec);
@@ -356,48 +360,43 @@ TEST(IterTests, CxxIterLoop) {
 }
 
 TEST(IterTests, CxxIterMut) {
-    std::vector<std::string> vec = {"a", "b", "c"};
-    // This does not compile (good):
-    // auto iter = from(vec).collect();
+    std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto iter = from(vec).copied().collect();
 
     ASSERT_EQ(iter.size(), 3);
-    ASSERT_EQ(iter[0], "a");
-    ASSERT_EQ(iter[1], "b");
-    ASSERT_EQ(iter[2], "c");
+    ASSERT_EQ(iter[0], STRING_1);
+    ASSERT_EQ(iter[1], STRING_2);
+    ASSERT_EQ(iter[2], STRING_3);
 
     ASSERT_EQ(vec.size(), 3);
-    ASSERT_EQ(vec[0], "a");
-    ASSERT_EQ(vec[1], "b");
-    ASSERT_EQ(vec[2], "c");
+    ASSERT_EQ(vec[0], STRING_1);
+    ASSERT_EQ(vec[1], STRING_2);
+    ASSERT_EQ(vec[2], STRING_3);
 }
 
 TEST(IterTests, CxxIterMut2) {
-    std::vector<std::string> vec = {"a", "b", "c"};
+    std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto iter = from(vec).enumerate().collect();
 
-    using A = typename decltype(from(vec))::Item;
-    using B = typename decltype(from(vec).enumerate())::Item;
-
     ASSERT_EQ(iter.size(), 3);
-    ASSERT_EQ(iter[0].second, "a");
-    ASSERT_EQ(iter[1].second, "b");
-    ASSERT_EQ(iter[2].second, "c");
+    ASSERT_EQ(iter[0].second, STRING_1);
+    ASSERT_EQ(iter[1].second, STRING_2);
+    ASSERT_EQ(iter[2].second, STRING_3);
 
     ASSERT_EQ(vec.size(), 3);
-    ASSERT_EQ(vec[0], "a");
-    ASSERT_EQ(vec[1], "b");
-    ASSERT_EQ(vec[2], "c");
+    ASSERT_EQ(vec[0], STRING_1);
+    ASSERT_EQ(vec[1], STRING_2);
+    ASSERT_EQ(vec[2], STRING_3);
 }
 
 TEST(IterTests, CxxIterConsume) {
-    std::vector<std::string> vec = {"a", "b", "c"};
+    std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto vec2 = consume(vec).collect();
 
     ASSERT_EQ(vec2.size(), 3);
-    ASSERT_EQ(vec2[0], "a");
-    ASSERT_EQ(vec2[1], "b");
-    ASSERT_EQ(vec2[2], "c");
+    ASSERT_EQ(vec2[0], STRING_1);
+    ASSERT_EQ(vec2[1], STRING_2);
+    ASSERT_EQ(vec2[2], STRING_3);
     ASSERT_EQ(vec.size(), 3);
     ASSERT_EQ(vec[0], "");
     ASSERT_EQ(vec[1], "");
