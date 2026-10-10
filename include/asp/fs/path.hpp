@@ -2,11 +2,13 @@
 
 #include <asp/detail/Result.hpp>
 #include <asp/iter/Iter.hpp>
-#include <Geode/Result.hpp>
 #include <fmt/format.h>
-#include <filesystem>
 #include <string>
 #include "metadata.hpp"
+
+namespace std::filesystem {
+    class path;
+}
 
 namespace asp::fs {
 
@@ -53,6 +55,9 @@ namespace _impl {
     // TODO: readLink
 }
 
+template <typename T>
+class ToStdPath {};
+
 template <typename Derived>
 struct PathInterface {
     /// Returns a representation of this path that is suitable for use with OS APIs.
@@ -63,10 +68,8 @@ struct PathInterface {
     }
 
     /// Converts this path to a `std::filesystem::path`. This may fail if the UTF-16 conversion fails on Windows.
-    Result<std::filesystem::path> toStdPath(this auto&& self) {
-        GEODE_UNWRAP_INTO(auto p, self.native());
-        return Ok(std::filesystem::path(p));
-    }
+    /// This requires <asp/fs/std.hpp> to be included.
+    auto toStdPath(this auto&& self);
 
     bool empty(this auto&& self) noexcept {
         return self.m_path.empty();

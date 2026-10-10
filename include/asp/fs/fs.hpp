@@ -2,20 +2,21 @@
 
 #include <asp/detail/config.hpp>
 #include "path.hpp"
-#include <filesystem>
 #include <vector>
 #include <string>
 #include <stdint.h>
 
 namespace asp::fs {
     Result<void> copy(PathView origin, PathView dest);
-    Result<void> copy(PathView origin, PathView dest, std::filesystem::copy_options opts);
+    // TODO
+    // Result<void> copy(PathView origin, PathView dest, std::filesystem::copy_options opts);
     Result<void> rename(PathView oldPath, PathView newPath);
 
     Result<void> createDir(PathView path);
     Result<void> createDirAll(PathView path);
 
-    Result<std::filesystem::file_time_type> lastWriteTime(PathView path);
+    // TODO
+    // Result<std::filesystem::file_time_type> lastWriteTime(PathView path);
     Result<uint64_t> fileSize(PathView path);
 
     // Removes a file or an empty directory by the given path.
@@ -29,7 +30,8 @@ namespace asp::fs {
     // Removes a directory recursively, or a file.
     Result<uintmax_t> removeAll(PathView path);
 
-    Result<std::filesystem::directory_iterator> iterdir(PathView path);
+    // TODO
+    // Result<std::filesystem::directory_iterator> iterdir(PathView path);
 
     geode::Result<std::vector<uint8_t>> read(PathView path);
     geode::Result<std::string> readToString(PathView path);

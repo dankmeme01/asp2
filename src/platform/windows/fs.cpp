@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <userenv.h>
 #include <array>
+#include <filesystem>
 
 namespace asp::fs {
 

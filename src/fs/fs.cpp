@@ -1,6 +1,7 @@
 #include <asp/fs/fs.hpp>
 #include <cstring>
 #include <fmt/format.h>
+#include <filesystem>
 
 #ifdef _WIN32
 # include <windows.h>
@@ -52,11 +53,11 @@ Result<void> asp::fs::copy(PathView o, PathView d) {
     }, o, d);
 }
 
-Result<void> asp::fs::copy(PathView o, PathView d, std::filesystem::copy_options opts) {
-    return _fswrapvoid([](PathView o, PathView d, std::filesystem::copy_options opts, std::error_code& ec) {
-        std::filesystem::copy(o.view(), d.view(), opts, ec);
-    }, o, d, opts);
-}
+// Result<void> asp::fs::copy(PathView o, PathView d, std::filesystem::copy_options opts) {
+//     return _fswrapvoid([](PathView o, PathView d, std::filesystem::copy_options opts, std::error_code& ec) {
+//         std::filesystem::copy(o.view(), d.view(), opts, ec);
+//     }, o, d, opts);
+// }
 
 // Rename
 
@@ -149,11 +150,11 @@ Result<uintmax_t> asp::fs::removeAll(PathView p) {
 
 // Iteration
 
-Result<std::filesystem::directory_iterator> asp::fs::iterdir(PathView p) {
-    return _fswrap([](PathView p, std::error_code& ec) {
-        return std::filesystem::directory_iterator(p.view(), ec);
-    }, p);
-}
+// Result<std::filesystem::directory_iterator> asp::fs::iterdir(PathView p) {
+//     return _fswrap([](PathView p, std::error_code& ec) {
+//         return std::filesystem::directory_iterator(p.view(), ec);
+//     }, p);
+// }
 
 #ifdef _WIN32
 
