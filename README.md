@@ -16,5 +16,4 @@ Some highlights include:
 
 * Add custom iterator for `asp::fs::iterdir` to avoid exceptions in operator++
 * `asp::iter` stuff should not use reference wrapper in public apis beyond `next()` return value, make `map()` nice
-* No but seriously reconsider `asp::iter` design because `map` should not have usage different based on your stl!!!!! and probably rethink `from` and `consume`
-* Swiss table style `asp::HashMap`
+* `asp::iter` size hint

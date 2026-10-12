@@ -659,3 +659,60 @@ TEST(IterTests, FoldSet) {
         EXPECT_TRUE(result.contains(i));
     }
 }
+
+TEST(IterTests, Nth0) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    std::vector<int> vec2;
+    std::vector<int> vec3 = {1};
+
+    ASSERT_EQ(from(vec).nth(0), 1);
+    ASSERT_EQ(from(vec2).nth(0), std::nullopt);
+    ASSERT_EQ(from(vec3).nth(0), 1);
+}
+
+TEST(IterTests, Nth1) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    std::vector<int> vec2;
+    std::vector<int> vec3 = {1};
+
+    ASSERT_EQ(from(vec).nth(1), 2);
+    ASSERT_EQ(from(vec2).nth(1), std::nullopt);
+    ASSERT_EQ(from(vec3).nth(1), std::nullopt);
+}
+
+TEST(IterTests, NextChunk) {
+    std::vector<int> vec1;
+    std::vector<int> vec2 = {1};
+    std::vector<int> vec3 = {1, 2};
+    std::vector<int> vec4 = {1, 2, 3};
+    std::vector<int> vec5 = {1, 2, 3, 4};
+
+    auto it1 = from(vec1);
+    EXPECT_EQ(it1.nextChunk<1>(), std::nullopt);
+    EXPECT_EQ(it1.nextChunk<2>(), std::nullopt);
+
+    auto it2 = from(vec2);
+    EXPECT_EQ(it2.nextChunk<2>(), std::nullopt);
+
+    auto it3 = from(vec3);
+    EXPECT_EQ(it3.nextChunk<2>(), (std::array<int, 2>{1, 2}));
+    EXPECT_EQ(it3.nextChunk<2>(), std::nullopt);
+
+    auto it4 = from(vec4);
+    EXPECT_EQ(it4.nextChunk<2>(), (std::array<int, 2>{1, 2}));
+    EXPECT_EQ(it4.nextChunk<2>(), std::nullopt);
+
+    auto it5 = from(vec5);
+    EXPECT_EQ(it5.nextChunk<2>(), (std::array<int, 2>{1, 2}));
+    EXPECT_EQ(it5.nextChunk<2>(), (std::array<int, 2>{3, 4}));
+    EXPECT_EQ(it5.nextChunk<2>(), std::nullopt);
+}
+
+TEST(IterTests, NextChunkVarying) {
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+
+    auto it = from(vec);
+    EXPECT_EQ(it.nextChunk<2>(), (std::array<int, 2>{1, 2}));
+    EXPECT_EQ(it.nextChunk<3>(), (std::array<int, 3>{3, 4, 5}));
+    EXPECT_EQ(it.nextChunk<1>(), std::nullopt);
+}
