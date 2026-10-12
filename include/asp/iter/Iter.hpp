@@ -7,6 +7,7 @@
 #include <limits>
 #include <string>
 #include <iterator>
+#include <array>
 #include <fmt/format.h>
 
 namespace asp::iter {
@@ -76,6 +77,24 @@ public:
     template <size_t N>
     auto arrayChunks() &&; // defined in ArrayChunks.hpp
 
+    /// Returns the next chunk of N items from the iterator, or `std::nullopt` if there are not enough items left to fill the chunk.
+    /// Note: while not a terminal operation, this always consumes at most N items. For example if an iterator has 2 items left and nextChunk<3> is called,
+    /// the 2 items will be consumed and the iterator will be exhausted, while returning `std::nullopt`.
+    template <size_t N>
+    std::optional<std::array<Item, N>> nextChunk() {
+        static_assert(N > 0, "N must be greater than 0 for nextChunk");
+
+        std::array<Item, N> chunk;
+        for (size_t i = 0; i < N; ++i) {
+            auto item = this->derived().next();
+            if (!item) {
+                return std::nullopt;
+            }
+            chunk[i] = std::move(*item);
+        }
+        return chunk;
+    }
+
     /// Returns an iterator that yields the elements of the nested iterators.
     /// For example, if this is an iterator of `std::vector<int>`, then the resulting iterator
     /// will first yield integers from the first vector, then the next, and so on.
@@ -123,6 +142,18 @@ public:
         }
 
         return std::nullopt;
+    }
+
+    /// Returns the nth item in the iterator, or null if the iterator gets exhausted before reaching it.
+    /// `n` is zero indexed, so `nth(0)` returns the very next item, equivalent to calling `next()`.
+    std::optional<Item> nth(size_t n) && {
+        for (size_t i = 0; i < n; ++i) {
+            if (!this->derived().next()) {
+                return std::nullopt;
+            }
+        }
+
+        return this->derived().next();
     }
 
     /// Consumes the iterator and returns the number of items yielded.
