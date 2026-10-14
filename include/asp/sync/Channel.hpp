@@ -37,7 +37,7 @@ public:
 
         cvar.wait(lock, [this] { return !queue.empty(); });
 
-        return doPop(queue.data);
+        return doPop(queue);
     }
 
     // Like `pop`, but will return `std::nullopt` if the given timeout expires before there's available data.
