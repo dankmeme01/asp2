@@ -113,7 +113,7 @@ public:
 
     // Pushes multiple messages to the queue efficiently.
     // Note that this overload will move the messages out of the span.
-    void pushMany(std::span<T> messages) {
+    void pushManyMove(std::span<T> messages) {
         std::unique_lock lock(mtx);
         for (auto& msg : messages) {
             queue.push(std::move(msg));
