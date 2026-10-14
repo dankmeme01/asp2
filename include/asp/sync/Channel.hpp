@@ -105,6 +105,13 @@ public:
         }
     }
 
+    // Drains all elements into a new vector and returns it
+    std::vector<T> drain() {
+        std::vector<T> out;
+        drainInto(out);
+        return out;
+    }
+
     // Pushes a new message to the queue.
     void push(const T& msg) {
         std::unique_lock lock(mtx);
