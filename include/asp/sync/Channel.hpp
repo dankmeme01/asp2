@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <queue>
 #include <optional>
+#include <span>
 
 #include <asp/time/Duration.hpp>
 #include <asp/time/chrono.hpp>
