@@ -97,6 +97,14 @@ public:
         return doPop(queue);
     }
 
+    // Drains all elements into the given vector
+    void drainInto(std::vector<T>& out) {
+        std::unique_lock lock(mtx);
+        while (!queue.empty()) {
+            out.push_back(doPop(queue));
+        }
+    }
+
     // Pushes a new message to the queue.
     void push(const T& msg) {
         std::unique_lock lock(mtx);
