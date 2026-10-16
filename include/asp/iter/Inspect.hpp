@@ -3,6 +3,7 @@
 #include <optional>
 #include <functional>
 #include "Iter.hpp"
+#include "Util.hpp"
 
 namespace asp::iter {
 
@@ -15,7 +16,7 @@ public:
 
     std::optional<Item> next() {
         if (auto item = m_iter.next()) {
-            std::invoke(m_func, *item);
+            std::invoke(m_func, unwrapRefWrapper(*item));
             return item;
         }
 

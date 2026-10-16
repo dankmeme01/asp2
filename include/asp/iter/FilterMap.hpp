@@ -3,6 +3,7 @@
 #include <optional>
 #include <functional>
 #include "Iter.hpp"
+#include "Util.hpp"
 
 namespace asp::iter {
 
@@ -15,16 +16,22 @@ struct ExtractOptional<std::optional<T>> {
 };
 
 template <typename It, typename F>
-class FilterMap : public Iter<FilterMap<It, F>, typename ExtractOptional<std::invoke_result_t<F, typename It::Item>>::type> {
+using FilterMapInvokeResult = std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>;
+
+template <typename It, typename F>
+using FilterMapItem = typename ExtractOptional<FilterMapInvokeResult<It, F>>::type;
+
+template <typename It, typename F>
+class FilterMap : public Iter<FilterMap<It, F>, FilterMapItem<It, F>> {
 public:
-    using Item = typename ExtractOptional<std::invoke_result_t<F, typename It::Item>>::type;
-    static_assert(std::is_same_v<std::invoke_result_t<F, typename It::Item>, std::optional<Item>>, "FilterMap function must return std::optional");
+    using Item = FilterMapItem<It, F>;
+    static_assert(std::is_same_v<FilterMapInvokeResult<It, F>, std::optional<Item>>, "FilterMap function must return std::optional");
 
     FilterMap(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 
     std::optional<Item> next() {
         while (auto item = m_iter.next()) {
-            if (auto ret = std::invoke(m_func, std::move(*item))) {
+            if (auto ret = std::invoke(m_func, unwrapRefWrapper(std::move(*item)))) {
                 return ret;
             }
         }

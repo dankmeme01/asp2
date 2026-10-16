@@ -19,4 +19,23 @@ struct ExtractRefWrapper<std::reference_wrapper<T>> {
     using type = T;
 };
 
+template <typename T>
+struct UnwrapRefWrapper {
+    using type = T;
+};
+
+template <typename T>
+struct UnwrapRefWrapper<std::reference_wrapper<T>> {
+    using type = T&;
+};
+
+template <typename Y, typename T = std::decay_t<Y>>
+UnwrapRefWrapper<T>::type unwrapRefWrapper(Y&& value) {
+    if constexpr (is_reference_wrapper<T>::value) {
+        return value.get();
+    } else {
+        return value;
+    }
+}
+
 }

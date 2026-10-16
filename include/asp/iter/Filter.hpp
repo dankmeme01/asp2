@@ -15,7 +15,7 @@ public:
 
     std::optional<Item> next() {
         while (auto item = m_iter.next()) {
-            if (std::invoke(m_func, *item)) {
+            if (std::invoke(m_func, unwrapRefWrapper(*item))) {
                 return item;
             }
         }
