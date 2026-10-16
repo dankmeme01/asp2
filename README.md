@@ -14,5 +14,4 @@ Some highlights include:
 
 ## TODO
 
-* Add custom iterator for `asp::fs::iterdir` to avoid exceptions in operator++
 * `asp::iter` size hint

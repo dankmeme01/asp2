@@ -34,33 +34,26 @@ std::optional<std::string_view> _impl::rootName(std::string_view path) noexcept 
 }
 
 Result<Path> _impl::canonicalize(std::string_view path) {
-    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
-
     // see https://github.com/rust-lang/rust/blob/e457a7b0d326d67b4322ef0d11bd715cfaeda48f/library/std/src/sys/fs/windows.rs#L1602
-    auto h = CreateFileW(
-        native.c_str(),
-        0,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        nullptr,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS,
-        nullptr
-    );
+    OpenOptions opts{};
+    opts.read = false;
+    opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
+    auto result = File::open(path);
 
-    if (h == INVALID_HANDLE_VALUE) {
-        return Err(fmt::format("Unable to open file: {}", formatError()));
+    if (!result) {
+        return Err(fmt::format("Unable to open file: {}", result.unwrapErr()));
     }
 
-    auto len = GetFinalPathNameByHandleW(h, nullptr, 0, VOLUME_NAME_DOS);
+    auto file = std::move(result).unwrap();
+
+    auto len = GetFinalPathNameByHandleW(file.fd(), nullptr, 0, VOLUME_NAME_DOS);
     if (len == 0) {
-        CloseHandle(h);
         return Err(fmt::format("Unable to get final path name: {}", formatError()));
     }
 
     std::wstring buf(len, L'\0');
-    len = GetFinalPathNameByHandleW(h, buf.data(), (DWORD)buf.size(), VOLUME_NAME_DOS);
+    len = GetFinalPathNameByHandleW(file.fd(), buf.data(), (DWORD)buf.size(), VOLUME_NAME_DOS);
     buf.resize(len);
-    CloseHandle(h);
 
     if (buf.starts_with(L"\\\\?\\")) {
         buf.erase(0, 4);
@@ -68,6 +61,33 @@ Result<Path> _impl::canonicalize(std::string_view path) {
 
     GEODE_UNWRAP_INTO(auto utf8, wideToUtf8(buf));
     return Ok(Path(std::move(utf8)));
+}
+
+bool _impl::equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept {
+    auto doOpen = [](auto path) {
+        OpenOptions opts{};
+        opts.read = false;
+        opts.followSymlink = true;
+        opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
+        return File::open(path);
+    };
+
+    auto r1 = doOpen(lhs);
+    if (!r1) return false;
+    auto r2 = doOpen(rhs);
+    if (!r2) return false;
+
+    auto file1 = std::move(r1).unwrap();
+    auto file2 = std::move(r2).unwrap();
+
+    BY_HANDLE_FILE_INFORMATION info1, info2;
+    if (!GetFileInformationByHandle(file1.fd(), &info1) || !GetFileInformationByHandle(file2.fd(), &info2)) {
+        return false;
+    }
+
+    return info1.dwVolumeSerialNumber == info2.dwVolumeSerialNumber
+        && info1.nFileIndexHigh == info2.nFileIndexHigh
+        && info1.nFileIndexLow == info2.nFileIndexLow;
 }
 
 Result<Path> _impl::absolute(std::string_view path) {
@@ -181,7 +201,7 @@ Result<Path> Path::home() {
 
 Result<Path> Path::tmp() {
     std::array<wchar_t, 1024> buf;
-    auto n = GetTempPath2W(buf.size(), buf.data());
+    auto n = GetTempPathW(buf.size(), buf.data());
     if (n == 0 || n > buf.size()) {
         return Err(formatError());
     }
@@ -272,7 +292,8 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
         }
 
         // directory = has attribute directory but NOT a reparse point
-        bool isDirectory = (findData.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == FILE_ATTRIBUTE_DIRECTORY;
+        bool isReparsePoint = (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+        bool isDirectory = !isReparsePoint && (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0
 
         GEODE_UNWRAP_INTO(auto childPath, Path::fromWide(name).map([&](Path child) {
             return path / child;
@@ -280,7 +301,11 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
         if (!isDirectory) {
             // this is a regular file or symlink, delete it
-            GEODE_UNWRAP(removeFile(childPath));
+            if (isReparsePoint) {
+                GEODE_UNWRAP(removeDir(childPath));
+            } else {
+                GEODE_UNWRAP(removeFile(childPath));
+            }
         } else {
             // directory, queue it
             out.push_back(std::move(childPath));
@@ -294,7 +319,7 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
 Result<void> removeDirAll(PathView path) {
     if (!path.isDir()) {
-        return Err(fmt::format("Path is not a directory", path));
+        return Err(fmt::format("Path '{}' is not a directory", path));
     }
 
     OpenOptions opts{};

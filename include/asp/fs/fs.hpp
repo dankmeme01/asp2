@@ -73,7 +73,7 @@ Result<std::string> readToString(PathView path);
 
 /// Writes the given data to the file at the given path, creating or overwriting it.
 Result<void> write(PathView path, std::span<const uint8_t> data);
-Result<void> write(PathView path, const std::string& data);
+Result<void> write(PathView path, std::string_view data);
 Result<void> write(PathView path, const void*, size_t size);
 
 // TODO: create symlink, read symlink
