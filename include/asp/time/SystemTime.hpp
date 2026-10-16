@@ -3,22 +3,11 @@
 #include "detail.hpp"
 #include "DateTime.hpp"
 #include "Duration.hpp"
-#include <fmt/format.h>
-#include <fmt/chrono.h>
 #include <optional>
-
-#include <time.h>
+#include <ctime>
 
 namespace asp::inline time {
-    inline std::tm localtime(std::time_t time) noexcept {
-        std::tm tm{};
-#ifdef _WIN32
-        localtime_s(&tm, &time);
-#else
-        localtime_r(&time, &tm);
-#endif
-        return tm;
-    }
+    std::tm localtime(std::time_t time) noexcept;
 
     class SystemTime {
     public:
@@ -73,11 +62,7 @@ namespace asp::inline time {
         Time timeUtc() const noexcept;
         DateTime dateTimeUtc() const noexcept;
 
-        inline std::string format(std::string_view fmt) const {
-            time_t curTime = this->to_time_t();
-            auto ms = this->timeSinceEpoch().subsecMillis();
-            return fmt::format(fmt::runtime(fmt), asp::localtime(curTime), ms);
-        }
+        std::string format(std::string_view fmt) const;
 
         inline std::string toString(bool millis = false) const {
             return this->format(millis ? "{:%Y-%m-%d %H:%M:%S}.{:03}" : "{:%Y-%m-%d %H:%M:%S}");
