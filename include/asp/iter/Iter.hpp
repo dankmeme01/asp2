@@ -9,6 +9,7 @@
 #include <iterator>
 #include <array>
 #include <fmt/format.h>
+#include "Util.hpp"
 
 namespace asp::iter {
 
@@ -112,7 +113,7 @@ public:
     template <typename F>
     bool all(F&& f) && {
         while (auto item = this->derived().next()) {
-            if (!std::invoke(f, *item)) {
+            if (!std::invoke(f, unwrapRefWrapper(*item))) {
                 return false;
             }
         }
@@ -124,7 +125,7 @@ public:
     template <typename F>
     bool any(F&& f) && {
         while (auto item = this->derived().next()) {
-            if (std::invoke(f, *item)) {
+            if (std::invoke(f, unwrapRefWrapper(*item))) {
                 return true;
             }
         }
@@ -144,7 +145,7 @@ public:
     template <typename F>
     std::optional<Item> find(F&& f) && {
         while (auto item = this->derived().next()) {
-            if (std::invoke(f, *item)) {
+            if (std::invoke(f, unwrapRefWrapper(*item))) {
                 return std::move(*item);
             }
         }
@@ -221,7 +222,7 @@ public:
     template <typename B, typename F>
     B fold(B init, F&& f) && {
         while (auto item = this->derived().next()) {
-            std::invoke(f, init, *item);
+            std::invoke(f, init, unwrapRefWrapper(*item));
         }
         return init;
     }
@@ -237,7 +238,7 @@ public:
     /// Consumes the iterator and invokes the given function on every item.
     void forEach(auto&& f) && {
         while (auto item = this->derived().next()) {
-            std::invoke(f, *item);
+            std::invoke(f, unwrapRefWrapper(*item));
         }
     }
 

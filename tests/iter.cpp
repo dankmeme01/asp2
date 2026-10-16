@@ -47,6 +47,15 @@ TEST(IterTests, Map) {
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, MapComplex) {
+    std::vector<std::string> vec = {"1", "22"};
+    auto iter = from(vec).map([](std::string& x) { return x.size(); });
+
+    ASSERT_EQ(iter.next(), 1);
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
 TEST(IterTests, Filter) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).filter([](int x) { return x % 2 == 0; });
@@ -56,12 +65,41 @@ TEST(IterTests, Filter) {
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, FilterComplex) {
+    std::vector<std::string> vec = {"1", "22"};
+    auto iter = from(vec).filter([](std::string& x) { return x.size() == 1; });
+
+    ASSERT_EQ(iter.next()->get(), "1");
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
 TEST(IterTests, FilterMap) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
-    auto iter = from(vec).filter([](int x) { return x % 2 == 0; }).map([](int x) { return x * 2; });
+    auto iter = from(vec).filterMap([](int x) -> std::optional<int> {
+        if (x % 2 == 0) {
+            return x * 2;
+        } else {
+            return std::nullopt;
+        }
+    });
 
     ASSERT_EQ(iter.next(), 4);
     ASSERT_EQ(iter.next(), 8);
+    ASSERT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, FilterMapComplex) {
+    std::vector<std::string> vec = {"1", "22", "333", "4444"};
+    auto iter = from(vec).filterMap([](std::string& x) -> std::optional<int> {
+        if (x.size() % 2 == 0) {
+            return x.size();
+        } else {
+            return std::nullopt;
+        }
+    });
+
+    ASSERT_EQ(iter.next(), 2);
+    ASSERT_EQ(iter.next(), 4);
     ASSERT_EQ(iter.next(), std::nullopt);
 }
 
@@ -124,6 +162,14 @@ TEST(IterTests, Find) {
 
     ASSERT_EQ(from(vec1).find([](int x) { return x < 0; }), -4);
     ASSERT_EQ(from(vec1).find([](int x) { return x > 5 ; }), std::nullopt);
+}
+
+TEST(IterTests, FindStr) {
+    std::vector<std::string> vec1 = {"1", "22", "333", "4444", "55555"};
+
+    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() < 3; })->get(), "1");
+    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 3; })->get(), "4444");
+    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 5; }), std::nullopt);
 }
 
 TEST(IterTests, Collect) {
@@ -403,10 +449,10 @@ TEST(IterTests, CxxIterConsume) {
     ASSERT_EQ(vec[2], "");
 }
 
-TEST(IterTests, IterMap) {
+TEST(IterTests, IterFind) {
     std::unordered_map<std::string, int> map{{"1", 10}, {"2", 20}, {"3", 30}};
 
-    size_t val = from(map).find([](const auto& p) { return p.get().first == "2"; })->get().second;
+    size_t val = from(map).find([](const auto& p) { return p.first == "2"; })->get().second;
     ASSERT_EQ(val, 20);
 }
 
@@ -658,6 +704,16 @@ TEST(IterTests, FoldSet) {
     for (int i = 1; i <= 5; ++i) {
         EXPECT_TRUE(result.contains(i));
     }
+}
+
+TEST(IterTests, FoldStr) {
+    std::vector<std::string> vec {"1", "22", "333"};
+    auto result = from(vec).fold(
+        size_t{0},
+        [](size_t& acc, const std::string& x) { acc += x.size(); }
+    );
+
+    EXPECT_EQ(result, 6);
 }
 
 TEST(IterTests, Nth0) {

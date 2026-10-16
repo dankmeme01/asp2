@@ -3,19 +3,20 @@
 #include <optional>
 #include <functional>
 #include "Iter.hpp"
+#include "Util.hpp"
 
 namespace asp::iter {
 
 template <typename It, typename F>
-class Map : public Iter<Map<It, F>, std::invoke_result_t<F, typename It::Item>> {
+class Map : public Iter<Map<It, F>, std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>> {
 public:
-    using Item = std::invoke_result_t<F, typename It::Item>;
+    using Item = std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>;
 
     Map(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 
     std::optional<Item> next() {
         if (auto item = m_iter.next()) {
-            return std::invoke(m_func, std::move(*item));
+            return std::invoke(m_func, unwrapRefWrapper(std::move(*item)));
         }
 
         return std::nullopt;
