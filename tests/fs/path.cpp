@@ -173,8 +173,14 @@ TEST(Path, MakePreferred) {
     auto pr1 = p1.makePreferred();
     auto pr2 = p2.makePreferred();
 
-    EXPECT_TRUE(pr1.string().find(PreferredSep) != std::string_view::npos);
-    EXPECT_TRUE(pr2.string().find(PreferredSep) != std::string_view::npos);
+#ifdef _WIN32
+    EXPECT_TRUE(pr1.string().contains(PreferredSep));
+    EXPECT_TRUE(pr2.string().contains(PreferredSep));
+#else
+    // unix expects no difference
+    EXPECT_EQ(pr1.string(), "foo/bar");
+    EXPECT_EQ(pr2.string(), "foo\\bar");
+#endif
 }
 
 TEST(Path, RemoveFilename) {
@@ -260,7 +266,7 @@ TEST(Path, Extension) {
     EXPECT_EQ(p1.extension(), "txt");
     EXPECT_EQ(p2.extension(), "");
     EXPECT_EQ(p3.extension(), std::nullopt);
-    EXPECT_EQ(p4.extension(), "baz");
+    EXPECT_EQ(p4.extension(), std::nullopt);
     EXPECT_EQ(p5.extension(), "baz");
 }
 
@@ -348,7 +354,7 @@ TEST(Path, Components) {
 
     std::vector<std::string_view> c1 = {"foo", "bar", "baz.txt"};
     std::vector<std::string_view> c2 = {"/", "foo", "bar", "baz.txt"};
-    std::vector<std::string_view> c3 = {"C:", "foo", "bar", "baz.txt"};
+    std::vector<std::string_view> c3 = {"C:/", "foo", "bar", "baz.txt"};
     std::vector<std::string_view> c4 = {"C:foo", "bar", "baz.txt"};
 
     EXPECT_EQ(p1.components().collect(), c1);

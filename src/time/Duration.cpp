@@ -86,7 +86,7 @@ namespace asp::inline time {
     std::string Duration::toHumanString(u8 precision) const {
         auto out = formatDur<true>(*this, precision);
         // this is very silly core
-        if (out.starts_with("1 ") && out.ends_with("s")) {
+        if (out.starts_with("1 ") && out.ends_with('s')) {
             out.pop_back();
         }
         return out;

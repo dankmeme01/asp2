@@ -1,5 +1,5 @@
 #pragma once
-#include "permissions.hpp"
+#include "Permissions.hpp"
 #include <stdint.h>
 #include <asp/time/SystemTime.hpp>
 
@@ -70,7 +70,7 @@ using Metadata = MetadataApple;
 #elif defined (__ANDROID__)
 
 /// Android-specific metadata
-struct MetadataAndroid : MetadataUnix {};
+struct MetadataAndroid : MetadataLinux {};
 using Metadata = MetadataAndroid;
 
 #elif defined (__linux__)

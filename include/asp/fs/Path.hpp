@@ -4,11 +4,7 @@
 #include <asp/iter/Iter.hpp>
 #include <fmt/format.h>
 #include <string>
-#include "metadata.hpp"
-
-namespace std::filesystem {
-    class path;
-}
+#include "Metadata.hpp"
 
 namespace asp::fs {
 
@@ -28,7 +24,6 @@ class Path;
 class PathView;
 
 namespace _impl {
-    Result<Path> fromStdPath(const std::filesystem::path& path);
     Result<NativePath> native(std::string_view path);
     size_t hash(std::string_view path) noexcept;
     bool isAbsolute(std::string_view path) noexcept;
@@ -106,7 +101,7 @@ struct PathInterface {
 
     /// Returns whether this path has a parent path. This is equivalent to `parent().has_value()`.
     inline bool hasParent(this auto&& self) noexcept {
-        return self.parent(self.m_path).has_value();
+        return self.parent().has_value();
     }
 
     /// Returns the filename component of this path, or `std::nullopt` if this path has no filename.
@@ -114,17 +109,18 @@ struct PathInterface {
 
     /// Returns whether the path has a filename. This is equivalent to `filename().has_value()`.
     inline bool hasFilename(this auto&& self) noexcept {
-        return self.filename(self.m_path).has_value();
+        return self.filename().has_value();
     }
 
     /// Returns the extension of the filename, or `std::nullopt` if the filename has no extension.
     /// The extension is defined as the substring after the last dot in the filename, and does not include the dot itself.
     /// If the filename ends with a dot, returns an empty view.
+    /// If the filename starts with a dot and has no other dots, returns `std::nullopt`.
     std::optional<std::string_view> extension(this auto&& self) noexcept;
 
     /// Returns whether the filename has an extension. This is equivalent to `extension().has_value()`.
     inline bool hasExtension(this auto&& self) noexcept {
-        return self.extension(self.m_path).has_value();
+        return self.extension().has_value();
     }
 
     /// Returns the stem of the path, which is the filename without the extension. If the filename has no '.' or begins with a '.' (with no other '.'), returns the entire filename.
@@ -133,7 +129,7 @@ struct PathInterface {
 
     /// Returns whether the path has a stem. This is equivalent to `stem().has_value()`.
     inline bool hasStem(this auto&& self) noexcept {
-        return self.stem(self.m_path).has_value();
+        return self.stem().has_value();
     }
 
     /// Returns the root name of the path, or `std::nullopt` if the path has no root name.
@@ -142,7 +138,7 @@ struct PathInterface {
 
     /// Returns whether the path has a root name. This is equivalent to `rootName().has_value()`.
     inline bool hasRootName(this auto&& self) noexcept {
-        return self.rootName(self.m_path).has_value();
+        return self.rootName().has_value();
     }
 
     /// Returns the canonical, absolute form of the path, resolving all symlinks and normalizing relative components.
@@ -211,7 +207,7 @@ struct PathInterface {
     /// Checks whether this path exists and is a regular file. Returns `false` on failures. For detailed error information, call `metadata()`.
     /// This will resolve intermediate symlinks, but NOT the final symlink, and will return false if the final component is a symlink.
     bool isFile(this auto&& self) {
-        return self.metadata().map([](auto&& meta) {
+        return self.symlinkMetadata().map([](auto&& meta) {
             return meta.isFile();
         }).unwrapOr(false);
     }
@@ -219,14 +215,14 @@ struct PathInterface {
     /// Checks whether this path exists and is a directory. Returns `false` on failures. For detailed error information, call `metadata()`.
     /// This will resolve intermediate symlinks, but NOT the final symlink, and will return false if the final component is a symlink.
     bool isDir(this auto&& self) {
-        return self.metadata().map([](auto&& meta) {
+        return self.symlinkMetadata().map([](auto&& meta) {
             return meta.isDir();
         }).unwrapOr(false);
     }
 
     /// Checks whether this path exists and is a symlink. Returns `false` on failures. For detailed error information, call `metadata()`.
     bool isSymlink(this auto&& self) {
-        return self.metadata().map([](auto&& meta) {
+        return self.symlinkMetadata().map([](auto&& meta) {
             return meta.isSymlink();
         }).unwrapOr(false);
     }
@@ -236,7 +232,7 @@ struct PathInterface {
     /// Returns an `asp::iter` iterator over the components of this path. This performs no fs operations and performs only a few normalization steps:
     /// * Empty components are excluded, e.g. `a//b`, `a/b` and `a/b/` all yield `["a", "b"]`
     /// * Absolute path contains `rootName()` as the first component. This means, `/foo/bar` yields `["/", "foo", "bar"]`,
-    /// and `C:/foo/bar` yields `["C:", "foo", "bar"]` on Windows.
+    /// and `C:/foo/bar` yields `["C:/", "foo", "bar"]` on Windows.
     auto components(this auto&& self) noexcept;
 
     /// Returns whether the first component of this path is equal to the given prefix.
@@ -264,6 +260,7 @@ class PathView : public PathInterface<PathView> {
 public:
     PathView() = default;
     PathView(std::string_view path) : m_path(path) {}
+    PathView(const std::string& path) : m_path(path) {}
     PathView(const char* path) : m_path(path) {}
 
     PathView(const PathView&) noexcept = default;
@@ -281,7 +278,7 @@ public:
     Path toPath() const;
 
 private:
-    friend class PathInterface<PathView>;
+    friend struct PathInterface<PathView>;
     std::string_view m_path;
 };
 
@@ -289,20 +286,17 @@ class Path : public PathInterface<Path> {
 public:
     Path() = default;
     Path(PathView path) : m_path(path) {}
+    Path(const char* path) : m_path(path) {}
 
     template <typename T> requires std::same_as<std::decay_t<T>, std::string>
     Path(T&& path) : m_path(std::forward<T>(path)) {}
-
-    template <typename T> requires std::same_as<std::decay_t<T>, std::filesystem::path>
-    Path(T&& path) {
-        GEODE_UNWRAP_INTO(auto utf8, _impl::fromStdPath(path));
-        *this = std::move(utf8).unwrapOrDefault();
-    }
 
 #ifdef _WIN32
     /// Converts the given UTF-16 wide string to a UTF-8 path, may fail if conversion fails.
     static Result<Path> fromWide(std::wstring_view path);
 #endif
+
+    Path fromStdPath(const auto& stdPath);
 
     Path(const Path&) = default;
     Path(Path&&) noexcept = default;
@@ -344,9 +338,15 @@ public:
     /// For example, "a" + "b" would become "ab" and not "a/b"
     Path& operator+=(PathView path);
 
+    /// Concatenates a character to the path, without introducing a directory separator.
+    Path& operator+=(char c);
+
     /// Concatenates a component to the path, without introducing a directory separator.
     /// For example, "a" + "b" would become "ab" and not "a/b"
     Path& concat(PathView path);
+
+    /// Concatenates a character to the path, without introducing a directory separator.
+    Path& concat(char c);
 
     /// Clears the path, making it empty.
     void clear() noexcept;
@@ -403,7 +403,7 @@ public:
     operator PathView() const noexcept;
 
 private:
-    friend class PathInterface<Path>;
+    friend struct PathInterface<Path>;
     std::string m_path;
 };
 
@@ -501,9 +501,7 @@ std::optional<Path> PathInterface<D>::lexicallyRelative(this auto&& self, PathVi
 
 template <typename D>
 Path PathInterface<D>::lexicallyProximate(this auto&& self, PathView base) {
-    return self.lexicallyRelative(base).or_else([&]() {
-        return Path{self};
-    });
+    return self.lexicallyRelative(base).value_or(Path{self});
 }
 
 template <typename D>

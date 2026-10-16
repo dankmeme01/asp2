@@ -294,9 +294,9 @@ public:
             return *this;
         }
 
-        reference operator*() {
+        decltype(auto) operator*() {
             ASP_ASSERT(m_item, "Dereferencing end iterator");
-            return *m_item;
+            return unwrapRefWrapper(*m_item);
         }
 
         bool operator==(const iterator& other) const {

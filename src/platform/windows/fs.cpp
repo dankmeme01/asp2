@@ -1,76 +1,18 @@
 #include <asp/fs.hpp>
-#include <fmt/format.h>
-#include <Windows.h>
+#include <asp/iter.hpp>
+#include "helpers.hpp"
 #include <userenv.h>
 #include <array>
 #include <filesystem>
 
 namespace asp::fs {
 
-static std::string formatError(DWORD error = GetLastError()) {
-    LPSTR buffer = nullptr;
-    DWORD size = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        error,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        (LPSTR)&buffer,
-        0,
-        nullptr
-    );
-
-    if (size == 0 || !buffer) {
-        return fmt::format("Win error {}", error);
-    }
-
-    std::string message(buffer, size);
-    LocalFree(buffer);
-
-    while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
-        message.pop_back();
-    }
-
-    return message;
-}
-
-static Result<std::string> wideToUtf8(std::wstring_view wide) {
-    if (wide.empty()) return Ok(std::string{});
-
-    int size = WideCharToMultiByte(CP_UTF8, 0, wide.data(), (int)wide.size(), nullptr, 0, nullptr, nullptr);
-    if (size == 0) {
-        return Err(fmt::format("Unable to convert string: {}", formatError()));
-    }
-
-    std::string utf8(size, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, wide.data(), (int)wide.size(), utf8.data(), size, nullptr, nullptr);
-
-    return Ok(std::move(utf8));
-}
-
-static Result<std::wstring> utf8ToWide(std::string_view utf8) {
-    if (utf8.empty()) return Ok(std::wstring{});
-
-    int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(), (int)utf8.size(), nullptr, 0);
-    if (size == 0) {
-        return Err(fmt::format("Unable to convert string: {}", formatError()));
-    }
-
-    std::wstring wide(size, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), (int)utf8.size(), wide.data(), size);
-
-    return Ok(std::move(wide));
-}
-
-Result<Path> _impl::fromStdPath(const std::filesystem::path& path) {
-    return Path::fromWide(path.native());
-}
-
-Result<NativePath> _impl::native(std::string_view path) {
+    Result<NativePath> _impl::native(std::string_view path) {
     return utf8ToWide(path);
 }
 
 bool _impl::isAbsolute(std::string_view path) noexcept {
-    if (path.size() >= 3 && std::isalpha(path[0]) && path[1] == ':' && (path[2] == '/' || path[2] == '\\')) {
+    if (path.size() >= 3 && std::isalpha((uint8_t)path[0]) && path[1] == ':' && (path[2] == '/' || path[2] == '\\')) {
         return true;
     } else if (path.size() >= 2 && path[0] == '\\' && path[1] == '\\') {
         return true;
@@ -79,7 +21,7 @@ bool _impl::isAbsolute(std::string_view path) noexcept {
 }
 
 std::optional<std::string_view> _impl::rootName(std::string_view path) noexcept {
-    if (path.size() >= 2 && std::isalpha(path[0]) && path[1] == ':') {
+    if (path.size() >= 2 && std::isalpha((uint8_t)path[0]) && path[1] == ':') {
         // path like C:/...
         if (path.size() >= 3 && (path[2] == '/' || path[2] == '\\')) {
             return path.substr(0, 3);
@@ -117,9 +59,14 @@ Result<Path> _impl::canonicalize(std::string_view path) {
 
     std::wstring buf(len, L'\0');
     len = GetFinalPathNameByHandleW(h, buf.data(), (DWORD)buf.size(), VOLUME_NAME_DOS);
+    buf.resize(len);
     CloseHandle(h);
 
-    GEODE_UNWRAP_INTO(auto utf8, wideToUtf8({buf.data(), len}));
+    if (buf.starts_with(L"\\\\?\\")) {
+        buf.erase(0, 4);
+    }
+
+    GEODE_UNWRAP_INTO(auto utf8, wideToUtf8(buf));
     return Ok(Path(std::move(utf8)));
 }
 
@@ -168,60 +115,22 @@ bool _impl::exists(std::string_view path) noexcept {
     return e == ERROR_SHARING_VIOLATION || e == ERROR_CANT_ACCESS_FILE;
 }
 
-static asp::SystemTime toSystemTime(FILETIME ft) {
-    constexpr uint64_t EPOCH_DIFF = 116444736000000000ULL;
-
-    auto ft64 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
-    if (ft64 < EPOCH_DIFF) return asp::SystemTime::UNIX_EPOCH;
-
-    auto ms = (ft64 - EPOCH_DIFF) / 10'000ULL;
-    return asp::SystemTime::fromUnixMillis(ms);
+Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
+    OpenOptions opts{};
+    opts.followSymlink = followSymlink;
+    opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
+    return File::open(path, opts).andThen([&](File file) {
+        return file.metadata();
+    });
 }
 
-Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
-    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
-
-    auto h = CreateFileW(
-        native.c_str(),
-        0,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        nullptr,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | (followSymlink ? 0 : FILE_FLAG_OPEN_REPARSE_POINT),
-        nullptr
-    );
-    if (h == INVALID_HANDLE_VALUE) {
-        return Err(fmt::format("Unable to open file: {}", formatError()));
+Path& Path::makePreferred() noexcept {
+    for (auto& c : m_path) {
+        if (c == '/' || c == '\\') {
+            c = PreferredSep;
+        }
     }
-
-    BY_HANDLE_FILE_INFORMATION data;
-    auto res = GetFileInformationByHandle(h, &data);
-    CloseHandle(h);
-
-    if (!res) {
-        return Err(fmt::format("Unable to get file information: {}", formatError()));
-    }
-
-    Metadata meta;
-    meta.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
-
-    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        meta.type = FileType::Directory;
-    } else if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-        meta.type = FileType::Symlink;
-    } else {
-        meta.type = FileType::RegularFile;
-    }
-
-    meta.readOnly = (data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
-    meta.hidden = (data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
-    meta.accessedAt = toSystemTime(data.ftLastAccessTime);
-    meta.modifiedAt = toSystemTime(data.ftLastWriteTime);
-    meta.createdAt = toSystemTime(data.ftCreationTime);
-
-    // TODO: permissions
-
-    return Ok(meta);
+    return *this;
 }
 
 Result<Path> Path::fromWide(std::wstring_view path) {
@@ -232,7 +141,7 @@ Result<Path> Path::fromWide(std::wstring_view path) {
 Result<Path> Path::cwd() {
     std::array<wchar_t, 1024> buf;
     auto n = GetCurrentDirectoryW(buf.size(), buf.data());
-    if (n == 0) {
+    if (n == 0 || n > buf.size()) {
         return Err(formatError());
     }
 
@@ -271,13 +180,155 @@ Result<Path> Path::home() {
 }
 
 Result<Path> Path::tmp() {
-    std::array<wchar_t, 512> buf;
+    std::array<wchar_t, 1024> buf;
     auto n = GetTempPath2W(buf.size(), buf.data());
-    if (n == 0) {
+    if (n == 0 || n > buf.size()) {
         return Err(formatError());
     }
     GEODE_UNWRAP_INTO(auto utf8, wideToUtf8({buf.data(), n}));
     return Ok(Path(std::move(utf8)));
+}
+
+
+// -- file op (asp::fs) implementations -- //
+
+Result<void> copy(PathView origin, PathView dest) {
+    GEODE_UNWRAP_INTO(auto nativeOrigin, _impl::native(origin));
+    GEODE_UNWRAP_INTO(auto nativeDest, _impl::native(dest));
+
+    if (!CopyFileExW(nativeOrigin.c_str(), nativeDest.c_str(), nullptr, nullptr, nullptr, 0)) {
+        return Err(formatError());
+    }
+
+    return Ok();
+}
+
+Result<void> rename(PathView oldPath, PathView newPath) {
+    GEODE_UNWRAP_INTO(auto nativeOld, _impl::native(oldPath));
+    GEODE_UNWRAP_INTO(auto nativeNew, _impl::native(newPath));
+
+    if (!MoveFileExW(nativeOld.c_str(), nativeNew.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        return Err(formatError());
+    }
+
+    return Ok();
+}
+
+Result<void> createDir(PathView path) {
+    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
+
+    if (!CreateDirectoryW(native.c_str(), nullptr)) {
+        return Err(formatError());
+    }
+
+    return Ok();
+}
+
+Result<void> removeFile(PathView path) {
+    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
+
+    if (!DeleteFileW(native.c_str())) {
+        return Err(formatError());
+    }
+
+    return Ok();
+}
+
+Result<void> removeDir(PathView path) {
+    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
+
+    if (!RemoveDirectoryW(native.c_str())) {
+        return Err(formatError());
+    }
+
+    return Ok();
+}
+
+static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
+    GEODE_UNWRAP_INTO(auto native, path.native());
+    if (native.back() != L'\\') {
+        native += L'\\';
+    }
+    native += L'*';
+
+    WIN32_FIND_DATAW findData;
+    auto h = FindFirstFileExW(
+        native.c_str(),
+        FindExInfoBasic,
+        &findData,
+        FindExSearchNameMatch,
+        nullptr,
+        0
+    );
+
+    if (h == INVALID_HANDLE_VALUE) {
+        return Err(formatError());
+    }
+
+    do {
+        std::wstring_view name(findData.cFileName);
+        if (name == L"." || name == L"..") {
+            continue;
+        }
+
+        // directory = has attribute directory but NOT a reparse point
+        bool isDirectory = (findData.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == FILE_ATTRIBUTE_DIRECTORY;
+
+        GEODE_UNWRAP_INTO(auto childPath, Path::fromWide(name).map([&](Path child) {
+            return path / child;
+        }));
+
+        if (!isDirectory) {
+            // this is a regular file or symlink, delete it
+            GEODE_UNWRAP(removeFile(childPath));
+        } else {
+            // directory, queue it
+            out.push_back(std::move(childPath));
+        }
+
+    } while (FindNextFileW(h, &findData));
+
+    FindClose(h);
+    return Ok();
+}
+
+Result<void> removeDirAll(PathView path) {
+    if (!path.isDir()) {
+        return Err(fmt::format("Path is not a directory", path));
+    }
+
+    OpenOptions opts{};
+    opts.accessMode = FILE_LIST_DIRECTORY;
+    opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT;
+
+    GEODE_UNWRAP_INTO(auto file, File::open(path, opts));
+
+    FILE_BASIC_INFO info{};
+    if (!GetFileInformationByHandleEx(file.fd(), FileBasicInfo, &info, sizeof(info))) {
+        return Err(formatError());
+    }
+
+    if ((info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+        return Err("Not a directory");
+    }
+
+    std::vector<Path> toDelete;
+    toDelete.push_back(path.toPath());
+
+    size_t i = 0;
+    while (i < toDelete.size()) {
+        // copy dir to avoid lifetime issues due to vector mutation
+        auto dir = toDelete[i];
+        GEODE_UNWRAP(findAndRemoveAllInside(dir, toDelete));
+        i++;
+    }
+
+    // now we only have a bunch of empty directories left to delete
+    for (auto& dir : asp::iter::fromReverse(toDelete)) {
+        GEODE_UNWRAP(removeDir(dir));
+    }
+
+    return Ok();
 }
 
 }

@@ -1,16 +1,19 @@
 #include <asp/fs.hpp>
+#include <asp/iter.hpp>
+#include "helpers.hpp"
+
 #include <fmt/format.h>
 #include <array>
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/sendfile.h>
 #include <pwd.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 namespace asp::fs {
-
-Result<Path> _impl::fromStdPath(const std::filesystem::path& path) {
-    return Ok(Path{ path.string() });
-}
 
 Result<NativePath> _impl::native(std::string_view path) {
     return Ok(NativePath{std::string(path)});
@@ -51,58 +54,22 @@ Result<Path> _impl::absolute(std::string_view path) {
 
 bool _impl::exists(std::string_view path) noexcept {
     struct stat st;
-    return stat(path.data(), &st) == 0;
-}
-
-static asp::SystemTime toSystemTime(struct timespec ts) {
-    asp::Duration dur(ts.tv_sec, ts.tv_nsec);
-    return asp::SystemTime::UNIX_EPOCH + dur;
+    return stat(std::string{path}.c_str(), &st) == 0;
 }
 
 Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
     struct stat st;
 
-    int errc = followSymlink ? stat(path.data(), &st) : lstat(path.data(), &st);
-    if (errc != 0) {
-        return Err(fmt::format("Unable to get file metadata: {}", strerror(errno)));
-    }
+    auto p = std::string{path};
+    GEODE_UNWRAP(wrapCall(followSymlink ? "stat" : "lstat",
+        followSymlink ? stat(p.c_str(), &st) : lstat(p.c_str(), &st)
+    ));
 
-    Metadata meta;
-    if (S_ISREG(st.st_mode)) {
-        meta.type = FileType::RegularFile;
-    } else if (S_ISDIR(st.st_mode)) {
-        meta.type = FileType::Directory;
-    } else if (S_ISLNK(st.st_mode)) {
-        meta.type = FileType::Symlink;
-    } else if (S_ISCHR(st.st_mode)) {
-        meta.type = FileType::CharDevice;
-    } else if (S_ISBLK(st.st_mode)) {
-        meta.type = FileType::BlockDevice;
-    } else if (S_ISFIFO(st.st_mode)) {
-        meta.type = FileType::Fifo;
-    } else if (S_ISSOCK(st.st_mode)) {
-        meta.type = FileType::Socket;
-    } else {
-        meta.type = FileType::Other;
-    }
+    return Ok(metadataFromStat(st));
+}
 
-    // TODO: Permissions
-
-    meta.size = st.st_size;
-
-    auto filename = _impl::filename(path);
-
-#if defined(__APPLE__)
-    meta.modifiedAt = toSystemTime(st.st_mtimespec);
-    meta.accessedAt = toSystemTime(st.st_atimespec);
-    meta.createdAt  = toSystemTime(st.st_birthtimespec);
-#else
-    meta.modifiedAt = toSystemTime(st.st_mtim);
-    meta.accessedAt = toSystemTime(st.st_atim);
-    // TODO: no creation time, use statx?
-#endif
-
-    return Ok(meta);
+Path& Path::makePreferred() noexcept {
+    return *this;
 }
 
 Result<Path> Path::cwd() {
@@ -130,7 +97,7 @@ Result<Path> Path::home() {
     return Err("Unable to determine home directory");
 }
 
-#ifdef __linux__ // other impls live in their directories
+#if defined(__linux__) && !defined(__ANDROID__) // other impls live in their directories
 Result<Path> Path::tmp() {
     auto tmpdir = getenv("TMPDIR");
     if (tmpdir && *tmpdir) {
@@ -139,5 +106,157 @@ Result<Path> Path::tmp() {
     return Ok(Path{"/tmp"});
 }
 #endif
+
+// -- file op (asp::fs) implementations -- //
+
+struct ScopeFd {
+    int fd;
+    ScopeFd(int fd) : fd(fd) {}
+    ~ScopeFd() {
+        if (fd >= 0) {
+            close(fd);
+        }
+    }
+
+    operator int() const {
+        return fd;
+    }
+};
+
+// TODO: apple impl
+static Result<> doCopyContents(int inFd, int outFd, size_t size) {
+    off_t offset = 0;
+    while (offset < size) {
+        auto copied = copy_file_range(inFd, nullptr, outFd, nullptr, size - offset, 0);
+        if (copied > 0) {
+            offset += copied;
+            continue;
+        } else if (copied == -1) {
+            int e = errno;
+            if (e != ENOSYS && e != EXDEV && e != EINVAL) {
+                return Err(fmt::format("unable to copy file: {}", strerror(e)));
+            }
+
+            // otherwise, fallback to another method
+            break;
+        } else if (copied == 0) {
+            // this shouldn't happen unless the file was spontaneously truncated
+            return Err("unable to copy file: unexpected EOF");
+        }
+    }
+
+    if (offset == size) {
+        return Ok();
+    }
+
+    // copy_file_range failed, do a sendfile as a fallback
+    // explicitly keep offset in case the function above somehow transferred part of file, though should be impossible
+
+    while (offset < size) {
+        auto sent = ::sendfile(outFd, inFd, &offset, size - offset);
+        if (sent < 0) {
+            return Err(fmt::format("unable to copy file: {}", strerror(errno)));
+        } else if (sent == 0) {
+            // this shouldn't happen unless the file was spontaneously truncated
+            return Err("unable to copy file: unexpected EOF");
+        }
+    }
+
+    return Ok();
+}
+
+#ifdef __linux__
+Result<void> copy(PathView origin, PathView dest) {
+    ScopeFd inFd = open(origin.string().c_str(), O_RDONLY);
+    if (inFd < 0) {
+        return Err(fmt::format("unable to open source file: {}", strerror(errno)));
+    }
+
+    ScopeFd outFd = open(dest.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (outFd < 0) {
+        return Err(fmt::format("unable to open destination file: {}", strerror(errno)));
+    }
+
+    struct stat st;
+    fstat(inFd, &st);
+
+    GEODE_UNWRAP(doCopyContents(inFd, outFd, st.st_size));
+
+    // copy permissions
+    return wrapCall("fchmod", fchmod(outFd, st.st_mode));
+}
+#endif
+
+Result<void> rename(PathView oldPath, PathView newPath) {
+    return wrapCall("rename", ::rename(oldPath.string().c_str(), newPath.string().c_str()));
+}
+
+Result<void> createDir(PathView path) {
+    return wrapCall("mkdir", ::mkdir(path.string().c_str(), 0755));
+}
+
+Result<void> removeFile(PathView path) {
+    return wrapCall("unlink", ::unlink(path.string().c_str()));
+}
+
+Result<void> removeDir(PathView path) {
+    return wrapCall("rmdir", ::rmdir(path.string().c_str()));
+}
+
+using ScopeDir = std::unique_ptr<DIR, decltype(&closedir)>;
+
+static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
+    auto dir = ScopeDir{opendir(path.string().c_str()), &closedir};
+    if (!dir) {
+        return Err(fmt::format("Unable to open directory '{}': {}", path, strerror(errno)));
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir.get())) != nullptr) {
+        std::string_view name{entry->d_name};
+        if (name == "." || name == "..") continue;
+
+        auto fullPath = path / name;
+
+        struct stat st;
+        if (lstat(fullPath.c_str(), &st) != 0) {
+            return Err(fmt::format("Unable to stat '{}': {}", fullPath, strerror(errno)));
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            // this is a regular file or symlink, delete it
+            GEODE_UNWRAP(removeFile(fullPath));
+        } else {
+            // directory, queue it
+            out.push_back(std::move(fullPath));
+        }
+    }
+
+    return Ok();
+}
+
+Result<void> removeDirAll(PathView path) {
+    if (!path.isDir()) {
+        return Err(fmt::format("Path is not a directory", path));
+    }
+
+    std::vector<Path> toDelete;
+    toDelete.push_back(path.toPath());
+
+    size_t i = 0;
+    while (i < toDelete.size()) {
+        // copy dir to avoid lifetime issues due to vector mutation
+        auto dir = toDelete[i];
+        GEODE_UNWRAP(findAndRemoveAllInside(dir, toDelete));
+        i++;
+    }
+
+    // now we only have a bunch of empty directories left to delete
+    for (auto& dir : asp::iter::fromReverse(toDelete)) {
+        GEODE_UNWRAP(removeDir(dir));
+    }
+
+    return Ok();
+}
 
 }
