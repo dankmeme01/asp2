@@ -38,7 +38,7 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     OpenOptions opts{};
     opts.read = false;
     opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
-    auto result = File::open(path);
+    auto result = File::open(path, opts);
 
     if (!result) {
         return Err(fmt::format("Unable to open file: {}", result.unwrapErr()));
@@ -64,12 +64,12 @@ Result<Path> _impl::canonicalize(std::string_view path) {
 }
 
 bool _impl::equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept {
-    auto doOpen = [](auto path) {
+    auto doOpen = [&](auto path) {
         OpenOptions opts{};
         opts.read = false;
-        opts.followSymlink = true;
+        opts.followSymlink = followSymlink;
         opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
-        return File::open(path);
+        return File::open(path, opts);
     };
 
     auto r1 = doOpen(lhs);
@@ -245,6 +245,22 @@ Result<void> createDir(PathView path) {
 }
 
 Result<void> removeFile(PathView path) {
+    OpenOptions opts{};
+    opts.read = false;
+    opts.followSymlink = false;
+    GEODE_UNWRAP_INTO(auto file, File::open(path, opts));
+
+    BY_HANDLE_FILE_INFORMATION data;
+    GEODE_UNWRAP(wrapCall(GetFileInformationByHandle(file.fd(), &data)));
+
+    bool reparsePoint = (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+    bool directory = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+
+    if (reparsePoint && directory) {
+        // symlink to directory, use removeDir
+        return removeDir(path);
+    }
+
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     if (!DeleteFileW(native.c_str())) {
@@ -293,22 +309,22 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
         // directory = has attribute directory but NOT a reparse point
         bool isReparsePoint = (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-        bool isDirectory = !isReparsePoint && (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        bool isDirectory = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
         GEODE_UNWRAP_INTO(auto childPath, Path::fromWide(name).map([&](Path child) {
             return path / child;
         }));
 
         if (!isDirectory) {
-            // this is a regular file or symlink, delete it
+            // this is a regular file or symlink to a file, delete it
+            GEODE_UNWRAP(removeFile(childPath));
+        } else {
+            // directory, queue it if not a reparse point
             if (isReparsePoint) {
                 GEODE_UNWRAP(removeDir(childPath));
             } else {
-                GEODE_UNWRAP(removeFile(childPath));
+                out.push_back(std::move(childPath));
             }
-        } else {
-            // directory, queue it
-            out.push_back(std::move(childPath));
         }
 
     } while (FindNextFileW(h, &findData));
