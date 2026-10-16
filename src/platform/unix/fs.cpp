@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 #include <array>
+#include <memory>
 
 #include <unistd.h>
 #include <sys/stat.h>

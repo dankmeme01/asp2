@@ -293,7 +293,7 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
         // directory = has attribute directory but NOT a reparse point
         bool isReparsePoint = (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-        bool isDirectory = !isReparsePoint && (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0
+        bool isDirectory = !isReparsePoint && (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
         GEODE_UNWRAP_INTO(auto childPath, Path::fromWide(name).map([&](Path child) {
             return path / child;

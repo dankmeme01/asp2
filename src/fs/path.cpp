@@ -1,5 +1,6 @@
 #include <asp/fs/Path.hpp>
 #include <asp/iter.hpp>
+#include <vector>
 
 namespace asp::fs {
 
