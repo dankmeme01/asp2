@@ -3,7 +3,6 @@
 #include <asp/detail/Result.hpp>
 #include <asp/iter/Iter.hpp>
 #include <fmt/format.h>
-#include <string>
 #include "Metadata.hpp"
 
 namespace asp::fs {
