@@ -23,6 +23,11 @@ std::optional<PathView> _impl::parent(std::string_view path) noexcept {
         return std::nullopt;
     }
 
+    auto rn = rootName(path);
+    if (rn && slash < rn->size()) {
+        return *rn;
+    }
+
     // "/" has no parent
     if (slash == 0 && slash + 1 >= path.size()) {
         return std::nullopt;
@@ -77,13 +82,6 @@ bool _impl::equal(std::string_view lhs, std::string_view rhs) noexcept {
 
 std::strong_ordering _impl::compare(std::string_view lhs, std::string_view rhs) noexcept {
     return lhs <=> rhs;
-}
-
-bool _impl::equivalent(std::string_view lhs, std::string_view rhs) noexcept {
-    auto lp = canonicalize(lhs);
-    auto rp = canonicalize(rhs);
-
-    return lp && rp && _impl::equal(lp.unwrap().view(), rp.unwrap().view());
 }
 
 Path _impl::lexicallyNormal(std::string_view path) {

@@ -129,12 +129,17 @@ Result<Metadata> File::metadata() {
     Metadata meta;
     meta.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
 
-    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        meta.type = FileType::Directory;
-    } else if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+    if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
         meta.type = FileType::Symlink;
+    } else if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        meta.type = FileType::Directory;
     } else {
         meta.type = FileType::RegularFile;
+    }
+
+    meta.permissions = Permissions::All;
+    if (data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) {
+        meta.permissions &= ~(Permissions::OwnerWrite | Permissions::GroupWrite | Permissions::OtherWrite);
     }
 
     meta.readOnly = (data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
@@ -142,8 +147,6 @@ Result<Metadata> File::metadata() {
     meta.accessedAt = toSystemTime(data.ftLastAccessTime);
     meta.modifiedAt = toSystemTime(data.ftLastWriteTime);
     meta.createdAt = toSystemTime(data.ftCreationTime);
-
-    // TODO: permissions
 
     return Ok(meta);
 }

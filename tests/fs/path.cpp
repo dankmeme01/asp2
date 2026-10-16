@@ -354,8 +354,14 @@ TEST(Path, Components) {
 
     std::vector<std::string_view> c1 = {"foo", "bar", "baz.txt"};
     std::vector<std::string_view> c2 = {"/", "foo", "bar", "baz.txt"};
+
+#ifdef _WIN32
     std::vector<std::string_view> c3 = {"C:/", "foo", "bar", "baz.txt"};
+    std::vector<std::string_view> c4 = {"C:", "foo", "bar", "baz.txt"};
+#else
+    std::vector<std::string_view> c3 = {"C:", "foo", "bar", "baz.txt"};
     std::vector<std::string_view> c4 = {"C:foo", "bar", "baz.txt"};
+#endif
 
     EXPECT_EQ(p1.components().collect(), c1);
     EXPECT_EQ(p2.components().collect(), c2);

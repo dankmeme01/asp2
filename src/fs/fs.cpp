@@ -5,13 +5,22 @@
 
 namespace asp::fs {
 
+static auto endsWithOneOf(std::string_view str, std::string_view chars) {
+    return !str.empty() && chars.contains(str.back());
+}
+
 Result<void> createDirAll(PathView path) {
-    if (path.empty()) {
+    auto view = path.view();
+    while (endsWithOneOf(view, SupportedSep)) {
+        view.remove_suffix(1);
+    }
+
+    if (view.empty()) {
         return Ok();
     }
 
     std::vector<Path> toCreate;
-    Path p{path};
+    Path p{view};
 
     while (!p.empty() && !p.exists()) {
         toCreate.push_back(p);
@@ -64,7 +73,7 @@ Result<void> write(PathView path, std::span<const uint8_t> data) {
     return file.writeAll(data);
 }
 
-Result<void> write(PathView path, const std::string& data) {
+Result<void> write(PathView path, std::string_view data) {
     return write(path, std::span{reinterpret_cast<const uint8_t*>(data.data()), data.size()});
 }
 

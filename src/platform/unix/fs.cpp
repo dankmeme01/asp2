@@ -15,6 +15,15 @@
 
 namespace asp::fs {
 
+static Result<struct stat> getStat(const std::string& path, bool followSymlink) {
+    struct stat st;
+    GEODE_UNWRAP(wrapCall(
+        followSymlink ? "stat" : "lstat",
+        followSymlink ? ::stat(path.c_str(), &st) : ::lstat(path.c_str(), &st)
+    ));
+    return Ok(st);
+}
+
 Result<NativePath> _impl::native(std::string_view path) {
     return Ok(NativePath{std::string(path)});
 }
@@ -45,6 +54,18 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     return Ok(Path(resolved.get()));
 }
 
+bool _impl::equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept {
+    auto r1 = getStat(std::string{lhs}, followSymlink);
+    if (!r1) return false;
+    auto r2 = getStat(std::string{rhs}, followSymlink);
+    if (!r2) return false;
+
+    auto& st1 = r1.unwrap();
+    auto& st2 = r2.unwrap();
+
+    return st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino;
+}
+
 Result<Path> _impl::absolute(std::string_view path) {
     if (_impl::isAbsolute(path)) return Ok(Path{path});
 
@@ -58,13 +79,7 @@ bool _impl::exists(std::string_view path) noexcept {
 }
 
 Result<Metadata> _impl::metadata(std::string_view path, bool followSymlink) {
-    struct stat st;
-
-    auto p = std::string{path};
-    GEODE_UNWRAP(wrapCall(followSymlink ? "stat" : "lstat",
-        followSymlink ? stat(p.c_str(), &st) : lstat(p.c_str(), &st)
-    ));
-
+    GEODE_UNWRAP_INTO(auto st, getStat(std::string{path}, followSymlink));
     return Ok(metadataFromStat(st));
 }
 
@@ -126,32 +141,6 @@ struct ScopeFd {
 // TODO: apple impl
 static Result<> doCopyContents(int inFd, int outFd, size_t size) {
     off_t offset = 0;
-    while (offset < size) {
-        auto copied = copy_file_range(inFd, nullptr, outFd, nullptr, size - offset, 0);
-        if (copied > 0) {
-            offset += copied;
-            continue;
-        } else if (copied == -1) {
-            int e = errno;
-            if (e != ENOSYS && e != EXDEV && e != EINVAL) {
-                return Err(fmt::format("unable to copy file: {}", strerror(e)));
-            }
-
-            // otherwise, fallback to another method
-            break;
-        } else if (copied == 0) {
-            // this shouldn't happen unless the file was spontaneously truncated
-            return Err("unable to copy file: unexpected EOF");
-        }
-    }
-
-    if (offset == size) {
-        return Ok();
-    }
-
-    // copy_file_range failed, do a sendfile as a fallback
-    // explicitly keep offset in case the function above somehow transferred part of file, though should be impossible
-
     while (offset < size) {
         auto sent = ::sendfile(outFd, inFd, &offset, size - offset);
         if (sent < 0) {
@@ -237,7 +226,7 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
 Result<void> removeDirAll(PathView path) {
     if (!path.isDir()) {
-        return Err(fmt::format("Path is not a directory", path));
+        return Err(fmt::format("Path '{}' is not a directory", path));
     }
 
     std::vector<Path> toDelete;

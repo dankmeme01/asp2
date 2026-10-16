@@ -44,7 +44,7 @@ static Metadata metadataFromStat(const struct stat& st) {
         meta.type = FileType::Other;
     }
 
-    // TODO: Permissions
+    meta.permissions = fromBits(st.st_mode);
 
     meta.size = st.st_size;
 

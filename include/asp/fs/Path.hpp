@@ -41,7 +41,7 @@ namespace _impl {
     Result<Path> weaklyCanonical(std::string_view path);
 
     bool equal(std::string_view lhs, std::string_view rhs) noexcept;
-    bool equivalent(std::string_view lhs, std::string_view rhs) noexcept;
+    bool equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept;
     std::strong_ordering compare(std::string_view lhs, std::string_view rhs) noexcept;
 
     bool exists(std::string_view path) noexcept;
@@ -49,9 +49,6 @@ namespace _impl {
 
     // TODO: readLink
 }
-
-template <typename T>
-class ToStdPath {};
 
 template <typename Derived>
 struct PathInterface {
@@ -174,10 +171,17 @@ struct PathInterface {
     bool operator==(this const Derived& self, const Derived& other) noexcept;
     /// Compares two paths. This is a simple string comparison, and does not take into account any filesystem semantics.
     std::strong_ordering operator<=>(this const Derived& self, const Derived& other) noexcept;
+
     /// Checks if two paths are equivalent and point to the same file in the filesystem.
     /// If either does not exist, or any other error occurred, returns false.
+    ///
+    /// Note that this follows all symlinks, including the target one.
+    /// So if this path refers to a specific file, and `other` is a symlink to the same file (or vice versa), this will return `true`.
     bool equivalent(this const Derived& self, PathView other) noexcept;
 
+    /// Similar to `equivalent`, checks if two files point to the same in the filesystem, but does not follow the final link.
+    /// This means two links pointing to the same file may return `false`.
+    bool symlinkEquivalent(this const Derived& self, PathView other) noexcept;
 
     // -- fs operations -- //
 
@@ -296,7 +300,7 @@ public:
     static Result<Path> fromWide(std::wstring_view path);
 #endif
 
-    Path fromStdPath(const auto& stdPath);
+    static Path fromStdPath(const auto& stdPath);
 
     Path(const Path&) = default;
     Path(Path&&) noexcept = default;
@@ -314,7 +318,7 @@ public:
 
     /// Returns the current working directory. May error if the current directory does not exist, or the user has insufficient permissions.
     static Result<Path> cwd();
-    /// Returns the user home directory. May error if the current directory does not exist, or the user has insufficient permissions.
+    /// Returns the user home directory. May error if the directory does not exist, or the user has insufficient permissions.
     /// On Unix, this is equivalent to the `$HOME` environment variable, also known as `~`.
     /// On Windows, this is equivalent to the `%USERPROFILE%` environment variable.
     static Result<Path> home();
@@ -521,7 +525,12 @@ std::strong_ordering PathInterface<D>::operator<=>(this const D& self, const D& 
 
 template <typename D>
 bool PathInterface<D>::equivalent(this const D& self, PathView other) noexcept {
-    return _impl::equivalent(self.m_path, other.view());
+    return _impl::equivalent(self.m_path, other.view(), true);
+}
+
+template <typename D>
+bool PathInterface<D>::symlinkEquivalent(this const D& self, PathView other) noexcept {
+    return _impl::equivalent(self.m_path, other.view(), false);
 }
 
 template <typename D>
