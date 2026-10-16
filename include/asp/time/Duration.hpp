@@ -38,27 +38,25 @@ public:
             return _unchecked(static_cast<u64>(secs), 0);
         } else if constexpr (std::is_floating_point_v<T>) {
             auto posZero = static_cast<T>(+0.0);
-            if (secs < posZero) {
-                return std::optional<Duration>{};
-            }
+            ASP_ALWAYS_ASSERT(secs >= posZero, "fromSecs only supports non-negative numbers");
 
             auto whole = time_detail::floor(secs);
             auto fractional = secs - (u64)secs;
 
-            return std::optional{Duration(
+            return Duration(
                 static_cast<u64>(whole),
                 static_cast<u32>(static_cast<T>(time_detail::NANOS_IN_SEC) * fractional)
-            )};
+            );
         } else {
             static_assert(!std::is_same_v<T, T>, "fromSecs only supports numbers");
         }
     }
 
-    constexpr static std::optional<Duration> fromSecsF32(f32 secs) noexcept {
+    constexpr static Duration fromSecsF32(f32 secs) noexcept {
         return fromSecs(secs);
     }
 
-    constexpr static std::optional<Duration> fromSecsF64(f64 secs) noexcept {
+    constexpr static Duration fromSecsF64(f64 secs) noexcept {
         return fromSecs(secs);
     }
 
