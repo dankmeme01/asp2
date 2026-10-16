@@ -1,4 +1,4 @@
-#include <asp/fs/path.hpp>
+#include <asp/fs/Path.hpp>
 #include <asp/iter.hpp>
 
 namespace asp::fs {
@@ -6,11 +6,11 @@ namespace asp::fs {
 // Shared impl
 
 static auto startsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.find(str.front()) != std::string_view::npos;
+    return !str.empty() && chars.contains(str.front());
 }
 
 static auto endsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.find(str.back()) != std::string_view::npos;
+    return !str.empty() && chars.contains(str.back());
 }
 
 size_t _impl::hash(std::string_view path) noexcept {
@@ -53,6 +53,10 @@ std::optional<std::string_view> _impl::extension(std::string_view path) noexcept
 
     auto dot = fn->find_last_of('.');
     if (dot == std::string::npos) return std::nullopt;
+
+    if (dot == 0 && fn->find_first_of('.', 1) == std::string::npos) {
+        return std::nullopt;
+    }
 
     return fn->substr(dot + 1);
 }
@@ -111,7 +115,7 @@ Path _impl::lexicallyNormal(std::string_view path) {
     }
 
     if (trailing && !result.empty() && !endsWithOneOf(result.view(), SupportedSep)) {
-        result += "/";
+        result += PreferredSep;
     }
     return result;
 }
@@ -133,8 +137,10 @@ std::optional<Path> _impl::lexicallyRelative(std::string_view path, std::string_
         i++;
     }
 
+    size_t bComponents = b.components().count();
+
     Path out;
-    for (size_t j = i; j < b.components().count(); j++) {
+    for (size_t j = i; j < bComponents; j++) {
         out /= "..";
     }
     for (auto c : a.components().skip(i)) {
@@ -146,12 +152,12 @@ std::optional<Path> _impl::lexicallyRelative(std::string_view path, std::string_
 
 Result<Path> _impl::weaklyCanonical(std::string_view path) {
     GEODE_UNWRAP_INTO(auto abs, absolute(path).map([](Path p) { return p.lexicallyNormal(); }));
-    std::vector<std::string_view> suffix;
+    std::vector<std::string> suffix;
 
     Path prefix = abs;
-    while (~prefix.empty() && !prefix.exists()) {
+    while (!prefix.empty() && !prefix.exists()) {
         if (auto fn = prefix.filename()) {
-            suffix.push_back(*fn);
+            suffix.push_back(std::string{*fn});
         }
         if (auto par = prefix.parent()) {
             prefix = *par;
@@ -165,7 +171,7 @@ Result<Path> _impl::weaklyCanonical(std::string_view path) {
     }
 
     GEODE_UNWRAP_INTO(auto canon, prefix.canonicalize());
-    for (auto s : asp::iter::fromReverse(suffix)) {
+    for (auto& s : asp::iter::fromReverse(suffix)) {
         canon /= s;
     }
 
@@ -216,7 +222,7 @@ Path& Path::append(PathView path) {
     }
 
     if (!m_path.empty() && !endsWithOneOf(m_path, SupportedSep)) {
-        m_path += "/";
+        m_path += PreferredSep;
     }
     m_path += path.view();
 
@@ -227,9 +233,17 @@ Path& Path::operator+=(PathView path) {
     return this->concat(path);
 }
 
+Path& Path::operator+=(char c) {
+    return this->concat(c);
+}
+
 Path& Path::concat(PathView path) {
     m_path += path.view();
     return *this;
+}
+
+Path& Path::concat(char c) {
+    return this->concat(std::string_view{&c, 1});
 }
 
 void Path::clear() noexcept {
@@ -242,15 +256,6 @@ void Path::reserve(size_t newCapacity) {
 
 void Path::shrinkToFit() {
     m_path.shrink_to_fit();
-}
-
-Path& Path::makePreferred() noexcept {
-    for (auto& c : m_path) {
-        if (c == '/' || c == '\\') {
-            c = PreferredSep;
-        }
-    }
-    return *this;
 }
 
 Path& Path::removeFilename() {
@@ -267,16 +272,18 @@ Path& Path::replaceFilename(std::string_view filename) {
 }
 
 Path& Path::replaceExtension(std::string_view extension) {
-    auto dotPos = m_path.find_last_of('.');
-    if (dotPos != std::string::npos) {
-        m_path.erase(dotPos);
+    if (auto ext = this->extension()) {
+        m_path.erase(m_path.size() - ext->size() - 1);
     }
 
-    if (extension.starts_with('.')) {
-        extension.remove_prefix(1);
+    if (extension.empty()) {
+        return *this;
     }
 
-    m_path.push_back('.');
+    if (!extension.starts_with('.')) {
+        m_path += '.';
+    }
+
     m_path += extension;
 
     return *this;
@@ -329,7 +336,7 @@ std::optional<std::string_view> PathComponentIterator::next() noexcept {
         m_first = false;
         if (auto rn = PathView{m_path}.rootName()) {
             m_path.remove_prefix(rn->size());
-            return *rn;
+            return rn;
         }
     }
 

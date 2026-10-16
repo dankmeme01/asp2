@@ -1,0 +1,66 @@
+#include <asp/fs/DirectoryIterator.hpp>
+#include <dirent.h>
+#include "helpers.hpp"
+
+namespace asp::fs {
+
+DirectoryIterator::~DirectoryIterator() {
+    if (m_handle) {
+        closedir((DIR*)m_handle);
+    }
+}
+
+DirectoryIterator::DirectoryIterator(DirectoryIterator&& other) noexcept {
+    *this = std::move(other);
+}
+
+DirectoryIterator& DirectoryIterator::operator=(DirectoryIterator&& other) noexcept {
+    if (this != &other) {
+        if (m_handle) {
+            closedir((DIR*)m_handle);
+        }
+
+        m_handle = other.m_handle;
+        m_path = std::move(other.m_path);
+        m_nextItem = std::move(other.m_nextItem);
+
+        other.m_handle = nullptr;
+        other.m_nextItem = std::nullopt;
+    }
+
+    return *this;
+}
+
+Result<DirectoryIterator> DirectoryIterator::create(PathView path, bool recursive) {
+    auto h = opendir(path.string().c_str());
+
+    if (h == nullptr) {
+        return Err(fmt::format("Unable to open directory '{}': {}", path, strerror(errno)));
+    }
+
+    DirectoryIterator iter{ path.toPath() };
+    iter.m_handle = h;
+
+    return Ok(std::move(iter));
+}
+
+std::optional<Result<Path>> DirectoryIterator::next() noexcept {
+    while (!m_nextItem) {
+        auto entry = readdir((DIR*)m_handle);
+        if (!entry) {
+            return std::nullopt;
+        }
+
+        std::string_view name{entry->d_name};
+        if (name == "." || name == "..") continue;
+
+        m_nextItem = m_path / name;
+    }
+
+    auto nextItem = std::move(*m_nextItem);
+    m_nextItem = std::nullopt;
+
+    return Ok(std::move(nextItem));
+}
+
+}
