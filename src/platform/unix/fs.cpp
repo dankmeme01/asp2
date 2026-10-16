@@ -9,10 +9,13 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/sendfile.h>
 #include <pwd.h>
 #include <fcntl.h>
 #include <dirent.h>
+
+#ifdef __linux__
+# include <sys/sendfile.h>
+#endif
 
 namespace asp::fs {
 
@@ -139,7 +142,7 @@ struct ScopeFd {
     }
 };
 
-// TODO: apple impl
+#ifdef __linux__
 static Result<> doCopyContents(int inFd, int outFd, size_t size) {
     off_t offset = 0;
     while (offset < size) {
@@ -155,8 +158,14 @@ static Result<> doCopyContents(int inFd, int outFd, size_t size) {
     return Ok();
 }
 
-#ifdef __linux__
-Result<void> copy(PathView origin, PathView dest) {
+Result<void> copy(PathView origin_, PathView dest_) {
+    auto origin = origin.string();
+    auto dest = dest_.string();
+
+    if (::clonefile(origin.c_str(), dest.c_str(), 0) == 0) {
+        return Ok();
+    }
+
     ScopeFd inFd = open(origin.string().c_str(), O_RDONLY);
     if (inFd < 0) {
         return Err(fmt::format("unable to open source file: {}", strerror(errno)));
