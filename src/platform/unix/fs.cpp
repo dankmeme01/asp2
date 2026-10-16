@@ -159,19 +159,15 @@ static Result<> doCopyContents(int inFd, int outFd, size_t size) {
 }
 
 Result<void> copy(PathView origin_, PathView dest_) {
-    auto origin = origin.string();
+    auto origin = origin_.string();
     auto dest = dest_.string();
 
-    if (::clonefile(origin.c_str(), dest.c_str(), 0) == 0) {
-        return Ok();
-    }
-
-    ScopeFd inFd = open(origin.string().c_str(), O_RDONLY);
+    ScopeFd inFd = open(origin.c_str(), O_RDONLY);
     if (inFd < 0) {
         return Err(fmt::format("unable to open source file: {}", strerror(errno)));
     }
 
-    ScopeFd outFd = open(dest.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    ScopeFd outFd = open(dest.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (outFd < 0) {
         return Err(fmt::format("unable to open destination file: {}", strerror(errno)));
     }
@@ -181,8 +177,21 @@ Result<void> copy(PathView origin_, PathView dest_) {
 
     GEODE_UNWRAP(doCopyContents(inFd, outFd, st.st_size));
 
+    // copy ownership if possible
+    if (st.st_uid != geteuid() || st.st_gid != getegid()) {
+        if (fchown(outFd, st.st_uid, st.st_gid) != 0 && errno != EPERM) {
+            return Err(fmt::format("unable to copy ownership: {}", strerror(errno)));
+        }
+    }
+
     // copy permissions
-    return wrapCall("fchmod", fchmod(outFd, st.st_mode));
+    GEODE_UNWRAP(wrapCall("fchmod", fchmod(outFd, st.st_mode)));
+
+    // copy timestamps
+    struct timespec times[2] = {st.st_atim, st.st_mtim};
+    GEODE_UNWRAP(wrapCall("futimens", futimens(outFd, times)));
+
+    return Ok();
 }
 #endif
 
