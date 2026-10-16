@@ -15,5 +15,4 @@ Some highlights include:
 ## TODO
 
 * Add custom iterator for `asp::fs::iterdir` to avoid exceptions in operator++
-* `asp::iter` stuff should not use reference wrapper in public apis beyond `next()` return value, make `map()` nice
 * `asp::iter` size hint
