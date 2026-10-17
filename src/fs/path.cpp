@@ -1,18 +1,11 @@
 #include <asp/fs/Path.hpp>
 #include <asp/iter.hpp>
 #include <vector>
+#include "util.hpp"
 
 namespace asp::fs {
 
 // Shared impl
-
-static auto startsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.contains(str.front());
-}
-
-static auto endsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.contains(str.back());
-}
 
 size_t _impl::hash(std::string_view path) noexcept {
     return std::hash<std::string_view>()(path);
@@ -306,28 +299,6 @@ const char* Path::c_str() const noexcept {
 
 Path::operator PathView() const noexcept {
     return this->view();
-}
-
-Path operator/(const PathView& lhs, const PathView& rhs) {
-    Path result(lhs);
-    result /= rhs;
-    return result;
-}
-
-Path operator/(Path&& lhs, const PathView& rhs) {
-    lhs /= rhs;
-    return std::move(lhs);
-}
-
-Path operator+(const PathView& lhs, const PathView& rhs) {
-    Path result(lhs);
-    result += rhs;
-    return result;
-}
-
-Path operator+(Path&& lhs, const PathView& rhs) {
-    lhs += rhs;
-    return std::move(lhs);
 }
 
 std::optional<std::string_view> PathComponentIterator::next() noexcept {

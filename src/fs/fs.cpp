@@ -1,14 +1,12 @@
 #include <asp/fs/fs.hpp>
 #include <asp/fs/File.hpp>
+#include <asp/iter.hpp>
+#include "util.hpp"
+
 #include <cstring>
 #include <fmt/format.h>
-#include <asp/iter.hpp>
 
 namespace asp::fs {
-
-static auto endsWithOneOf(std::string_view str, std::string_view chars) {
-    return !str.empty() && chars.contains(str.back());
-}
 
 bool exists(PathView path) {
     return path.exists();

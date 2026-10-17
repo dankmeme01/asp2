@@ -199,6 +199,7 @@ public:
     /// * `std::set`
     /// * `std::unordered_map` (requires pair)
     /// * `std::map` (requires pair)
+    /// * `Result<std::vector<T>, E>` from an iterator of `Result<T, E>`
     template <typename Container = std::vector<ExtractRefWrapper<Item>>>
     auto collect() && {
         using OutItem = ExtractRefWrapper<Item>;
