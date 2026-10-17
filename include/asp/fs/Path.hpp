@@ -52,7 +52,13 @@ struct PathInterface {
     /// Returns a representation of this path that is suitable for use with OS APIs.
     /// On Windows, this converts the path to UTF-16 and returns a wide string.
     /// On other systems, this simply copies the path and is equivalent to `string()`.
-    Result<NativePath> native(this auto&& self) {
+    /// If the conversion fails or the path is empty, returns an empty string.
+    NativePath native(this auto&& self) {
+        return _impl::native(self.m_path).unwrapOrDefault();
+    }
+
+    // Like `native`, but returning a Result instead, indicating errors if the conversion fails
+    Result<NativePath> nativeOrError(this auto&& self) {
         return _impl::native(self.m_path);
     }
 
@@ -409,10 +415,57 @@ private:
     std::string m_path;
 };
 
-Path operator/(const PathView& lhs, const PathView& rhs);
-Path operator/(Path&& lhs, const PathView& rhs);
-Path operator+(const PathView& lhs, const PathView& rhs);
-Path operator+(Path&& lhs, const PathView& rhs);
+template <typename Y>
+inline Path operator/(const PathView& lhs, Y&& rhs) {
+    Path result{lhs};
+
+    if constexpr (std::is_convertible_v<Y, PathView>) {
+        result /= PathView{std::forward<Y>(rhs)};
+    } else if constexpr (std::is_convertible_v<Y, std::string_view>) {
+        result /= PathView{std::string_view{std::forward<Y>(rhs)}};
+    } else {
+        static_assert(!std::is_same_v<Y, Y>, "rhs must be convertible to PathView");
+    }
+    return result;
+}
+
+template <typename Y>
+inline Path operator/(Path&& result, Y&& rhs) {
+    if constexpr (std::is_convertible_v<Y, PathView>) {
+        result /= PathView{std::forward<Y>(rhs)};
+    } else if constexpr (std::is_convertible_v<Y, std::string_view>) {
+        result /= PathView{std::string_view{std::forward<Y>(rhs)}};
+    } else {
+        static_assert(!std::is_same_v<Y, Y>, "rhs must be convertible to PathView");
+    }
+    return result;
+}
+
+template <typename Y>
+inline Path operator+(const PathView& lhs, Y&& rhs) {
+    Path result{lhs};
+
+    if constexpr (std::is_convertible_v<Y, PathView>) {
+        result += PathView{std::forward<Y>(rhs)};
+    } else if constexpr (std::is_convertible_v<Y, std::string_view>) {
+        result += PathView{std::string_view{std::forward<Y>(rhs)}};
+    } else {
+        static_assert(!std::is_same_v<Y, Y>, "rhs must be convertible to PathView");
+    }
+    return result;
+}
+
+template <typename Y>
+inline Path operator+(Path&& result, Y&& rhs) {
+    if constexpr (std::is_convertible_v<Y, PathView>) {
+        result += PathView{std::forward<Y>(rhs)};
+    } else if constexpr (std::is_convertible_v<Y, std::string_view>) {
+        result += PathView{std::string_view{std::forward<Y>(rhs)}};
+    } else {
+        static_assert(!std::is_same_v<Y, Y>, "rhs must be convertible to PathView");
+    }
+    return result;
+}
 
 inline bool operator==(const PathView& lhs, const PathView& rhs) noexcept {
     return _impl::equal(lhs.view(), rhs.view());
