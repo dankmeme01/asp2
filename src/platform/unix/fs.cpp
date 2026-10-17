@@ -271,7 +271,7 @@ Result<void> createSymlink(PathView target, PathView link) {
     return wrapCall("symlink", ::symlink(target.string().c_str(), link.string().c_str()));
 }
 
-Result<void> createDirectorySymlink(PathView target, PathView link) {
+Result<void> createDirSymlink(PathView target, PathView link) {
     return createSymlink(target, link);
 }
 

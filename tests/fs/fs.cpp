@@ -227,7 +227,7 @@ TEST_F(FsTest, CreateDirSymlink) {
     // create link to 'tempfile' directory
 
     Path symlinkDir = tempfile.parent().value() / fmt::format("{}_symlink", tempfile.filename().value());
-    ASSERT_TRUE(asp::fs::createSymlink(tempfile, symlinkDir).isOk());
+    ASSERT_TRUE(asp::fs::createDirSymlink(tempfile, symlinkDir).isOk());
     EXPECT_TRUE(symlinkDir.exists());
 
     auto fileMetadata = tempfile.metadata().unwrap();

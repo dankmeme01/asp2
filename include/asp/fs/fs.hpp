@@ -82,7 +82,7 @@ Result<void> createSymlink(PathView target, PathView link);
 
 /// Creates a *directory* symlink at `link` that points to `target`, similar to POSIX `symlink()` call.
 /// Depending on the platform, this may fail if `target` does not exist or is not a directory.
-Result<void> createDirectorySymlink(PathView target, PathView link);
+Result<void> createDirSymlink(PathView target, PathView link);
 
 /// Reads a symlink, returning the path it points to. Returns an error if the path is not a symlink.
 Result<Path> readSymlink(PathView path);

@@ -391,7 +391,7 @@ Result<void> createSymlink(PathView target, PathView link) {
     return doCreateSymlink(target, link, false);
 }
 
-Result<void> createDirectorySymlink(PathView target, PathView link) {
+Result<void> createDirSymlink(PathView target, PathView link) {
     return doCreateSymlink(target, link, true);
 }
 
