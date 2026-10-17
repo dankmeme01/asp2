@@ -45,8 +45,6 @@ namespace _impl {
 
     bool exists(std::string_view path) noexcept;
     Result<Metadata> metadata(std::string_view path, bool followSymlink);
-
-    // TODO: readLink
 }
 
 template <typename Derived>

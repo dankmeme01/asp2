@@ -10,8 +10,6 @@ template <typename T>
 class WeakPtr;
 template <typename T>
 class SharedPtr;
-template <typename T>
-class PtrSwap;
 
 template <typename T, typename... Args>
 SharedPtr<T> make_shared(Args&&... args);
@@ -185,7 +183,6 @@ public:
 
 private:
     friend class WeakPtr<T>;
-    friend class PtrSwap<T>;
 
     template <typename U, typename... Args>
     friend SharedPtr<U> make_shared(Args&&... args);
