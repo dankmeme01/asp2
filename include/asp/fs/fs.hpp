@@ -2,10 +2,9 @@
 
 #include <asp/detail/config.hpp>
 #include "Path.hpp"
-#include "File.hpp"
 #include <vector>
 #include <string>
-#include <stdint.h>
+#include <cstdint>
 #include "DirectoryIterator.hpp"
 
 namespace asp::fs {

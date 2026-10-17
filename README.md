@@ -276,3 +276,93 @@ for (auto s : asp::iter::splitWhitespace("hi this is a string")) {
 This does not scan the whole string at once, instead it scans until the next space and moves the cursor, again and again as the loop goes. This makes `asp::iter` iterators a zero-cost abstraction that's just as fast as manual loops, but without the extra boilerplate.
 
 # Filesystem
+
+`asp::fs` module provides various path and IO operations, aims to be similar to Rust's `std::fs`/`std::path` and in some aspects C++ `std::filesystem`, while staying lightweight and having a platform independent API with little surprises.
+
+## Path and PathView
+
+Analogous to `std::string` and `std::string_view`, these are the two primary classes for representing filesystem paths. Unlike `std::filesystem::path`, they have the same representation on all platforms (typically UTF-8, however not always guaranteed), so methods like `.string()` or `.view()` are zero-cost and perform no conversions.
+
+Here are some examples of what you can do with paths:
+
+```cpp
+// obtain path to the temporary directory, such as /tmp/
+// may not work on all systems, so can return an error
+Path temp = Path::tmp().unwrap();
+
+auto myFile = temp / "test.txt";
+
+// let's read the file contents if it already exists
+if (myFile.exists()) {
+    if (myFile.isFile()) {
+        auto result = asp::fs::readToString(myFile);
+        if (!result) {
+            std::cout << "failed to read: " << result.unwrapErr() << std::endl;
+        } else {
+            std::cout << result.unwrap() << std::endl;
+        }
+    } else {
+        std::cout << "test.txt exists but it's not a file !!!" << std::endl;
+    }
+}
+
+// now let's overwrite the file
+auto result = asp::fs::write(myFile, "new contents");
+if (!result) {
+    std::cout << "failed to write: " << result.unwrapErr() << std::endl;
+}
+
+// some other path operations:
+Path p = myFile.parent(); // will return the same path as `temp`
+assert(p.equivalent(temp));
+
+Path asExe = myFile.withExtension(".exe");
+assert(asExe.filename() == "test.exe");
+
+
+// Let's assume that our current directory (cwd) is the same as temp dir,
+// so this relative path points to the same .txt file we created:
+Path rel{"test.txt"};
+// Because one is "test.txt" and another is "/tmp/test.txt" (or similar), the equality check will fail
+assert(rel != myFile);
+// However, the equivalence check doesn't care about path strings, so it will succeed:
+assert(rel.equivalent(myFile));
+// And we can expect the canonical representation of the relative path to also be /tmp/test.txt:
+assert(rel.canonicalize().unwrap() == myFile);
+```
+
+## File
+
+`File` is a class similar to `std::fstream`, with nicer Result-based API and **no buffering**, every read/write call invokes a syscall. While `asp::fs::read`/`asp::fs::write` functions exist as simpler shorthands, `File` can be used when richer api is needed:
+
+```cpp
+// let's create a new file, the `create` shorthand will truncate the file for us if it already exists
+{
+    auto file = asp::fs::File::create("/tmp/test.txt").unwrap();
+    file.write("new contents").unwrap();
+    // no need to manually close the file, it will be done during destruction of File
+}
+
+// now let's read it back
+{
+    auto file = asp::fs::File::open("/tmp/test.txt").unwrap();
+    std::string contents = file.readToString().unwrap();
+    std::cout << contents << std::endl;
+}
+```
+
+`File` features other member functions that could be useful for seeking, cloning, checking metadata, locking/unlocking, or syncing data to disk.
+
+If you want to read/write from/to a file incrementally, it is highly advised to use `BufferedFile`, which will buffer data internally and only invoke syscalls when necessary. `File` has a shorthand to create a buffered file:
+
+```cpp
+// openBuffered or createBuffered will open a file and wrap it into a `BufferedFile`
+auto file = asp::fs::File::openBuffered("/tmp/test.txt").unwrap();
+
+// now we can even read 1 byte at a time and it stays efficient!
+uint8_t byte;
+
+while (file.read(std::span{&byte, 1}).isOk()) {
+    // ...
+}
+```

@@ -120,6 +120,9 @@ struct PathInterface {
         return self.extension().has_value();
     }
 
+    /// Returns the path with extension replaced via `replaceExtension`
+    Path withExtension(this auto&& self, std::string_view newExt) noexcept;
+
     /// Returns the stem of the path, which is the filename without the extension. If the filename has no '.' or begins with a '.' (with no other '.'), returns the entire filename.
     /// If there is no file name, returns `std::nullopt`.
     std::optional<std::string_view> stem(this auto&& self) noexcept;
@@ -464,6 +467,13 @@ std::optional<std::string_view> PathInterface<D>::filename(this auto&& self) noe
 template <typename D>
 std::optional<std::string_view> PathInterface<D>::extension(this auto&& self) noexcept {
     return _impl::extension(self.m_path);
+}
+
+template <typename D>
+Path PathInterface<D>::withExtension(this auto&& self, std::string_view newExt) noexcept {
+    Path path{self.m_path};
+    path.replaceExtension(newExt);
+    return path;
 }
 
 template <typename D>

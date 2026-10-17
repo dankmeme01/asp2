@@ -8,7 +8,7 @@ namespace asp::fs {
 /// which helps with performance a lot.
 class BufferedFile : public File {
 public:
-    BufferedFile(File file, size_t bufSize = 8192, bool readBuf = true, bool writeBuf = true);
+    BufferedFile(File file, size_t bufSize = FILE_BUFFER_DEFAULT_SIZE, bool readBuf = true, bool writeBuf = true);
     ~BufferedFile();
 
     BufferedFile(const BufferedFile&) = delete;

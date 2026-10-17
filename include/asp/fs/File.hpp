@@ -15,6 +15,8 @@ using NativeFd = int;
 const inline auto INVALID_FD = -1;
 #endif
 
+static constexpr size_t FILE_BUFFER_DEFAULT_SIZE = 16384;
+
 class BufferedFile;
 
 class File {
@@ -30,7 +32,7 @@ public:
     static Result<File> open(PathView path, const OpenOptions& options = {});
 
     /// Opens a file with the given options and buffering enabled. Shorthand for creating a `BufferedFile` manually.
-    static Result<BufferedFile> openBuffered(PathView path, const OpenOptions& options = {}, size_t bufSize = 8192);
+    static Result<BufferedFile> openBuffered(PathView path, const OpenOptions& options = {}, size_t bufSize = FILE_BUFFER_DEFAULT_SIZE);
 
     /// Opens a file in write-only mode, creates a file if it does not exist and truncating otherwise.
     /// This may fail if the directory does not exist. This is simply a shorthand for `open` with the appropriate `OpenOptions`.
@@ -45,7 +47,7 @@ public:
 
     /// Opens a file in write-only buffered mode, creates a file if it does not exist and truncating otherwise.
     /// This is a shorthand for using `create` and then wrapping in a `BufferedFile`.
-    static Result<BufferedFile> createBuffered(PathView path, size_t bufSize = 8192);
+    static Result<BufferedFile> createBuffered(PathView path, size_t bufSize = FILE_BUFFER_DEFAULT_SIZE);
 
     /// Like `create`, but additionally this will error if the file already exists.
     static Result<File> createNew(PathView path) {

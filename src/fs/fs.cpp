@@ -1,4 +1,5 @@
 #include <asp/fs/fs.hpp>
+#include <asp/fs/File.hpp>
 #include <cstring>
 #include <fmt/format.h>
 #include <asp/iter.hpp>
