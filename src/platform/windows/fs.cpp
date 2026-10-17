@@ -63,7 +63,7 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     buf.resize(len);
 
     unwindowsizePath(buf);
-    return Path::fromWide(buf);
+    return Path::fromWideResult(buf);
 }
 
 bool _impl::equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept {
@@ -156,7 +156,7 @@ Path& Path::makePreferred() noexcept {
     return *this;
 }
 
-Result<Path> Path::fromWide(std::wstring_view path) {
+Result<Path> Path::fromWideResult(std::wstring_view path) {
     GEODE_UNWRAP_INTO(auto utf8, wideToUtf8(path));
     return Ok(Path(std::move(utf8)));
 }
@@ -316,7 +316,7 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
         bool isReparsePoint = (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         bool isDirectory = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-        GEODE_UNWRAP_INTO(auto childPath, Path::fromWide(name).map([&](Path child) {
+        GEODE_UNWRAP_INTO(auto childPath, Path::fromWideResult(name).map([&](Path child) {
             return path / child;
         }));
 
@@ -418,7 +418,7 @@ Result<Path> readSymlink(PathView path) {
     buf.resize(bufSize);
 
     unwindowsizePath(buf);
-    return Path::fromWide(buf);
+    return Path::fromWideResult(buf);
 }
 
 }

@@ -73,7 +73,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
 
     std::wstring_view name(findData.cFileName);
     if (name != L"." && name != L"..") {
-        GEODE_UNWRAP_INTO(auto asPath, Path::fromWide(name));
+        GEODE_UNWRAP_INTO(auto asPath, Path::fromWideResult(name));
         iter.m_nextItem = makeEntry(findData, path, asPath);
     }
 
@@ -97,7 +97,7 @@ std::optional<Result<DirectoryEntry>> DirectoryIterator::next() {
             continue;
         }
 
-        GEODE_UNWRAP_INTO(auto pname, Path::fromWide(name));
+        GEODE_UNWRAP_INTO(auto pname, Path::fromWideResult(name));
         m_nextItem = makeEntry(findData, m_path, pname);
     }
 
