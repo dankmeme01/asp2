@@ -55,7 +55,7 @@ static Metadata metadataFromStat(const struct stat& st) {
 #else
     meta.modifiedAt = toSystemTime(st.st_mtim);
     meta.accessedAt = toSystemTime(st.st_atim);
-    // TODO: no creation time, use statx?
+    // TODO: creation time requires statx (glibc 4.11+ / android 11)
 #endif
 
     return meta;
