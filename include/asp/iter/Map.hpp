@@ -8,9 +8,9 @@
 namespace asp::iter {
 
 template <typename It, typename F>
-class Map : public Iter<Map<It, F>, std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>> {
+class Map : public Iter<Map<It, F>, std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>> {
 public:
-    using Item = std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>;
+    using Item = std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>;
 
     Map(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 

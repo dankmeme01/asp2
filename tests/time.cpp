@@ -14,7 +14,7 @@ TEST(DurationTests, Ctor) {
 }
 
 TEST(DurationTests, Ctor2) {
-    auto dur = Duration::fromSecsF32(123.550f).value();
+    auto dur = Duration::fromSecsF32(123.550f);
 
     EXPECT_EQ(dur.millis(), 123'550);
     EXPECT_EQ(dur.subsecMillis(), 550);
@@ -75,8 +75,8 @@ TEST(DurationTests, Format) {
     auto dur4 = Duration::fromMillis(4);
     auto dur5 = Duration::fromMillis(42) + Duration::fromMicros(3);
     auto dur6 = Duration::fromMillis(420) + Duration::fromMicros(230);
-    auto dur7 = Duration::fromSecsF32(1.01f).value();
-    auto dur8 = Duration::fromSecsF32(49.49f).value();
+    auto dur7 = Duration::fromSecsF32(1.01f);
+    auto dur8 = Duration::fromSecsF32(49.49f);
     auto dur9 = Duration::fromSecs(42 * 60 + 29);
     auto dur10 = Duration::fromHours(2) + Duration::fromMinutes(15);
 

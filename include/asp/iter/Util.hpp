@@ -20,17 +20,20 @@ struct ExtractRefWrapper<std::reference_wrapper<T>> {
 };
 
 template <typename T>
-struct UnwrapRefWrapper {
+struct UnwrapRefWrapper_ {
     using type = T;
 };
 
 template <typename T>
-struct UnwrapRefWrapper<std::reference_wrapper<T>> {
+struct UnwrapRefWrapper_<std::reference_wrapper<T>> {
     using type = T&;
 };
 
+template <typename T>
+using UnwrapRefWrapper = typename UnwrapRefWrapper_<T>::type;
+
 template <typename Y, typename T = std::decay_t<Y>>
-UnwrapRefWrapper<T>::type unwrapRefWrapper(Y&& value) {
+UnwrapRefWrapper<T> unwrapRefWrapper(Y&& value) {
     if constexpr (is_reference_wrapper<T>::value) {
         return value.get();
     } else {

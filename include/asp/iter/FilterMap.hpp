@@ -16,7 +16,7 @@ struct ExtractOptional<std::optional<T>> {
 };
 
 template <typename It, typename F>
-using FilterMapInvokeResult = std::invoke_result_t<F, typename UnwrapRefWrapper<typename It::Item>::type>;
+using FilterMapInvokeResult = std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>;
 
 template <typename It, typename F>
 using FilterMapItem = typename ExtractOptional<FilterMapInvokeResult<It, F>>::type;

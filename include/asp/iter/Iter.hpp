@@ -212,8 +212,8 @@ public:
 
     /// Returns an iterator that yields pairs of (index, item) for each item in this iterator.
     auto enumerate() && {
-        return std::move(*this).map([n = size_t{0}](auto item) mutable {
-            return std::make_pair(n++, std::move(item));
+        return std::move(*this).map([n = size_t{0}]<typename T>(T&& item) mutable {
+            return std::pair<size_t, UnwrapRefWrapper<Item>>{n++, std::forward<T>(item)};
         });
     }
 

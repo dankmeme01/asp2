@@ -229,7 +229,7 @@ TEST(IterTests, HolyMix) {
     int outnum = 0;
 
     size_t count = from(vec1)
-        .chain(from(vec2).map([](float x) { return static_cast<int>(round(x * x * x)); }))
+        .chain(from(vec2).map([](float x) { return static_cast<int>(roundf(x * x * x)); }))
         .zip(from(vec3))
         .enumerate()
         .filter([](const auto& p) { return p.first % 2 == 0; })
@@ -464,7 +464,10 @@ TEST(IterTests, EnumerateSteal) {
     std::vector<std::string> strings{ long1, long2, long3 };
 
     size_t iters = 0;
-    for (auto& [idx, str] : from(strings).enumerate()) {
+    for (auto [idx, str] : from(strings).enumerate()) {
+        // this is a reference, no copies done here
+        static_assert(std::is_same_v<decltype(str), std::string&>);
+
         EXPECT_EQ(str, "very long string to bypass sso" + std::to_string(idx + 1));
         iters++;
     }
@@ -477,6 +480,31 @@ TEST(IterTests, EnumerateSteal) {
     EXPECT_EQ(strings[0], long1);
     EXPECT_EQ(strings[1], long2);
     EXPECT_EQ(strings[2], long3);
+}
+
+TEST(IterTests, EnumerateConsume) {
+    constexpr auto long1 = "very long string to bypass sso1";
+    constexpr auto long2 = "very long string to bypass sso2";
+    constexpr auto long3 = "very long string to bypass sso3";
+
+    std::vector<std::string> strings{ long1, long2, long3 };
+
+    size_t iters = 0;
+    for (auto [idx, str] : consume(strings).enumerate()) {
+        static_assert(std::is_same_v<decltype(str), std::string>);
+
+        EXPECT_EQ(str, "very long string to bypass sso" + std::to_string(idx + 1));
+        iters++;
+    }
+
+    ASSERT_EQ(iters, 3);
+
+    // check that the original vector got mutated
+    ASSERT_EQ(strings.size(), 3);
+
+    ASSERT_EQ(strings[0], "");
+    ASSERT_EQ(strings[1], "");
+    ASSERT_EQ(strings[2], "");
 }
 
 TEST(IterTests, LinesEmpty) {
