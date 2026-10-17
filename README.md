@@ -353,6 +353,8 @@ assert(rel.canonicalize().unwrap() == myFile);
 
 `File` features other member functions that could be useful for seeking, cloning, checking metadata, locking/unlocking, or syncing data to disk.
 
+### BufferedFile
+
 If you want to read/write from/to a file incrementally, it is highly advised to use `BufferedFile`, which will buffer data internally and only invoke syscalls when necessary. `File` has a shorthand to create a buffered file:
 
 ```cpp
