@@ -59,18 +59,25 @@ TEST(Path, TempDir) {
     EXPECT_TRUE(path.isAbsolute());
 }
 
+static Path join(auto... args) {
+    std::string out;
+    ((out += args, out += PreferredSep), ...);
+    out.pop_back();
+    return out;
+}
+
 TEST(Path, SlashEqual) {
     Path p1("foo");
     Path p2("bar");
 
     p1 /= p2;
-    EXPECT_EQ(p1.string(), "foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar"));
 
     p1 /= p1;
-    EXPECT_EQ(p1.string(), "foo/bar/foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar", "foo", "bar"));
 
     p1 /= "";
-    EXPECT_EQ(p1.string(), "foo/bar/foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar", "foo", "bar"));
 }
 
 TEST(Path, Append) {
@@ -78,13 +85,13 @@ TEST(Path, Append) {
     Path p2("bar");
 
     p1.append(p2);
-    EXPECT_EQ(p1.string(), "foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar"));
 
     p1.append(p1);
-    EXPECT_EQ(p1.string(), "foo/bar/foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar", "foo", "bar"));
 
     p1.append("");
-    EXPECT_EQ(p1.string(), "foo/bar/foo/bar");
+    EXPECT_EQ(p1.string(), join("foo", "bar", "foo", "bar"));
 }
 
 TEST(Path, PlusEqual) {
@@ -136,10 +143,10 @@ TEST(Path, Join) {
     Path p2("bar");
 
     auto p3 = p1.join(p2);
-    EXPECT_EQ(p3.string(), "foo/bar");
+    EXPECT_EQ(p3.string(), join("foo", "bar"));
 
     auto p4 = p3.join("baz");
-    EXPECT_EQ(p4.string(), "foo/bar/baz");
+    EXPECT_EQ(p4.string(), join("foo", "bar", "baz"));
 }
 
 TEST(Path, Slash) {
@@ -147,24 +154,28 @@ TEST(Path, Slash) {
     Path p2("bar");
 
     auto p3 = p1 / p2;
-    EXPECT_EQ(p3.string(), "foo/bar");
+    EXPECT_EQ(p3.string(), join("foo", "bar"));
 
     auto p4 = p3 / "baz";
-    EXPECT_EQ(p4.string(), "foo/bar/baz");
+    EXPECT_EQ(p4.string(), join("foo", "bar", "baz"));
 }
 
 TEST(Path, JoinAbsolute) {
     Path p1("foo");
+#ifndef _WIN32
     Path p2("/bar");
+#else
+    Path p2("C:/bar");
+#endif
 
     EXPECT_TRUE(p1.isRelative());
     EXPECT_TRUE(p2.isAbsolute());
 
     auto p3 = p1.join(p2);
-    EXPECT_EQ(p3.string(), "/bar");
+    EXPECT_EQ(p3.string(), p2);
 
     auto p4 = p3.join("baz");
-    EXPECT_EQ(p4.string(), "/bar/baz");
+    EXPECT_EQ(p4.string(), join(p2.string(), "baz"));
 }
 
 TEST(Path, MakePreferred) {
@@ -368,12 +379,13 @@ TEST(Path, Components) {
     Path p4("C:foo/bar/baz.txt");
 
     std::vector<std::string_view> c1 = {"foo", "bar", "baz.txt"};
-    std::vector<std::string_view> c2 = {"/", "foo", "bar", "baz.txt"};
 
 #ifdef _WIN32
+    std::vector<std::string_view> c2 = {"foo", "bar", "baz.txt"};
     std::vector<std::string_view> c3 = {"C:/", "foo", "bar", "baz.txt"};
     std::vector<std::string_view> c4 = {"C:", "foo", "bar", "baz.txt"};
 #else
+    std::vector<std::string_view> c2 = {"/", "foo", "bar", "baz.txt"};
     std::vector<std::string_view> c3 = {"C:", "foo", "bar", "baz.txt"};
     std::vector<std::string_view> c4 = {"C:foo", "bar", "baz.txt"};
 #endif
