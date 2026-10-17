@@ -185,4 +185,79 @@ TEST_F(FsTest, IterDir) {
     asp::fs::removeDirAll(tempfile).unwrap();
 }
 
-// TODO: symlink tests
+TEST_F(FsTest, CreateFileSymlink) {
+    asp::fs::write(tempfile, "Hello").unwrap();
+
+    Path symlinkPath = tempfile.parent().value() / fmt::format("{}_symlink", tempfile.filename().value());
+    ASSERT_TRUE(asp::fs::createSymlink(tempfile, symlinkPath).isOk());
+    EXPECT_TRUE(symlinkPath.exists());
+
+    auto fileMetadata = tempfile.metadata().unwrap();
+    auto symTargetMetadata = symlinkPath.metadata().unwrap();
+
+    // fileMetadata by all means should be equal to symTargetMetadata, minus a few things like accessedAt
+    EXPECT_EQ(fileMetadata.type, symTargetMetadata.type);
+    EXPECT_EQ(fileMetadata.createdAt, symTargetMetadata.createdAt);
+    EXPECT_EQ(fileMetadata.modifiedAt, symTargetMetadata.modifiedAt);
+    EXPECT_EQ(fileMetadata.size, symTargetMetadata.size);
+
+    // and the paths should be considered equivalent, when following symlinks
+    EXPECT_TRUE(tempfile.equivalent(symlinkPath));
+    // but not if using symlinkEquivalent
+    EXPECT_FALSE(tempfile.symlinkEquivalent(symlinkPath));
+
+
+    auto symlinkMetadata = symlinkPath.symlinkMetadata().unwrap();
+    EXPECT_TRUE(symlinkMetadata.isSymlink());
+    EXPECT_FALSE(symlinkMetadata.isFile());
+    EXPECT_FALSE(symlinkMetadata.isDir());
+
+    auto computedTarget = asp::fs::readSymlink(symlinkPath).unwrap();
+    EXPECT_TRUE(computedTarget.equivalent(tempfile));
+
+    EXPECT_TRUE(asp::fs::remove(symlinkPath).isOk());
+}
+
+TEST_F(FsTest, CreateDirSymlink) {
+    asp::fs::createDir(tempfile).unwrap();
+
+    auto testPath = tempfile / "test.txt";
+    asp::fs::write(testPath, "Hello").unwrap();
+
+    // create link to 'tempfile' directory
+
+    Path symlinkDir = tempfile.parent().value() / fmt::format("{}_symlink", tempfile.filename().value());
+    ASSERT_TRUE(asp::fs::createSymlink(tempfile, symlinkDir).isOk());
+    EXPECT_TRUE(symlinkDir.exists());
+
+    auto fileMetadata = tempfile.metadata().unwrap();
+    auto symTargetMetadata = symlinkDir.metadata().unwrap();
+
+    // fileMetadata by all means should be equal to symTargetMetadata, minus a few things like accessedAt
+    EXPECT_EQ(fileMetadata.type, symTargetMetadata.type);
+    EXPECT_EQ(fileMetadata.createdAt, symTargetMetadata.createdAt);
+    EXPECT_EQ(fileMetadata.modifiedAt, symTargetMetadata.modifiedAt);
+    EXPECT_EQ(fileMetadata.size, symTargetMetadata.size);
+
+    // and the paths should be considered equivalent, when following symlinks
+    EXPECT_TRUE(tempfile.equivalent(symlinkDir));
+    // but not if using symlinkEquivalent
+    EXPECT_FALSE(tempfile.symlinkEquivalent(symlinkDir));
+
+
+    auto symlinkMetadata = symlinkDir.symlinkMetadata().unwrap();
+    EXPECT_TRUE(symlinkMetadata.isSymlink());
+    EXPECT_FALSE(symlinkMetadata.isFile());
+    EXPECT_FALSE(symlinkMetadata.isDir());
+
+    auto computedTarget = asp::fs::readSymlink(symlinkDir).unwrap();
+    EXPECT_TRUE(computedTarget.equivalent(tempfile));
+
+    // expect to be able to read the file via symlink
+    auto symlinkedFile = symlinkDir / "test.txt";
+    EXPECT_TRUE(symlinkedFile.exists());
+    EXPECT_EQ(asp::fs::readToString(symlinkedFile).unwrap(), "Hello");
+
+    EXPECT_TRUE(asp::fs::remove(symlinkDir).isOk());
+    EXPECT_TRUE(asp::fs::removeDirAll(tempfile).isOk());
+}

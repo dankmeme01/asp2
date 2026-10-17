@@ -3,11 +3,10 @@
 #include "helpers.hpp"
 #include <userenv.h>
 #include <array>
-#include <filesystem>
 
 namespace asp::fs {
 
-    Result<NativePath> _impl::native(std::string_view path) {
+Result<NativePath> _impl::native(std::string_view path) {
     return utf8ToWide(path);
 }
 
@@ -33,6 +32,14 @@ std::optional<std::string_view> _impl::rootName(std::string_view path) noexcept 
     return std::nullopt;
 }
 
+static void unwindowsizePath(std::wstring& str) {
+    if (str.starts_with(L"\\\\?\\UNC\\")) {
+        str.replace(0, 8, L"\\\\");
+    } else if (str.starts_with(L"\\\\?\\")) {
+        str.erase(0, 4);
+    }
+}
+
 Result<Path> _impl::canonicalize(std::string_view path) {
     // see https://github.com/rust-lang/rust/blob/e457a7b0d326d67b4322ef0d11bd715cfaeda48f/library/std/src/sys/fs/windows.rs#L1602
     OpenOptions opts{};
@@ -55,12 +62,8 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     len = GetFinalPathNameByHandleW(file.fd(), buf.data(), (DWORD)buf.size(), VOLUME_NAME_DOS);
     buf.resize(len);
 
-    if (buf.starts_with(L"\\\\?\\")) {
-        buf.erase(0, 4);
-    }
-
-    GEODE_UNWRAP_INTO(auto utf8, wideToUtf8(buf));
-    return Ok(Path(std::move(utf8)));
+    unwindowsizePath(buf);
+    return Path::fromWide(buf);
 }
 
 bool _impl::equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept {
@@ -370,6 +373,50 @@ Result<void> removeDirAll(PathView path) {
     }
 
     return Ok();
+}
+
+static Result<> doCreateSymlink(PathView target, PathView link, bool isDir) {
+    GEODE_UNWRAP_INTO(auto nativeTarget, _impl::native(target));
+    GEODE_UNWRAP_INTO(auto nativeLink, _impl::native(link));
+
+    DWORD flags = 0;
+    if (isDir) {
+        flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+    }
+
+    return wrapCall(CreateSymbolicLinkW(nativeLink.c_str(), nativeTarget.c_str(), flags));
+}
+
+Result<void> createSymlink(PathView target, PathView link) {
+    return doCreateSymlink(target, link, false);
+}
+
+Result<void> createDirectorySymlink(PathView target, PathView link) {
+    return doCreateSymlink(target, link, true);
+}
+
+Result<Path> readSymlink(PathView path) {
+    OpenOptions opts{};
+    opts.read = false;
+    opts.followSymlink = false;
+    opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT;
+    GEODE_UNWRAP_INTO(auto file, File::open(path, opts));
+
+    DWORD bufSize = GetFinalPathNameByHandleW(file.fd(), nullptr, 0, FILE_NAME_NORMALIZED);
+    if (!bufSize) {
+        return Err(formatError());
+    }
+
+    std::wstring buf(bufSize, L'\0');
+    bufSize = GetFinalPathNameByHandleW(file.fd(), buf.data(), buf.size(), FILE_NAME_NORMALIZED);
+    if (!bufSize) {
+        return Err(formatError());
+    }
+
+    buf.resize(bufSize);
+
+    unwindowsizePath(buf);
+    return Path::fromWide(buf);
 }
 
 }

@@ -267,4 +267,22 @@ Result<void> removeDirAll(PathView path) {
     return Ok();
 }
 
+Result<void> createSymlink(PathView target, PathView link) {
+    return wrapCall("symlink", ::symlink(target.string().c_str(), link.string().c_str()));
+}
+
+Result<void> createDirectorySymlink(PathView target, PathView link) {
+    return createSymlink(target, link);
+}
+
+Result<Path> readSymlink(PathView path) {
+    std::array<char, 1024> buf;
+    ssize_t len = ::readlink(path.string().c_str(), buf.data(), buf.size());
+    if (len < 0) {
+        return Err(fmt::format("readlink failed: {}", path, strerror(errno)));
+    }
+
+    return Ok(Path{std::string{buf.data(), size_t(len)}});
+}
+
 }

@@ -75,6 +75,10 @@ namespace asp::inline time {
         SystemTime operator+(const Duration& dur) const noexcept;
         std::strong_ordering operator<=>(const SystemTime& other) const noexcept;
 
+        inline bool operator==(const SystemTime& other) const noexcept {
+            return this->operator<=>(other) == std::strong_ordering::equal;
+        }
+
     private:
         constexpr SystemTime(i64 _s, i64 _s2) noexcept : _storage1(_s), _storage2(_s2) {}
 

@@ -34,7 +34,7 @@ static std::string formatError(DWORD error = GetLastError()) {
 
 template <typename T>
 Result<> wrapCall(T result) {
-    if constexpr (std::is_same_v<T, BOOL>) {
+    if constexpr (std::is_same_v<T, BOOL> || std::is_same_v<T, BOOLEAN>) {
         if (!result) {
             return Err(formatError());
         }
