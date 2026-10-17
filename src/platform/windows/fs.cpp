@@ -285,7 +285,8 @@ Result<void> removeDir(PathView path) {
 }
 
 static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
-    GEODE_UNWRAP_INTO(auto native, path.native());
+    auto native = path.native();
+
     if (native.back() != L'\\') {
         native += L'\\';
     }

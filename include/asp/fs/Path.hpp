@@ -58,7 +58,7 @@ struct PathInterface {
     }
 
     // Like `native`, but returning a Result instead, indicating errors if the conversion fails
-    Result<NativePath> nativeOrError(this auto&& self) {
+    Result<NativePath> nativeResult(this auto&& self) {
         return _impl::native(self.m_path);
     }
 
@@ -301,7 +301,12 @@ public:
 
 #ifdef _WIN32
     /// Converts the given UTF-16 wide string to a UTF-8 path, may fail if conversion fails.
-    static Result<Path> fromWide(std::wstring_view path);
+    static Result<Path> fromWideResult(std::wstring_view path);
+
+    /// Converts the given UTF-16 wide string to a UTF-8 path, returns empty path if conversion fails.
+    static Path fromWide(std::wstring_view path) {
+        return fromWideResult(path).unwrapOrDefault();
+    }
 #endif
 
     static Path fromStdPath(const auto& stdPath);

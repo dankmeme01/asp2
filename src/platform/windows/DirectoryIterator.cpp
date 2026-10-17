@@ -48,7 +48,7 @@ static DirectoryEntry makeEntry(WIN32_FIND_DATAW& ent, PathView rootPath, PathVi
 }
 
 Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
-    GEODE_UNWRAP_INTO(auto native, path.native());
+    auto native = path.native();
     if (native.back() != L'\\') {
         native += L'\\';
     }
