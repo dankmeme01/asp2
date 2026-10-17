@@ -282,7 +282,7 @@ TEST(Path, Extension) {
 }
 
 TEST(Path, Canonicalize) {
-    auto dest = createTmpFile();
+    auto dest = createTmpFile().canonicalize().unwrap();
     auto tmp = dest.parent().value();
     auto alt = tmp / ".." / tmp.filename().value() / "__asp_fs_test.txt";
 
