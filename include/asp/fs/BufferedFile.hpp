@@ -39,9 +39,17 @@ public:
 
     /// Writes the given bytes to the file, returning the number of bytes successfully written.
     Result<size_t> write(std::span<const uint8_t> buf);
+    /// Writes the given bytes to the file, returning the number of bytes successfully written.
+    Result<size_t> write(std::string_view buf) {
+        return write(std::span{reinterpret_cast<const uint8_t*>(buf.data()), buf.size()});
+    }
 
     /// Writes all bytes to the file, returning an error if not all bytes could be written.
     Result<> writeAll(std::span<const uint8_t> buf);
+    /// Writes all bytes to the file, returning an error if not all bytes could be written.
+    Result<> writeAll(std::string_view buf) {
+        return writeAll(std::span{reinterpret_cast<const uint8_t*>(buf.data()), buf.size()});
+    }
 
     Result<> seek(uint64_t pos) = delete;
     Result<uint64_t> tell() = delete;
