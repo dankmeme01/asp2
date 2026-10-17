@@ -56,6 +56,20 @@ TEST(IterTests, MapComplex) {
     EXPECT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, MapRef) {
+    std::vector<std::string> vec = {"1", "22"};
+
+    auto iter = from(vec)
+        .map([](std::string& x) -> std::string& { return x; })
+        .map([](std::string& x) -> std::string& { return x; });
+
+    static_assert(std::is_same_v<decltype(iter)::Item, std::reference_wrapper<std::string>>);
+
+    EXPECT_EQ(iter.next()->get(), "1");
+    EXPECT_EQ(iter.next()->get(), "22");
+    EXPECT_EQ(iter.next(), std::nullopt);
+}
+
 TEST(IterTests, Filter) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).filter([](int x) { return x % 2 == 0; });

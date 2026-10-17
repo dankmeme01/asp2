@@ -21,6 +21,11 @@ concept Summable = requires(Accum a, Item b) {
     { a + b } -> std::same_as<Accum>;
 };
 
+template <typename It>
+concept ProvidesSizeHint = requires(const It it) {
+    { it.sizeHint() } -> std::convertible_to<size_t>;
+};
+
 struct IterBase {};
 
 /// The base template for all iterators, which has many transformational and terminal methods and utilities.
@@ -198,7 +203,11 @@ public:
     auto collect() && {
         using OutItem = ExtractRefWrapper<Item>;
 
-        std::optional<size_t> sizeHint;  // TODO
+        std::optional<size_t> sizeHint;
+
+        if constexpr (ProvidesSizeHint<Concrete>) {
+            sizeHint = this->derived().sizeHint();
+        }
 
         if constexpr (IsPair<OutItem> && IsCollector2<Container>) {
             // iterator of pairs and the collection supports Collector2 trait, we can use that
@@ -423,6 +432,9 @@ using CxxIterUnderlying = std::conditional_t<
     std::remove_cv_t<T>
 >;
 
+template <typename It>
+static constexpr bool CxxCanCalculateDistance = std::forward_iterator<It>;
+
 template <IsCxxIterator It>
 class CxxIter : public Iter<CxxIter<It>, CxxIterUnderlying<It>> {
 public:
@@ -447,6 +459,10 @@ public:
         }
     }
 
+    size_t sizeHint() const requires(CxxCanCalculateDistance<It>) {
+        return std::distance(m_current, m_end);
+    }
+
 private:
     It m_current, m_end;
 };
@@ -467,6 +483,10 @@ public:
         ++m_current;
 
         return item;
+    }
+
+    size_t sizeHint() const requires(CxxCanCalculateDistance<It>) {
+        return std::distance(m_current, m_end);
     }
 
 private:

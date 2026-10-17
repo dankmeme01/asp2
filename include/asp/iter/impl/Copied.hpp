@@ -28,6 +28,10 @@ public:
         return std::nullopt;
     }
 
+    size_t sizeHint() const requires(ProvidesSizeHint<It>) {
+        return m_iter.sizeHint();
+    }
+
 private:
     It m_iter;
 };

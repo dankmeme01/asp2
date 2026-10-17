@@ -24,6 +24,10 @@ public:
         return std::nullopt;
     }
 
+    size_t sizeHint() const requires(ProvidesSizeHint<It1> && ProvidesSizeHint<It2>) {
+        return std::min(m_iter1.sizeHint(), m_iter2.sizeHint());
+    }
+
 private:
     It1 m_iter1;
     It2 m_iter2;

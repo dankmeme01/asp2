@@ -165,3 +165,39 @@ TEST(IterTests, CollectMapStealsWhenCan) {
     EXPECT_EQ(vec[1], "");
     EXPECT_EQ(vec[2], "");
 }
+
+TEST(IterTests, CollectTakesSizeHint) {
+    std::vector<std::string> items;
+
+    // intentionally use NPOT size
+    items.reserve(1025);
+    for (size_t i = 0; i < 1025; i++) {
+        items.push_back("test item");
+    }
+
+    // just to catch any funny errors, call a bunch of no-op transformations
+    auto output = from(items)
+        .map([](std::string& x) -> std::string& { return x; })
+        .inspect([](std::string& x) { return; })
+        .collect();
+
+    // due to size hint being taken, the output vector should have same capacity instead of using geometric growth
+    EXPECT_EQ(output.capacity(), 1025);
+}
+
+TEST(IterTests, CollectIgnoresSizeHintIfImpossible) {
+    std::vector<std::string> items;
+
+    // intentionally use NPOT size
+    items.reserve(1025);
+    for (size_t i = 0; i < 1025; i++) {
+        items.push_back("test item");
+    }
+
+    // filter destroys the size hint, because at compile time it cannot be determined how many items will be transformed
+    auto output = from(items)
+        .filter([](std::string& x) { return true; })
+        .collect();
+
+    EXPECT_GT(output.capacity(), 1025);
+}

@@ -12,6 +12,5 @@ Some highlights include:
 * `asp::Notify` - synchronous notifications aka simpler condition variable
 * `asp::Channel<T>` a simple thread-safe message channel
 
-## TODO
+## Iterators
 
-* `asp::iter` size hint

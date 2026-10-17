@@ -23,6 +23,10 @@ public:
         return arr;
     }
 
+    size_t sizeHint() const requires(ProvidesSizeHint<It>) {
+        return m_iter.sizeHint() / N;
+    }
+
 private:
     It m_iter;
 };

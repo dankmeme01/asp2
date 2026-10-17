@@ -4,18 +4,25 @@
 namespace asp::iter {
 
 template <typename It, typename F>
-class Map : public Iter<Map<It, F>, std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>> {
+using MapItem = WrapRefWrapper<std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>>;
+
+template <typename It, typename F>
+class Map : public Iter<Map<It, F>, MapItem<It, F>> {
 public:
-    using Item = std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>;
+    using Item = MapItem<It, F>;
 
     Map(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 
     std::optional<Item> next() {
         if (auto item = m_iter.next()) {
-            return std::invoke(m_func, unwrapRefWrapper(std::move(*item)));
+            return wrapRefWrapper(std::invoke(m_func, unwrapRefWrapper(std::move(*item))));
         }
 
         return std::nullopt;
+    }
+
+    size_t sizeHint() const requires(ProvidesSizeHint<It>) {
+        return m_iter.sizeHint();
     }
 
 private:

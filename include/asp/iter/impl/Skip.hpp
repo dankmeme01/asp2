@@ -21,6 +21,15 @@ public:
         return m_iter.next();
     }
 
+    size_t sizeHint() const requires(ProvidesSizeHint<It>) {
+        size_t hint = m_iter.sizeHint();
+        if (hint < m_n) {
+            return 0;
+        } else {
+            return hint - m_n;
+        }
+    }
+
 private:
     It m_iter;
     size_t m_n;
