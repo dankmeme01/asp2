@@ -30,7 +30,24 @@ DirectoryIterator& DirectoryIterator::operator=(DirectoryIterator&& other) noexc
     return *this;
 }
 
-Result<DirectoryIterator> DirectoryIterator::create(PathView path, bool recursive) {
+static FileType convertFileType(DWORD attrs) {
+    if (attrs & FILE_ATTRIBUTE_REPARSE_POINT) {
+        return FileType::Symlink;
+    } else if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+        return FileType::Directory;
+    } else {
+        return FileType::RegularFile;
+    }
+}
+
+static DirectoryEntry makeEntry(WIN32_FIND_DATAW& ent, PathView rootPath, PathView name) {
+    return DirectoryEntry {
+        rootPath / name,
+        convertFileType(ent.dwFileAttributes)
+    };
+}
+
+Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
     GEODE_UNWRAP_INTO(auto native, path.native());
     if (native.back() != L'\\') {
         native += L'\\';
@@ -57,13 +74,13 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path, bool recursiv
     std::wstring_view name(findData.cFileName);
     if (name != L"." && name != L"..") {
         GEODE_UNWRAP_INTO(auto asPath, Path::fromWide(name));
-        iter.m_nextItem = path / asPath;
+        iter.m_nextItem = makeEntry(findData, path, asPath);
     }
 
     return Ok(std::move(iter));
 }
 
-std::optional<Result<Path>> DirectoryIterator::next() noexcept {
+std::optional<Result<DirectoryEntry>> DirectoryIterator::next() {
     while (!m_nextItem) {
         WIN32_FIND_DATAW findData;
         if (!FindNextFileW(m_handle, &findData)) {
@@ -81,7 +98,7 @@ std::optional<Result<Path>> DirectoryIterator::next() noexcept {
         }
 
         GEODE_UNWRAP_INTO(auto pname, Path::fromWide(name));
-        m_nextItem = m_path / pname;
+        m_nextItem = makeEntry(findData, m_path, pname);
     }
 
     auto nextItem = std::move(*m_nextItem);

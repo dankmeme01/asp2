@@ -63,8 +63,13 @@ Result<void> removeDir(PathView path);
 /// This will not follow symlinks inside the directory, and will simply delete the symbolic links themselves.
 Result<void> removeDirAll(PathView path);
 
-/// Returns an iterator over the files in the given directory.
-Result<DirectoryIterator> iterDir(PathView path, bool recursive = false);
+/// Returns an iterator over the files and directories in the given directory.
+/// For recursive iteration, use `iterDirRecursive`.
+Result<DirectoryIterator> iterDir(PathView path);
+
+/// Returns an iterator over the files and directories in the given directory, recursively including all subdirectories.
+/// This does not follow any symlinks, and simply yields them, even if they point to a directory.
+Result<RecursiveDirectoryIterator> iterDirRecursive(PathView path);
 
 /// Reads the contents of the file into a vector of bytes.
 Result<std::vector<uint8_t>> read(PathView path);

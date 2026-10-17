@@ -53,8 +53,12 @@ Result<void> remove(PathView path) {
     }
 }
 
-Result<DirectoryIterator> iterDir(PathView path, bool recursive) {
-    return DirectoryIterator::create(path, recursive);
+Result<DirectoryIterator> iterDir(PathView path) {
+    return DirectoryIterator::create(path);
+}
+
+Result<RecursiveDirectoryIterator> iterDirRecursive(PathView path) {
+    return RecursiveDirectoryIterator::create(path);
 }
 
 Result<std::vector<uint8_t>> read(PathView path) {

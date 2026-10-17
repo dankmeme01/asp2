@@ -172,7 +172,9 @@ TEST_F(FsTest, IterDir) {
     auto actualPaths = asp::fs::iterDir(tempfile).unwrap()
         .filterMap([](auto result) -> std::optional<Path> {
             if (result.isOk()) {
-                return result.unwrap();
+                auto entry = result.unwrap();
+                EXPECT_EQ(entry.type, FileType::RegularFile);
+                return entry.path;
             } else {
                 return std::nullopt;
             }
@@ -181,6 +183,65 @@ TEST_F(FsTest, IterDir) {
 
     std::sort(actualPaths.begin(), actualPaths.end());
     EXPECT_EQ(actualPaths, expectedPaths);
+
+    asp::fs::removeDirAll(tempfile).unwrap();
+}
+
+TEST_F(FsTest, IterDirRecursive) {
+    ASSERT_TRUE(asp::fs::createDirAll(tempfile / "1" / "2").isOk());
+
+    std::vector<Path> filePaths {
+        tempfile / "1.txt",
+        tempfile / "2.txt",
+        tempfile / "1" / "1.txt",
+        tempfile / "1" / "2" / "1.txt",
+    };
+    for (auto& p : filePaths) {
+        asp::fs::write(p, "Hello").unwrap();
+    }
+
+    std::vector<Path> expectedPaths {
+        tempfile / "1.txt",
+        tempfile / "2.txt",
+        tempfile / "1",
+        tempfile / "1" / "1.txt",
+        tempfile / "1" / "2",
+        tempfile / "1" / "2" / "1.txt",
+    };
+    for (auto& p : expectedPaths) {
+        p = p.canonicalize().unwrap();
+    }
+    std::sort(expectedPaths.begin(), expectedPaths.end());
+
+    // retrieve paths via iterDirRecursive
+
+    auto actualPaths = asp::fs::iterDirRecursive(tempfile).unwrap()
+        .filterMap([](auto result) -> std::optional<Path> {
+            if (result.isOk()) {
+                auto entry = result.unwrap();
+                if (entry.path.extension() == "txt") {
+                    EXPECT_EQ(entry.type, FileType::RegularFile);
+                } else {
+                    EXPECT_EQ(entry.type, FileType::Directory);
+                }
+
+                return entry.path;
+            } else {
+                return std::nullopt;
+            }
+        })
+        .collect();
+
+    for (auto& p : actualPaths) {
+        p = p.canonicalize().unwrap();
+    }
+    std::sort(actualPaths.begin(), actualPaths.end());
+
+    // sorted canonical paths must be the same as the ones we expect above: 2 directories and 4 files
+    EXPECT_EQ(actualPaths.size(), expectedPaths.size());
+    for (size_t i = 0; i < actualPaths.size(); ++i) {
+        EXPECT_EQ(actualPaths[i].string(), expectedPaths[i].string());
+    }
 
     asp::fs::removeDirAll(tempfile).unwrap();
 }

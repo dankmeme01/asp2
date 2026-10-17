@@ -31,7 +31,7 @@ DirectoryIterator& DirectoryIterator::operator=(DirectoryIterator&& other) noexc
     return *this;
 }
 
-Result<DirectoryIterator> DirectoryIterator::create(PathView path, bool recursive) {
+Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
     auto h = opendir(path.string().c_str());
 
     if (h == nullptr) {
@@ -44,7 +44,27 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path, bool recursiv
     return Ok(std::move(iter));
 }
 
-std::optional<Result<Path>> DirectoryIterator::next() noexcept {
+static FileType convertFileType(unsigned char d_type) {
+    switch (d_type) {
+        case DT_REG: return FileType::RegularFile;
+        case DT_DIR: return FileType::Directory;
+        case DT_LNK: return FileType::Symlink;
+        case DT_BLK: return FileType::BlockDevice;
+        case DT_CHR: return FileType::CharDevice;
+        case DT_FIFO: return FileType::Fifo;
+        case DT_SOCK: return FileType::Socket;
+        default: return FileType::Other;
+    }
+}
+
+static DirectoryEntry makeEntry(struct dirent* ent, PathView rootPath, std::string_view name) {
+    return DirectoryEntry {
+        rootPath / name,
+        convertFileType(ent->d_type)
+    };
+}
+
+std::optional<Result<DirectoryEntry>> DirectoryIterator::next() {
     while (!m_nextItem) {
         auto entry = readdir((DIR*)m_handle);
         if (!entry) {
@@ -54,7 +74,7 @@ std::optional<Result<Path>> DirectoryIterator::next() noexcept {
         std::string_view name{entry->d_name};
         if (name == "." || name == "..") continue;
 
-        m_nextItem = m_path / name;
+        m_nextItem = makeEntry(entry, m_path, name);
     }
 
     auto nextItem = std::move(*m_nextItem);

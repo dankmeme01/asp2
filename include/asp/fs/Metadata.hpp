@@ -1,6 +1,6 @@
 #pragma once
 #include "Permissions.hpp"
-#include <stdint.h>
+#include <cstdint>
 #include <asp/time/SystemTime.hpp>
 
 namespace asp::fs {
