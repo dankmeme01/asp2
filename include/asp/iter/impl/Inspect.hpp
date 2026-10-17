@@ -4,7 +4,7 @@
 namespace asp::iter {
 
 template <typename It, typename F>
-class Inspect : public Iter<Inspect<It, F>, typename It::Item> {
+class ASP_ITER_NODISCARD Inspect : public Iter<Inspect<It, F>, typename It::Item> {
 public:
     using Item = typename It::Item;
 

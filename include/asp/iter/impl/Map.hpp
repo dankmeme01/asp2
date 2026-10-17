@@ -7,7 +7,7 @@ template <typename It, typename F>
 using MapItem = WrapRefWrapper<std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>>;
 
 template <typename It, typename F>
-class Map : public Iter<Map<It, F>, MapItem<It, F>> {
+class ASP_ITER_NODISCARD Map : public Iter<Map<It, F>, MapItem<It, F>> {
 public:
     using Item = MapItem<It, F>;
 

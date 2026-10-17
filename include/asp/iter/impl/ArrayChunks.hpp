@@ -4,7 +4,7 @@
 namespace asp::iter {
 
 template <typename It, size_t N>
-class ArrayChunks : public Iter<ArrayChunks<It, N>, std::array<typename It::Item, N>> {
+class ASP_ITER_NODISCARD ArrayChunks : public Iter<ArrayChunks<It, N>, std::array<typename It::Item, N>> {
 public:
     using Item = std::array<typename It::Item, N>;
 

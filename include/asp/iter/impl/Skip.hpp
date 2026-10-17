@@ -4,7 +4,7 @@
 namespace asp::iter {
 
 template <typename It>
-class Skip : public Iter<Skip<It>, typename It::Item> {
+class ASP_ITER_NODISCARD Skip : public Iter<Skip<It>, typename It::Item> {
 public:
     using Item = typename It::Item;
 

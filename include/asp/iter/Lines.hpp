@@ -8,7 +8,7 @@ template <typename T>
 T _nextLine(T& inp);
 
 template <typename T>
-class Lines : public Iter<Lines<T>, T> {
+class ASP_ITER_NODISCARD Lines : public Iter<Lines<T>, T> {
 public:
     using Item = T;
 

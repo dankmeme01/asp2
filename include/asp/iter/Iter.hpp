@@ -35,7 +35,7 @@ struct IterBase {};
 /// Intermediate operations are *lazy*, meaning they do not do any work until an actual terminal operation is called,
 /// such as `count()`, `max()`, `collect()`, etc. This means a `map()` call does not immediately map any element, only the final terminal operation does.
 template <typename Concrete, typename Item_>
-class Iter : public IterBase {
+class ASP_ITER_NODISCARD Iter : public IterBase {
 public:
     using Item = Item_;
 
@@ -189,7 +189,7 @@ public:
 
     /// Collects the items of this iterator into the provided collection, by default `std::vector<T>`.
     /// The collection must implement the `Collector<C>` trait by specializing it.
-    /// When collecting an iterator of pairs or tuples, the trait is `Collector2<C>`.
+    /// When collecting an iterator of pairs, the trait is `Collector2<C>`.
     /// Iterators yielding tuples of 3 or more elements are not supported.
     /// Default specializations exist for (if <asp/iter/CollectorsImpl.hpp> is included):
     /// * `std::vector`
@@ -197,8 +197,8 @@ public:
     /// * `std::queue`
     /// * `std::unordered_set`
     /// * `std::set`
-    /// * `std::unordered_map` (requires pair or 2-element tuple)
-    /// * `std::map` (requires pair or 2-element tuple)
+    /// * `std::unordered_map` (requires pair)
+    /// * `std::map` (requires pair)
     template <typename Container = std::vector<ExtractRefWrapper<Item>>>
     auto collect() && {
         using OutItem = ExtractRefWrapper<Item>;
@@ -270,6 +270,11 @@ public:
         while (auto item = this->derived().next()) {
             std::invoke(f, unwrapRefWrapper(*item));
         }
+    }
+
+    /// Consumes the iterator without returning anything, processing all intermediate operations.
+    void terminate() && {
+        while (this->derived().next()) {}
     }
 
     /// Consumes the iterator and returns the minimum item, or `std::nullopt` if there are no items.
@@ -436,7 +441,7 @@ template <typename It>
 static constexpr bool CxxCanCalculateDistance = std::forward_iterator<It>;
 
 template <IsCxxIterator It>
-class CxxIter : public Iter<CxxIter<It>, CxxIterUnderlying<It>> {
+class ASP_ITER_NODISCARD CxxIter : public Iter<CxxIter<It>, CxxIterUnderlying<It>> {
 public:
     using Item = CxxIterUnderlying<It>;
     constexpr static bool IsRef = std::is_reference_v<CxxIterUntrivialize<It>>;
@@ -468,7 +473,7 @@ private:
 };
 
 template <IsCxxIterator It>
-class CxxIterConsume : public Iter<CxxIterConsume<It>, std::decay_t<decltype(*std::declval<It>())>> {
+class ASP_ITER_NODISCARD CxxIterConsume : public Iter<CxxIterConsume<It>, std::decay_t<decltype(*std::declval<It>())>> {
 public:
     using Item = std::decay_t<decltype(*std::declval<It>())>;
 
@@ -503,7 +508,7 @@ auto empty() {
 // One shot iterator
 
 template <typename T>
-class OnceIter : public Iter<OnceIter<T>, T> {
+class ASP_ITER_NODISCARD OnceIter : public Iter<OnceIter<T>, T> {
 public:
     using Item = T;
 
@@ -531,7 +536,7 @@ auto once(T value) {
 // Repeating iterator
 
 template <typename T, bool Forever = false>
-class RepeatIter : public Iter<RepeatIter<T, Forever>, T> {
+class ASP_ITER_NODISCARD RepeatIter : public Iter<RepeatIter<T, Forever>, T> {
 public:
     using Item = T;
 

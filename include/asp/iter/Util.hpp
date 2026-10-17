@@ -3,6 +3,11 @@
 #include <utility>
 #include <functional>
 
+#define ASP_ITER_NODISCARD [[nodiscard( \
+    "asp::iter iterators are lazy, and do nothing when discarded. You must loop over them or call a terminal operation such as `collect()` or `terminate()` " \
+    "for any intermediate operations to work." \
+)]]
+
 namespace asp::iter {
 
 namespace detail {

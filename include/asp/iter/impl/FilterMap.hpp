@@ -18,7 +18,7 @@ template <typename It, typename F>
 using FilterMapItem = typename ExtractOptional<FilterMapInvokeResult<It, F>>::type;
 
 template <typename It, typename F>
-class FilterMap : public Iter<FilterMap<It, F>, FilterMapItem<It, F>> {
+class ASP_ITER_NODISCARD FilterMap : public Iter<FilterMap<It, F>, FilterMapItem<It, F>> {
 public:
     using Item = FilterMapItem<It, F>;
     static_assert(std::is_same_v<FilterMapInvokeResult<It, F>, std::optional<Item>>, "FilterMap function must return std::optional");

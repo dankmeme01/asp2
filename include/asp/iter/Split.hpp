@@ -12,7 +12,7 @@ template <typename T, typename D>
 T _nextSplitAny(T& inp, const D& delim);
 
 template <typename T, typename D>
-class Split : public Iter<Split<T, D>, T> {
+class ASP_ITER_NODISCARD Split : public Iter<Split<T, D>, T> {
 public:
     using Item = T;
     using Delim = D;
@@ -33,7 +33,7 @@ private:
 };
 
 template <typename T, typename D>
-class SplitAny : public Iter<SplitAny<T, D>, T> {
+class ASP_ITER_NODISCARD SplitAny : public Iter<SplitAny<T, D>, T> {
 public:
     using Item = T;
     using Delim = D;

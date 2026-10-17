@@ -4,7 +4,7 @@
 namespace asp::iter {
 
 template <typename T>
-class RangeIter : public Iter<RangeIter<T>, T> {
+class ASP_ITER_NODISCARD RangeIter : public Iter<RangeIter<T>, T> {
 public:
     using Item = T;
 

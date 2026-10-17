@@ -28,7 +28,7 @@ template <
     typename InnerIterator = typename WrapContainerOrIterator<InnerValue>::type,
     typename Item_ = typename InnerIterator::Item
 >
-class Flatten : public Iter<Flatten<It>, Item_> {
+class ASP_ITER_NODISCARD Flatten : public Iter<Flatten<It>, Item_> {
 public:
     using Item = Item_;
 

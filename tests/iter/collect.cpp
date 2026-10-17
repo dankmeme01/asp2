@@ -1,8 +1,6 @@
 #include <asp/iter.hpp>
 #include <gtest/gtest.h>
 #include <unordered_set>
-#include <array>
-#include <cmath>
 
 using namespace asp::iter;
 using namespace asp;

@@ -7,7 +7,7 @@ template <typename It1, typename It2>
 using ZipItem = std::pair<UnwrapRefWrapper<typename It1::Item>, UnwrapRefWrapper<typename It2::Item>>;
 
 template <typename It1, typename It2>
-class Zip : public Iter<Zip<It1, It2>, ZipItem<It1, It2>> {
+class ASP_ITER_NODISCARD Zip : public Iter<Zip<It1, It2>, ZipItem<It1, It2>> {
 public:
     using Item = ZipItem<It1, It2>;
 

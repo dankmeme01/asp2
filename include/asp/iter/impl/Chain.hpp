@@ -4,7 +4,7 @@
 namespace asp::iter {
 
 template <typename It1, typename It2> requires std::same_as<typename It1::Item, typename It2::Item>
-class Chain : public Iter<Chain<It1, It2>, typename It1::Item> {
+class ASP_ITER_NODISCARD Chain : public Iter<Chain<It1, It2>, typename It1::Item> {
 public:
     using Item = typename It1::Item;
 

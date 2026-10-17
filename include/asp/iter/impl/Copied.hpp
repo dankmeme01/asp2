@@ -14,7 +14,7 @@ template <typename T>
 using ToCopied = std::remove_cv_t<Unreference<T>>;
 
 template <typename It>
-class Copied : public Iter<Copied<It>, ToCopied<typename It::Item>> {
+class ASP_ITER_NODISCARD Copied : public Iter<Copied<It>, ToCopied<typename It::Item>> {
 public:
     using Item = ToCopied<typename It::Item>;
 
