@@ -10,6 +10,9 @@
 
 namespace asp::fs {
 
+/// Checks if a file exists, returns `false` on failure
+bool exists(PathView path);
+
 /// Copies the contents (including permissions) from the source file to the destination
 Result<void> copy(PathView origin, PathView dest);
 

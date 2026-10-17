@@ -10,6 +10,10 @@ static auto endsWithOneOf(std::string_view str, std::string_view chars) {
     return !str.empty() && chars.contains(str.back());
 }
 
+bool exists(PathView path) {
+    return path.exists();
+}
+
 Result<void> createDirAll(PathView path) {
     auto view = path.view();
     while (endsWithOneOf(view, SupportedSep)) {
