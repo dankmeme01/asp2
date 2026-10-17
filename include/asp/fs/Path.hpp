@@ -93,6 +93,7 @@ struct PathInterface {
 
     /// Returns a lexical parent path of this path, or `std::nullopt` if this path has no parent.
     /// This performs no filesystem operations, and for example `/foo/.` will return `/foo` as parent instead of `/`.
+    /// If the path is a root path (such as `/` or `C:/`), this will return the same path, aka `rootName()`.
     std::optional<PathView> parent(this auto&& self) noexcept;
 
     /// Returns whether this path has a parent path. This is equivalent to `parent().has_value()`.
