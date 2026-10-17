@@ -251,6 +251,7 @@ Result<void> removeFile(PathView path) {
     OpenOptions opts{};
     opts.read = false;
     opts.followSymlink = false;
+    opts.customFlags = FILE_FLAG_BACKUP_SEMANTICS;
     GEODE_UNWRAP_INTO(auto file, File::open(path, opts));
 
     BY_HANDLE_FILE_INFORMATION data;

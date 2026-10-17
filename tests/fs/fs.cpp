@@ -258,6 +258,6 @@ TEST_F(FsTest, CreateDirSymlink) {
     EXPECT_TRUE(symlinkedFile.exists());
     EXPECT_EQ(asp::fs::readToString(symlinkedFile).unwrap(), "Hello");
 
-    EXPECT_TRUE(asp::fs::remove(symlinkDir).isOk());
-    EXPECT_TRUE(asp::fs::removeDirAll(tempfile).isOk());
+    asp::fs::remove(symlinkDir).unwrap();
+    asp::fs::removeDirAll(tempfile).unwrap();
 }
