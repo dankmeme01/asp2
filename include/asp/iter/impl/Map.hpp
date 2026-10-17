@@ -1,16 +1,12 @@
 #pragma once
-#include <utility>
-#include <optional>
-#include <functional>
-#include "Iter.hpp"
-#include "Util.hpp"
+#include "../Iter.hpp"
 
 namespace asp::iter {
 
 template <typename It, typename F>
-class Map : public Iter<Map<It, F>, std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>> {
+class Map : public Iter<Map<It, F>, std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>> {
 public:
-    using Item = std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>;
+    using Item = std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>;
 
     Map(It iter, F func) : m_iter(std::move(iter)), m_func(std::move(func)) {}
 

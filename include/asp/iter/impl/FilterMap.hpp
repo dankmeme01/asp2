@@ -1,9 +1,5 @@
 #pragma once
-#include <utility>
-#include <optional>
-#include <functional>
-#include "Iter.hpp"
-#include "Util.hpp"
+#include "../Iter.hpp"
 
 namespace asp::iter {
 
@@ -16,7 +12,7 @@ struct ExtractOptional<std::optional<T>> {
 };
 
 template <typename It, typename F>
-using FilterMapInvokeResult = std::invoke_result_t<F, typename UnwrapRefWrapper_<typename It::Item>::type>;
+using FilterMapInvokeResult = std::invoke_result_t<F, UnwrapRefWrapper<typename It::Item>>;
 
 template <typename It, typename F>
 using FilterMapItem = typename ExtractOptional<FilterMapInvokeResult<It, F>>::type;

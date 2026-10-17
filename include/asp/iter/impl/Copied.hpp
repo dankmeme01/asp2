@@ -1,15 +1,12 @@
 #pragma once
-#include <utility>
-#include <optional>
-#include "Iter.hpp"
-#include "Util.hpp"
+#include "../Iter.hpp"
 
 namespace asp::iter {
 
 template <typename T>
 using Unreference = std::conditional_t<
-    is_reference_wrapper<T>::value,
-    typename ExtractRefWrapper<T>::type,
+    IsReferenceWrapper<T>,
+    ExtractRefWrapper<T>,
     std::remove_reference_t<T>
 >;
 

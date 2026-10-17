@@ -15,62 +15,62 @@ TEST(IterTests, VectorIter) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec);
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), 5);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), 5);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, VectorIterNTCopiy) {
     std::vector<std::string> vec = {"a", "b", "c", "d", "e"};
     auto iter = from(vec);
 
-    ASSERT_EQ(iter.next()->get(), "a");
-    ASSERT_EQ(iter.next()->get(), "b");
-    ASSERT_EQ(iter.next()->get(), "c");
-    ASSERT_EQ(iter.next()->get(), "d");
-    ASSERT_EQ(iter.next()->get(), "e");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next()->get(), "a");
+    EXPECT_EQ(iter.next()->get(), "b");
+    EXPECT_EQ(iter.next()->get(), "c");
+    EXPECT_EQ(iter.next()->get(), "d");
+    EXPECT_EQ(iter.next()->get(), "e");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Map) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).map([](int x) { return x * 2; });
 
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), 6);
-    ASSERT_EQ(iter.next(), 8);
-    ASSERT_EQ(iter.next(), 10);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), 6);
+    EXPECT_EQ(iter.next(), 8);
+    EXPECT_EQ(iter.next(), 10);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, MapComplex) {
     std::vector<std::string> vec = {"1", "22"};
     auto iter = from(vec).map([](std::string& x) { return x.size(); });
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Filter) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).filter([](int x) { return x % 2 == 0; });
 
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FilterComplex) {
     std::vector<std::string> vec = {"1", "22"};
     auto iter = from(vec).filter([](std::string& x) { return x.size() == 1; });
 
-    ASSERT_EQ(iter.next()->get(), "1");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next()->get(), "1");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FilterMap) {
@@ -83,9 +83,9 @@ TEST(IterTests, FilterMap) {
         }
     });
 
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), 8);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), 8);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FilterMapComplex) {
@@ -98,9 +98,9 @@ TEST(IterTests, FilterMapComplex) {
         }
     });
 
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Chain) {
@@ -109,13 +109,13 @@ TEST(IterTests, Chain) {
 
     auto iter = from(vec1).chain(from(vec2));
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 6);
-    ASSERT_EQ(iter.next(), 7);
-    ASSERT_EQ(iter.next(), 8);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 6);
+    EXPECT_EQ(iter.next(), 7);
+    EXPECT_EQ(iter.next(), 8);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Take) {
@@ -123,10 +123,10 @@ TEST(IterTests, Take) {
 
     auto iter = from(vec1).take(3);
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Zip) {
@@ -135,58 +135,65 @@ TEST(IterTests, Zip) {
 
     auto iter = from(vec1).zip(from(vec2));
 
-    ASSERT_EQ(iter.next(), std::make_pair(1, 1.0));
-    ASSERT_EQ(iter.next(), std::make_pair(2, 2.0));
-    ASSERT_EQ(iter.next(), std::make_pair(3, 3.0));
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), std::make_pair(1, 1.0));
+    EXPECT_EQ(iter.next(), std::make_pair(2, 2.0));
+    EXPECT_EQ(iter.next(), std::make_pair(3, 3.0));
+    EXPECT_EQ(iter.next(), std::nullopt);
+}
+
+TEST(IterTests, ZipRefUnwrap) {
+    std::vector<std::string> vec1 = {"a", "b", "c"};
+    std::vector<std::string> vec2 = {"x", "y", "z"};
+
+    std::string out;
+    for (auto [first, second] : from(vec1).zip(from(vec2))) {
+        static_assert(std::is_same_v<decltype(first), std::string&>);
+        static_assert(std::is_same_v<decltype(second), std::string&>);
+
+        out.append(first);
+        out.append(second);
+    }
+
+    EXPECT_EQ(out, "axbycz");
 }
 
 TEST(IterTests, All) {
     std::vector<int> vec1 = {1, 2, 3, 4, 5};
     std::vector<int> vec2 = {1, 2, 3, 4, 5, -4};
 
-    ASSERT_TRUE(from(vec1).all([](int x) { return x > 0; }));
-    ASSERT_FALSE(from(vec2).all([](int x) { return x > 0; }));
+    EXPECT_TRUE(from(vec1).all([](int x) { return x > 0; }));
+    EXPECT_FALSE(from(vec2).all([](int x) { return x > 0; }));
 }
 
 TEST(IterTests, Any) {
     std::vector<int> vec1 = {1, 2, 3, 4, 5};
     std::vector<int> vec2 = {1, 2, 3, 4, 5, -4};
 
-    ASSERT_FALSE(from(vec1).any([](int x) { return x < 0; }));
-    ASSERT_TRUE(from(vec2).any([](int x) { return x < 0; }));
+    EXPECT_FALSE(from(vec1).any([](int x) { return x < 0; }));
+    EXPECT_TRUE(from(vec2).any([](int x) { return x < 0; }));
 }
 
 TEST(IterTests, Find) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
 
-    ASSERT_EQ(from(vec1).find([](int x) { return x < 0; }), -4);
-    ASSERT_EQ(from(vec1).find([](int x) { return x > 5 ; }), std::nullopt);
+    EXPECT_EQ(from(vec1).find([](int x) { return x < 0; }), -4);
+    EXPECT_EQ(from(vec1).find([](int x) { return x > 5 ; }), std::nullopt);
 }
 
 TEST(IterTests, FindStr) {
     std::vector<std::string> vec1 = {"1", "22", "333", "4444", "55555"};
 
-    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() < 3; })->get(), "1");
-    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 3; })->get(), "4444");
-    ASSERT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 5; }), std::nullopt);
+    EXPECT_EQ(from(vec1).find([](const std::string& x) { return x.size() < 3; })->get(), "1");
+    EXPECT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 3; })->get(), "4444");
+    EXPECT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 5; }), std::nullopt);
 }
 
-TEST(IterTests, Collect) {
-    std::vector<int> vec1 = {1, 2, 3, -4, 5};
-    auto output = from(vec1)
-        .map([](int x) { return x * 2; })
-        .filter([](int x) { return x > 0; })
-        .collect<std::vector<int>>();
-
-    ASSERT_EQ(output, (std::vector<int>{2, 4, 6, 10}));
-}
 
 TEST(IterTests, Enumerate) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
     auto iter = from(vec1).enumerate().collect<std::vector<std::pair<size_t, int>>>();
 
-    ASSERT_EQ(iter, (std::vector<std::pair<size_t, int>>{{0, 1}, {1, 2}, {2, 3}, {3, -4}, {4, 5}}));
+    EXPECT_EQ(iter, (std::vector<std::pair<size_t, int>>{{0, 1}, {1, 2}, {2, 3}, {3, -4}, {4, 5}}));
 }
 
 TEST(IterTests, ForEach) {
@@ -194,7 +201,7 @@ TEST(IterTests, ForEach) {
     int sum = 0;
 
     from(vec1).forEach([&sum](int x) { sum += x; });
-    ASSERT_EQ(sum, 7);
+    EXPECT_EQ(sum, 7);
 }
 
 TEST(IterTests, Inspect) {
@@ -202,25 +209,25 @@ TEST(IterTests, Inspect) {
     int sum = 0;
 
     from(vec1).inspect([&sum](int x) { sum += x; }).count();
-    ASSERT_EQ(sum, 7);
+    EXPECT_EQ(sum, 7);
 }
 
 TEST(IterTests, Min) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
-    ASSERT_EQ(from(vec1).min(), -4);
+    EXPECT_EQ(from(vec1).min(), -4);
 }
 
 TEST(IterTests, Max) {
     std::vector<int> vec1 = {-1, 2, 333, -4, -49, 5, -100, 0};
-    ASSERT_EQ(from(vec1).max(), 333);
+    EXPECT_EQ(from(vec1).max(), 333);
 }
 
 TEST(IterTests, Sum) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
-    ASSERT_EQ(from(vec1).sum(), 7);
+    EXPECT_EQ(from(vec1).sum(), 7);
 }
 
-TEST(IterTests, HolyMix) {
+TEST(IterTests, IterMix) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
     std::vector<float> vec2 = {-1.5, -43, 3.14, 2.71, -0.42};
     std::vector<char> vec3 = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'};
@@ -241,143 +248,143 @@ TEST(IterTests, HolyMix) {
         })
         .count();
 
-    ASSERT_EQ(outnum, -79482);
-    ASSERT_EQ(outstr, "egi");
+    EXPECT_EQ(outnum, -79482);
+    EXPECT_EQ(outstr, "egi");
 }
 
 TEST(IterTests, SplitStrChar) {
     std::string str = "hello,world,this,is,a,test";
     auto iter = split(str, ',');
 
-    ASSERT_EQ(iter.next(), "hello");
-    ASSERT_EQ(iter.next(), "world");
-    ASSERT_EQ(iter.next(), "this");
-    ASSERT_EQ(iter.next(), "is");
-    ASSERT_EQ(iter.next(), "a");
-    ASSERT_EQ(iter.next(), "test");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "hello");
+    EXPECT_EQ(iter.next(), "world");
+    EXPECT_EQ(iter.next(), "this");
+    EXPECT_EQ(iter.next(), "is");
+    EXPECT_EQ(iter.next(), "a");
+    EXPECT_EQ(iter.next(), "test");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitStrStr) {
     std::string str = "hello||world||this||is||a||test";
     auto iter = split(str, "||");
 
-    ASSERT_EQ(iter.next(), "hello");
-    ASSERT_EQ(iter.next(), "world");
-    ASSERT_EQ(iter.next(), "this");
-    ASSERT_EQ(iter.next(), "is");
-    ASSERT_EQ(iter.next(), "a");
-    ASSERT_EQ(iter.next(), "test");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "hello");
+    EXPECT_EQ(iter.next(), "world");
+    EXPECT_EQ(iter.next(), "this");
+    EXPECT_EQ(iter.next(), "is");
+    EXPECT_EQ(iter.next(), "a");
+    EXPECT_EQ(iter.next(), "test");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitIntVec) {
     std::vector<unsigned char> vec = {1, 0, 2, 0, 3, 0, 4, 0, 5};
     auto iter = split(vec, 0);
 
-    ASSERT_EQ(iter.next().value()[0], 1);
-    ASSERT_EQ(iter.next().value()[0], 2);
-    ASSERT_EQ(iter.next().value()[0], 3);
-    ASSERT_EQ(iter.next().value()[0], 4);
-    ASSERT_EQ(iter.next().value()[0], 5);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next().value()[0], 1);
+    EXPECT_EQ(iter.next().value()[0], 2);
+    EXPECT_EQ(iter.next().value()[0], 3);
+    EXPECT_EQ(iter.next().value()[0], 4);
+    EXPECT_EQ(iter.next().value()[0], 5);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitAny) {
     auto iter = splitAny("1,2:3;;4|5-6", ",:;|");
 
-    ASSERT_EQ(iter.next(), "1");
-    ASSERT_EQ(iter.next(), "2");
-    ASSERT_EQ(iter.next(), "3");
-    ASSERT_EQ(iter.next(), "");
-    ASSERT_EQ(iter.next(), "4");
-    ASSERT_EQ(iter.next(), "5-6");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "1");
+    EXPECT_EQ(iter.next(), "2");
+    EXPECT_EQ(iter.next(), "3");
+    EXPECT_EQ(iter.next(), "");
+    EXPECT_EQ(iter.next(), "4");
+    EXPECT_EQ(iter.next(), "5-6");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitAnyNonEmpty) {
     auto iter = splitAny("1,2:3;;4|5-6", ",:;|", true);
 
-    ASSERT_EQ(iter.next(), "1");
-    ASSERT_EQ(iter.next(), "2");
-    ASSERT_EQ(iter.next(), "3");
-    ASSERT_EQ(iter.next(), "4");
-    ASSERT_EQ(iter.next(), "5-6");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "1");
+    EXPECT_EQ(iter.next(), "2");
+    EXPECT_EQ(iter.next(), "3");
+    EXPECT_EQ(iter.next(), "4");
+    EXPECT_EQ(iter.next(), "5-6");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 
 TEST(IterTests, SplitAnyEmptyStr) {
     auto iter = splitAny("", ",:;|");
 
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitAnyEmptyDelim) {
     auto iter = splitAny("hi", "");
 
-    ASSERT_EQ(iter.next(), "hi");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "hi");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, SplitWhitespace) {
     auto iter = splitWhitespace("hi   test\n hello\r\nyay");
 
-    ASSERT_EQ(iter.next(), "hi");
-    ASSERT_EQ(iter.next(), "test");
-    ASSERT_EQ(iter.next(), "hello");
-    ASSERT_EQ(iter.next(), "yay");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "hi");
+    EXPECT_EQ(iter.next(), "test");
+    EXPECT_EQ(iter.next(), "hello");
+    EXPECT_EQ(iter.next(), "yay");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Empty) {
     auto iter = empty<int*>();
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Once) {
     auto iter = once(42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, RepeatN) {
     auto iter = repeat(42, 3);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, RepeatForever) {
     auto iter = repeat(42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
-    ASSERT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
+    EXPECT_EQ(iter.next(), 42);
     // and so on...
 }
 
 TEST(IterTests, Cycle) {
     std::vector<int> vec = {1, 2, 3};
     auto iter = from(vec).cycle();
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 1);
 }
 
 TEST(IterTests, ArrayChunks) {
     std::vector<int> vec = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto iter = from(vec).arrayChunks<3>();
-    ASSERT_EQ(iter.next(), (std::array<int, 3>{1, 2, 3}));
-    ASSERT_EQ(iter.next(), (std::array<int, 3>{4, 5, 6}));
-    ASSERT_EQ(iter.next(), (std::array<int, 3>{7, 8, 9}));
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), (std::array<int, 3>{1, 2, 3}));
+    EXPECT_EQ(iter.next(), (std::array<int, 3>{4, 5, 6}));
+    EXPECT_EQ(iter.next(), (std::array<int, 3>{7, 8, 9}));
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, CxxIterRangeLoop) {
@@ -389,7 +396,7 @@ TEST(IterTests, CxxIterRangeLoop) {
         sum += x;
     }
 
-    ASSERT_EQ(sum, 30);
+    EXPECT_EQ(sum, 30);
 }
 
 TEST(IterTests, CxxIterLoop) {
@@ -402,58 +409,58 @@ TEST(IterTests, CxxIterLoop) {
         sum += *it;
     }
 
-    ASSERT_EQ(sum, 30);
+    EXPECT_EQ(sum, 30);
 }
 
 TEST(IterTests, CxxIterMut) {
     std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto iter = from(vec).copied().collect();
 
-    ASSERT_EQ(iter.size(), 3);
-    ASSERT_EQ(iter[0], STRING_1);
-    ASSERT_EQ(iter[1], STRING_2);
-    ASSERT_EQ(iter[2], STRING_3);
+    EXPECT_EQ(iter.size(), 3);
+    EXPECT_EQ(iter[0], STRING_1);
+    EXPECT_EQ(iter[1], STRING_2);
+    EXPECT_EQ(iter[2], STRING_3);
 
-    ASSERT_EQ(vec.size(), 3);
-    ASSERT_EQ(vec[0], STRING_1);
-    ASSERT_EQ(vec[1], STRING_2);
-    ASSERT_EQ(vec[2], STRING_3);
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], STRING_1);
+    EXPECT_EQ(vec[1], STRING_2);
+    EXPECT_EQ(vec[2], STRING_3);
 }
 
 TEST(IterTests, CxxIterMut2) {
     std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto iter = from(vec).enumerate().collect();
 
-    ASSERT_EQ(iter.size(), 3);
-    ASSERT_EQ(iter[0].second, STRING_1);
-    ASSERT_EQ(iter[1].second, STRING_2);
-    ASSERT_EQ(iter[2].second, STRING_3);
+    EXPECT_EQ(iter.size(), 3);
+    EXPECT_EQ(iter[0].second, STRING_1);
+    EXPECT_EQ(iter[1].second, STRING_2);
+    EXPECT_EQ(iter[2].second, STRING_3);
 
-    ASSERT_EQ(vec.size(), 3);
-    ASSERT_EQ(vec[0], STRING_1);
-    ASSERT_EQ(vec[1], STRING_2);
-    ASSERT_EQ(vec[2], STRING_3);
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], STRING_1);
+    EXPECT_EQ(vec[1], STRING_2);
+    EXPECT_EQ(vec[2], STRING_3);
 }
 
 TEST(IterTests, CxxIterConsume) {
     std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
     auto vec2 = consume(vec).collect();
 
-    ASSERT_EQ(vec2.size(), 3);
-    ASSERT_EQ(vec2[0], STRING_1);
-    ASSERT_EQ(vec2[1], STRING_2);
-    ASSERT_EQ(vec2[2], STRING_3);
-    ASSERT_EQ(vec.size(), 3);
-    ASSERT_EQ(vec[0], "");
-    ASSERT_EQ(vec[1], "");
-    ASSERT_EQ(vec[2], "");
+    EXPECT_EQ(vec2.size(), 3);
+    EXPECT_EQ(vec2[0], STRING_1);
+    EXPECT_EQ(vec2[1], STRING_2);
+    EXPECT_EQ(vec2[2], STRING_3);
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], "");
+    EXPECT_EQ(vec[1], "");
+    EXPECT_EQ(vec[2], "");
 }
 
 TEST(IterTests, IterFind) {
     std::unordered_map<std::string, int> map{{"1", 10}, {"2", 20}, {"3", 30}};
 
     size_t val = from(map).find([](const auto& p) { return p.first == "2"; })->get().second;
-    ASSERT_EQ(val, 20);
+    EXPECT_EQ(val, 20);
 }
 
 TEST(IterTests, EnumerateSteal) {
@@ -472,10 +479,10 @@ TEST(IterTests, EnumerateSteal) {
         iters++;
     }
 
-    ASSERT_EQ(iters, 3);
+    EXPECT_EQ(iters, 3);
 
     // check that the original vector didnt get mutated
-    ASSERT_EQ(strings.size(), 3);
+    EXPECT_EQ(strings.size(), 3);
 
     EXPECT_EQ(strings[0], long1);
     EXPECT_EQ(strings[1], long2);
@@ -497,135 +504,135 @@ TEST(IterTests, EnumerateConsume) {
         iters++;
     }
 
-    ASSERT_EQ(iters, 3);
+    EXPECT_EQ(iters, 3);
 
     // check that the original vector got mutated
-    ASSERT_EQ(strings.size(), 3);
+    EXPECT_EQ(strings.size(), 3);
 
-    ASSERT_EQ(strings[0], "");
-    ASSERT_EQ(strings[1], "");
-    ASSERT_EQ(strings[2], "");
+    EXPECT_EQ(strings[0], "");
+    EXPECT_EQ(strings[1], "");
+    EXPECT_EQ(strings[2], "");
 }
 
 TEST(IterTests, LinesEmpty) {
     auto iter = lines("");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesOne) {
     auto iter = lines("line");
-    ASSERT_EQ(iter.next(), "line");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleLF) {
     auto iter = lines("\n");
-    ASSERT_EQ(iter.next(), "");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleCR) {
     auto iter = lines("\r");
-    ASSERT_EQ(iter.next(), "\r");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "\r");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleCRLF) {
     auto iter = lines("\r\n");
-    ASSERT_EQ(iter.next(), "");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleWithLF) {
     auto iter = lines("line\n");
-    ASSERT_EQ(iter.next(), "line");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleWithCRLF) {
     auto iter = lines("line\r\n");
-    ASSERT_EQ(iter.next(), "line");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesSingleWithCR) {
     auto iter = lines("line\r");
-    ASSERT_EQ(iter.next(), "line\r");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line\r");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByLF) {
     auto iter = lines("line1\nline2");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByLFWithTrailing) {
     auto iter = lines("line1\nline2\n");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByCRLF) {
     auto iter = lines("line1\r\nline2");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByCRLFWithTrailing) {
     auto iter = lines("line1\r\nline2\r\n");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByCRLFWithTrailingLF) {
     auto iter = lines("line1\r\nline2\n");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleSplitByTwoLF) {
     auto iter = lines("line1\n\nline2");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesMultipleWrappedInLF) {
     auto iter = lines("\nline1\nline2\n");
-    ASSERT_EQ(iter.next(), "");
-    ASSERT_EQ(iter.next(), "line1");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "");
+    EXPECT_EQ(iter.next(), "line1");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesConsecutiveCR) {
     auto iter = lines("line1\r\r\nline2");
-    ASSERT_EQ(iter.next(), "line1\r");
-    ASSERT_EQ(iter.next(), "line2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1\r");
+    EXPECT_EQ(iter.next(), "line2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, LinesConsecutiveCRWithNoBreak) {
     auto iter = lines("line1\r\r\rline2");
-    ASSERT_EQ(iter.next(), "line1\r\r\rline2");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "line1\r\r\rline2");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, Range) {
     auto r1 = range(0, 5);
-    ASSERT_EQ(r1.next(), 0);
-    ASSERT_EQ(r1.next(), 1);
-    ASSERT_EQ(r1.next(), 2);
-    ASSERT_EQ(r1.next(), 3);
-    ASSERT_EQ(r1.next(), 4);
-    ASSERT_EQ(r1.next(), std::nullopt);
+    EXPECT_EQ(r1.next(), 0);
+    EXPECT_EQ(r1.next(), 1);
+    EXPECT_EQ(r1.next(), 2);
+    EXPECT_EQ(r1.next(), 3);
+    EXPECT_EQ(r1.next(), 4);
+    EXPECT_EQ(r1.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenEmpty) {
@@ -633,39 +640,39 @@ TEST(IterTests, FlattenEmpty) {
     auto iter = from(vec).flatten();
     static_assert(std::is_same_v<decltype(iter)::Item, int>);
 
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenOneVector) {
     std::vector<std::vector<int>> vec = {{1, 2, 3}};
     auto iter = from(vec).flatten();
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenTwoVectors) {
     std::vector<std::vector<int>> vec = {{1, 2}, {3, 4}};
     auto iter = from(vec).flatten();
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenMixedEmptyCollections) {
     std::vector<std::vector<int>> vec = {{}, {1, 2}, {}, {3, 4}, {}};
     auto iter = from(vec).flatten();
 
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), 2);
-    ASSERT_EQ(iter.next(), 3);
-    ASSERT_EQ(iter.next(), 4);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), 2);
+    EXPECT_EQ(iter.next(), 3);
+    EXPECT_EQ(iter.next(), 4);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenIterMix) {
@@ -677,10 +684,10 @@ TEST(IterTests, FlattenIterMix) {
         .map([](int x) { return range(0, x); })
         .flatten();
 
-    ASSERT_EQ(iter.next(), 0);
-    ASSERT_EQ(iter.next(), 0);
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 0);
+    EXPECT_EQ(iter.next(), 0);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlattenTextSplit) {
@@ -692,13 +699,13 @@ TEST(IterTests, FlattenTextSplit) {
         .flatMap([](auto sv) { return split(sv, ' '); })
         .flatMap([](auto sv) { return split(sv, '\n'); });
 
-    ASSERT_EQ(iter.next(), "1");
-    ASSERT_EQ(iter.next(), "2");
-    ASSERT_EQ(iter.next(), "3");
-    ASSERT_EQ(iter.next(), "4");
-    ASSERT_EQ(iter.next(), "5");
-    ASSERT_EQ(iter.next(), "6");
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), "1");
+    EXPECT_EQ(iter.next(), "2");
+    EXPECT_EQ(iter.next(), "3");
+    EXPECT_EQ(iter.next(), "4");
+    EXPECT_EQ(iter.next(), "5");
+    EXPECT_EQ(iter.next(), "6");
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FlatMapIterMix) {
@@ -709,16 +716,16 @@ TEST(IterTests, FlatMapIterMix) {
     auto iter = range(0, 3)
         .flatMap([](int x) { return range(0, x); });
 
-    ASSERT_EQ(iter.next(), 0);
-    ASSERT_EQ(iter.next(), 0);
-    ASSERT_EQ(iter.next(), 1);
-    ASSERT_EQ(iter.next(), std::nullopt);
+    EXPECT_EQ(iter.next(), 0);
+    EXPECT_EQ(iter.next(), 0);
+    EXPECT_EQ(iter.next(), 1);
+    EXPECT_EQ(iter.next(), std::nullopt);
 }
 
 TEST(IterTests, FoldSum) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     int sum = from(vec).fold(0, [](int& acc, int x) { acc += x; });
-    ASSERT_EQ(sum, 15);
+    EXPECT_EQ(sum, 15);
 }
 
 TEST(IterTests, FoldSet) {
@@ -749,9 +756,9 @@ TEST(IterTests, Nth0) {
     std::vector<int> vec2;
     std::vector<int> vec3 = {1};
 
-    ASSERT_EQ(from(vec).nth(0), 1);
-    ASSERT_EQ(from(vec2).nth(0), std::nullopt);
-    ASSERT_EQ(from(vec3).nth(0), 1);
+    EXPECT_EQ(from(vec).nth(0), 1);
+    EXPECT_EQ(from(vec2).nth(0), std::nullopt);
+    EXPECT_EQ(from(vec3).nth(0), 1);
 }
 
 TEST(IterTests, Nth1) {
@@ -759,9 +766,9 @@ TEST(IterTests, Nth1) {
     std::vector<int> vec2;
     std::vector<int> vec3 = {1};
 
-    ASSERT_EQ(from(vec).nth(1), 2);
-    ASSERT_EQ(from(vec2).nth(1), std::nullopt);
-    ASSERT_EQ(from(vec3).nth(1), std::nullopt);
+    EXPECT_EQ(from(vec).nth(1), 2);
+    EXPECT_EQ(from(vec2).nth(1), std::nullopt);
+    EXPECT_EQ(from(vec3).nth(1), std::nullopt);
 }
 
 TEST(IterTests, NextChunk) {

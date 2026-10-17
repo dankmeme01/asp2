@@ -4,14 +4,22 @@
 #include <concepts>
 #include <optional>
 #include <functional>
-#include <limits>
+#include <vector>
 #include <string>
 #include <iterator>
 #include <array>
+#include <utility>
 #include <fmt/format.h>
+#include "CollectorBase.hpp"
 #include "Util.hpp"
 
 namespace asp::iter {
+
+template <typename Accum, typename Item>
+concept Summable = requires(Accum a, Item b) {
+    { a += b } -> std::same_as<Accum&>;
+    { a + b } -> std::same_as<Accum>;
+};
 
 struct IterBase {};
 
@@ -28,47 +36,47 @@ public:
 
     /// Returns an iterator that invokes the given function on every item and returns the result, mapping the items.
     template <typename F>
-    auto map(F&& f) &&; // defined in Map.hpp
+    auto map(F&& f) &&; // defined in impl/Map.hpp
 
     /// Returns an iterator that copies data from references into owned objects.
     /// For example, if this is an iterator of `std::string&` or `reference_wrapper<std::string>`,
     /// `copied()` will return an iterator that produces `std::string` by copying the referenced object.
-    auto copied() &&; // defined in Copied.hpp
+    auto copied() &&; // defined in impl/Copied.hpp
 
     /// Returns the iterator that invokes the given function on every item before yielding that item again.
     /// Note that this is not a terminal operation, so the function will not be eagerly invoked.
     template <typename F>
-    auto inspect(F&& f) &&; // defined in Inspect.hpp
+    auto inspect(F&& f) &&; // defined in impl/Inspect.hpp
 
     /// Returns an iterator that only yields items for which the given predicate returns true.
     template <typename F>
-    auto filter(F&& f) &&; // defined in Filter.hpp
+    auto filter(F&& f) &&; // defined in impl/Filter.hpp
 
     /// Similar to filter, but using `std::optional`: the provided function takes an item and
     /// must return an `std::optional<T>`. If the function returns `std::nullopt`, the item is skipped.
     template <typename F>
-    auto filterMap(F&& f) &&; // defined in FilterMap.hpp
+    auto filterMap(F&& f) &&; // defined in impl/FilterMap.hpp
 
     /// Returns a concatenation of this iterator and `it2`.
     /// It will yield elements of this iterator until they run out, before switching to `it2`.
     template <typename It2>
-    auto chain(It2&& it2) &&; // defined in Chain.hpp
+    auto chain(It2&& it2) &&; // defined in impl/Chain.hpp
 
     /// Limits how many items can be yielded by this iterator.
     /// The iterator will not yield any more items after `n` items have been yielded.
-    auto take(size_t n) &&; // defined in Take.hpp
+    auto take(size_t n) &&; // defined in impl/Take.hpp
 
     /// Returns an iterator that merges the elements yielded by this iterator and the provided iterator `it2`.
     /// The resulting iterator will yield `std::pair<T, Y>` where `T` is the item type of this iterator and `Y` is the item type of `it2`.
     /// Stops yielding items once any of the two iterator runs out.
     template <typename It2>
-    auto zip(It2&& it2) &&; // defined in Zip.hpp
+    auto zip(It2&& it2) &&; // defined in impl/Zip.hpp
 
     /// Returns an iterator that skips yielding the first `n` items of this iterator.
-    auto skip(size_t n) &&; // defined in Skip.hpp
+    auto skip(size_t n) &&; // defined in impl/Skip.hpp
 
     /// Returns an iterator that yields the items of this iterator in a cycle, repeating indefinitely.
-    auto cycle() &&; // defined in Cycle.hpp
+    auto cycle() &&; // defined in impl/Cycle.hpp
 
     /// Returns an iterator that groups items of this iterator into statically sized chunks of size `N`.
     /// For example, if this iterator has 10 items and `arrayChunks<3>()` is called,
@@ -76,7 +84,7 @@ public:
     ///
     /// If the amount of items in this iterator is not divisible by `N`, the last few items will be dropped.
     template <size_t N>
-    auto arrayChunks() &&; // defined in ArrayChunks.hpp
+    auto arrayChunks() &&; // defined in impl/ArrayChunks.hpp
 
     /// Returns the next chunk of N items from the iterator, or `std::nullopt` if there are not enough items left to fill the chunk.
     /// Note: while not a terminal operation, this always consumes at most N items. For example if an iterator has 2 items left and nextChunk<3> is called,
@@ -100,7 +108,7 @@ public:
     /// For example, if this is an iterator of `std::vector<int>`, then the resulting iterator
     /// will first yield integers from the first vector, then the next, and so on.
     /// Only valid with iterators that yield containers or other iterators.
-    auto flatten() &&; // defined in Flatten.hpp
+    auto flatten() &&; // defined in impl/Flatten.hpp
 
     /// Shorthand for `map(f).flatten()`, this allows you to map each item to a container or iterator,
     /// and have the resulting iterator produce the underlying items of those containers/iterators.
@@ -175,23 +183,36 @@ public:
     }
 
     /// Collects the items of this iterator into the provided collection, by default `std::vector<T>`.
-    /// The collection must support one of the methods: `push_back(T)`, `insert(T)` or `push(T)`.
-    template <typename Cont = std::vector<Item>>
+    /// The collection must implement the `Collector<C>` trait by specializing it.
+    /// When collecting an iterator of pairs or tuples, the trait is `Collector2<C>`.
+    /// Iterators yielding tuples of 3 or more elements are not supported.
+    /// Default specializations exist for (if <asp/iter/CollectorsImpl.hpp> is included):
+    /// * `std::vector`
+    /// * `std::deque`
+    /// * `std::queue`
+    /// * `std::unordered_set`
+    /// * `std::set`
+    /// * `std::unordered_map` (requires pair or 2-element tuple)
+    /// * `std::map` (requires pair or 2-element tuple)
+    template <typename Container = std::vector<ExtractRefWrapper<Item>>>
     auto collect() && {
-        // TODO: use some custom collector interface
-        Cont cont;
-        while (auto item = this->derived().next()) {
-            if constexpr (requires { cont.push_back(*item); }) {
-                cont.push_back(*item);
-            } else if constexpr (requires { cont.insert(*item); }) {
-                cont.insert(*item);
-            } else if constexpr (requires { cont.push(*item); }) {
-                cont.push(*item);
-            } else {
-                static_assert(std::is_void_v<Cont>, "Container must support push_back, insert or push");
-            }
+        using OutItem = ExtractRefWrapper<Item>;
+
+        std::optional<size_t> sizeHint;  // TODO
+
+        if constexpr (IsPair<OutItem> && IsCollector2<Container>) {
+            // iterator of pairs and the collection supports Collector2 trait, we can use that
+            return this->collectPairsInto<Container>(sizeHint);
+        } else if constexpr (IsCollector<Container>) {
+            return this->collectInto<Container>(sizeHint);
+        } else {
+            static_assert(
+                !std::is_same_v<Container, Container>, "\n\n"
+                "Container must implement the `Collector` or `Collector2` trait to use `collect()`.\n"
+                "If this is a standard library container, you likely haven't included <asp/iter/Collectors.hpp> which may resolve this problem.\n"
+                "Otherwise, you may need to specialize the `Collector` trait for your container type.\n\n"
+            );
         }
-        return cont;
     }
 
     /// Joins the items of this iterator into a string, using the provided separator between items.
@@ -230,8 +251,8 @@ public:
     /// Shorthand for `map()` with a `static_cast` inside, casts each item to the given type `Y`.
     template <typename Y>
     auto mapCast() && {
-        return std::move(*this).map([](auto item) {
-            return static_cast<Y>(item);
+        return std::move(*this).map([]<typename T>(T&& item) mutable {
+            return static_cast<Y>(std::forward<T>(item));
         });
     }
 
@@ -265,8 +286,9 @@ public:
     }
 
     /// Consumes the iterator and returns the sum of all items, or `Item{}` if there are no items.
-    auto sum() && requires(requires { Item{} + Item{}; }) {
-        Item total{};
+    template <typename O = Item>
+    O sum() && requires(Summable<O, Item>) {
+        O total{};
         while (auto item = this->derived().next()) {
             total += *item;
         }
@@ -335,6 +357,46 @@ public:
 private:
     Concrete& derived() {
         return static_cast<Concrete&>(*this);
+    }
+
+    template <typename C>
+    auto collectPairsInto(std::optional<size_t> sizeHint) requires(IsCollector2<C>) {
+        Collector2<C> collector{sizeHint};
+        while (auto item = this->derived().next()) {
+            decltype(auto) pair = unwrapRefWrapper(std::move(*item));
+
+            // there pair can be 3 things:
+            // pair ref, aka pair<...>&
+            // pair with refs, aka pair<X, Y&> or pair<X&, Y&>
+            // pair of owned values
+            // we want to move the values only when the pair isn't a reference and the value isn't either
+            using First = decltype(pair.first);
+            using Second = decltype(pair.second);
+            static constexpr bool moveFirst = !std::is_reference_v<decltype(pair)> && !std::is_reference_v<First>;
+            static constexpr bool moveSecond = !std::is_reference_v<decltype(pair)> && !std::is_reference_v<Second>;
+
+            if constexpr (moveFirst && moveSecond) {
+                collector.push(std::move(pair.first), std::move(pair.second));
+            } else if constexpr (moveFirst) {
+                collector.push(std::move(pair.first), pair.second);
+            } else if constexpr (moveSecond) {
+                collector.push(pair.first, std::move(pair.second));
+            } else {
+                collector.push(pair.first, pair.second);
+            }
+        }
+        return collector.finish();
+    }
+
+    template <typename C>
+    auto collectInto(std::optional<size_t> sizeHint) requires(IsCollector<C>) {
+        Collector<C> collector{sizeHint};
+
+        while (auto item = this->derived().next()) {
+            collector.push(unwrapRefWrapper(std::move(*item)));
+        }
+
+        return collector.finish();
     }
 };
 
@@ -448,19 +510,25 @@ auto once(T value) {
 
 // Repeating iterator
 
-template <typename T>
-class RepeatIter : public Iter<RepeatIter<T>, T> {
+template <typename T, bool Forever = false>
+class RepeatIter : public Iter<RepeatIter<T, Forever>, T> {
 public:
     using Item = T;
 
-    RepeatIter(T value, size_t times) : m_value(std::move(value)), m_times(times) {}
+    template <typename X>
+    RepeatIter(X&& value, size_t times) : m_value(std::forward<X>(value)), m_times(times) {}
+
+    template <typename X>
+    RepeatIter(X&& value) requires (Forever) : m_value(std::forward<X>(value)), m_times(0) {}
 
     std::optional<T> next() {
-        if (m_times == 0) {
-            return std::nullopt;
+        if constexpr (!Forever) {
+            if (m_times == 0) {
+                return std::nullopt;
+            }
+            --m_times;
         }
 
-        --m_times;
         return m_value;
     }
 
@@ -476,7 +544,7 @@ auto repeat(T value, size_t times) {
 
 template <typename T>
 auto repeat(T value) {
-    return RepeatIter<T>(std::move(value), std::numeric_limits<size_t>::max());
+    return RepeatIter<T, true>(std::move(value));
 }
 
 }

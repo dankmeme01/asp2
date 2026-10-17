@@ -165,9 +165,6 @@ struct PathInterface {
 
     // -- comparison -- //
 
-
-    /// Compares two paths for equality. This is a simple string comparison, and does not take into account any filesystem semantics.
-    bool operator==(this const Derived& self, const Derived& other) noexcept;
     /// Compares two paths. This is a simple string comparison, and does not take into account any filesystem semantics.
     std::strong_ordering operator<=>(this const Derived& self, const Derived& other) noexcept;
 
@@ -415,12 +412,8 @@ Path operator/(Path&& lhs, const PathView& rhs);
 Path operator+(const PathView& lhs, const PathView& rhs);
 Path operator+(Path&& lhs, const PathView& rhs);
 
-inline bool operator==(const Path& lhs, const PathView& rhs) noexcept {
-    return lhs.view() == rhs;
-}
-
-inline bool operator==(const PathView& lhs, const Path& rhs) noexcept {
-    return lhs == rhs.view();
+inline bool operator==(const PathView& lhs, const PathView& rhs) noexcept {
+    return _impl::equal(lhs.view(), rhs.view());
 }
 
 inline std::strong_ordering operator<=>(const Path& lhs, const PathView& rhs) noexcept {
@@ -510,11 +503,6 @@ Path PathInterface<D>::lexicallyProximate(this auto&& self, PathView base) {
 template <typename D>
 Result<Path> PathInterface<D>::weaklyCanonical(this auto&& self) {
     return _impl::weaklyCanonical(self.m_path);
-}
-
-template <typename D>
-bool PathInterface<D>::operator==(this const D& self, const D& other) noexcept {
-    return _impl::equal(self.m_path, other.m_path);
 }
 
 template <typename D>

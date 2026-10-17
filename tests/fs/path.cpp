@@ -1,4 +1,5 @@
 #include <asp/fs.hpp>
+#include <asp/iter.hpp>
 #include <gtest/gtest.h>
 
 using namespace asp::fs;
@@ -234,14 +235,24 @@ TEST(Path, Parent) {
     Path p1("foo/bar/baz.txt");
     Path p2("foo/bar/.");
     Path p3("foo");
-    Path p4("/");
     Path p5("/foo");
 
     EXPECT_EQ(p1.parent()->string(), "foo/bar");
     EXPECT_EQ(p2.parent()->string(), "foo/bar");
     EXPECT_EQ(p3.parent(), std::nullopt);
-    EXPECT_EQ(p4.parent(), std::nullopt);
     EXPECT_EQ(p5.parent()->string(), "/");
+}
+
+TEST(Path, ParentRoot) {
+#ifdef _WIN32
+    Path p1{"C:/"};
+
+    EXPECT_EQ(p1.parent()->string(), "C:/");
+#else
+    Path p1{"/"};
+
+    EXPECT_EQ(p1.parent()->string(), "/");
+#endif
 }
 
 TEST(Path, Filename) {
@@ -295,6 +306,10 @@ TEST(Path, Equal) {
     EXPECT_FALSE(p1 != p2);
     EXPECT_FALSE(p1 == p3);
     EXPECT_TRUE(p1 != p3);
+
+    // assert that string equality works too
+    EXPECT_EQ(p1, "foo/bar");
+    EXPECT_EQ(p3, "foo/baz");
 }
 
 TEST(Path, Equivalent) {

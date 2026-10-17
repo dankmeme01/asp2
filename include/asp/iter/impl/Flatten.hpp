@@ -1,16 +1,13 @@
 #pragma once
-#include <utility>
-#include <optional>
-#include "Iter.hpp"
-#include "Util.hpp"
+#include "../Iter.hpp"
 
 namespace asp::iter {
 
 template <typename T>
 struct WrapContainerOrIterator {
     static auto wrap(const T& value) {
-        if constexpr (is_reference_wrapper<T>::value) {
-            using Inner = ExtractRefWrapper<T>::type;
+        if constexpr (IsReferenceWrapper<T>) {
+            using Inner = ExtractRefWrapper<T>;
             return WrapContainerOrIterator<Inner>::wrap(value.get());
         } else if constexpr (std::is_base_of_v<IterBase, T>) {
             // this is an asp iterator, just return it
