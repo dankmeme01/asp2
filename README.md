@@ -197,6 +197,8 @@ By default the following collections support `collect` automatically:
 * `std::set`
 * `std::unordered_map` (requires pairs)
 * `std::map` (requires pairs)
+* `Result<std::vector<T>, E>` from an iterator of `Result<T, E>` (converts entire iterator into first encountered error, otherwise returns all results)
+* `asp::SmallVec<T, N>`
 
 (note: they require the `<asp/iter/Collectors.hpp>` header to be included, if you decide to not include the full `<asp/iter.hpp>`)
 

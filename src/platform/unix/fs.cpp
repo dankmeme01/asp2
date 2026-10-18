@@ -158,7 +158,7 @@ static Result<> doCopyContents(int inFd, int outFd, size_t size) {
     return Ok();
 }
 
-Result<void> copy(PathView origin_, PathView dest_) {
+Result<void> _impl::copyFile(PathView origin_, PathView dest_) {
     auto origin = origin_.string();
     auto dest = dest_.string();
 
@@ -197,6 +197,19 @@ Result<void> copy(PathView origin_, PathView dest_) {
 
 Result<void> rename(PathView oldPath, PathView newPath) {
     return wrapCall("rename", ::rename(oldPath.string().c_str(), newPath.string().c_str()));
+}
+
+Result<void> move(PathView oldPath, PathView newPath) {
+    if (::rename(oldPath.string().c_str(), newPath.string().c_str()) == 0) {
+        return Ok();
+    }
+
+    int e = errno;
+    if (e != EXDEV) {
+        return Err(fmt::format("rename failed: {}", strerror(e)));
+    }
+
+    return _impl::moveManual(oldPath, newPath);
 }
 
 Result<void> createDir(PathView path) {

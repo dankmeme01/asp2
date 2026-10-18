@@ -322,3 +322,48 @@ TEST_F(FsTest, CreateDirSymlink) {
     asp::fs::remove(symlinkDir).unwrap();
     asp::fs::removeDirAll(tempfile).unwrap();
 }
+
+TEST_F(FsTest, CopyDir) {
+    ASSERT_TRUE(asp::fs::createDirAll(tempfile / "1" / "2").isOk());
+
+    std::vector<Path> filePaths {
+        tempfile / "1.txt",
+        tempfile / "2.txt",
+        tempfile / "1" / "1.txt",
+        tempfile / "1" / "2" / "1.txt",
+    };
+    for (auto& p : filePaths) {
+        asp::fs::write(p, "Hello").unwrap();
+    }
+
+    std::vector<Path> expectedSuffixes {
+        Path{"1.txt"},
+        Path{"2.txt"},
+        Path{"1"},
+        Path{"1"} / "1.txt",
+        Path{"1"} / "2",
+        Path{"1"} / "2" / "1.txt",
+    };
+    std::sort(expectedSuffixes.begin(), expectedSuffixes.end());
+
+    auto destDir = tempfile.parent().value() / fmt::format("{}_copy", tempfile.filename().value());
+    asp::fs::copy(tempfile, destDir).unwrap();
+
+    // expect all suffixes to appear
+    auto actualSuffixes = asp::fs::iterDirRecursive(destDir).unwrap()
+        .map([&](auto result) {
+            DirectoryEntry entry = result.unwrap();
+            return entry.path.lexicallyRelative(destDir).value();
+        })
+        .collect();
+    std::sort(actualSuffixes.begin(), actualSuffixes.end());
+
+    // sorted canonical paths must be the same as the ones we expect above: 2 directories and 4 files
+    EXPECT_EQ(actualSuffixes.size(), expectedSuffixes.size());
+    for (size_t i = 0; i < actualSuffixes.size(); ++i) {
+        EXPECT_EQ(actualSuffixes[i].string(), expectedSuffixes[i].string());
+    }
+
+    asp::fs::removeDirAll(tempfile).unwrap();
+    asp::fs::removeDirAll(destDir).unwrap();
+}

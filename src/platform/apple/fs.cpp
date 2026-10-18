@@ -22,7 +22,7 @@ Result<Path> Path::tmp() {
     return Ok(Path{buf});
 }
 
-Result<void> copy(PathView origin_, PathView dest_) {
+Result<void> _impl::copyFile(PathView origin_, PathView dest_) {
     auto origin = origin_.string();
     auto dest = dest_.string();
 

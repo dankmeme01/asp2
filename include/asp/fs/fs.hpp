@@ -13,12 +13,19 @@ namespace asp::fs {
 /// Checks if a file exists, returns `false` on failure
 bool exists(PathView path);
 
-/// Copies the contents (including permissions) from the source file to the destination
+/// If `origin` is a file or a symlink, makes a copy of the file at `dest`, including permissions.
+/// If `origin` is a directory, creates a directory at `dest` and copies all files and directories inside it recursively.
+/// If `dest` already exists, it will be replaced; and if a directory is copied, contents will be merged and existing files will be overwritten.
 Result<void> copy(PathView origin, PathView dest);
 
 /// Renames a file or directory to a new name, replacing the destination if it already exists.
-/// Also known as "move".
+/// This is a simple, atomic OS function, and it may fail if the source and destination are on different drives, or the source is a directory.
+/// For a cross-platform 'move' operation, use `asp::fs::move`.
 Result<void> rename(PathView oldPath, PathView newPath);
+
+/// Moves a file or directory to a new location, replacing the destination if it already exists.
+/// Unlike `rename`, this isn't atomic so if a simple rename fails, this will fall back to a copy + delete, which may result in partial work done upon failure.
+Result<void> move(PathView oldPath, PathView newPath);
 
 /// Creates an empty directory at the given path.
 Result<void> createDir(PathView path);
@@ -95,4 +102,10 @@ Result<void> createDirSymlink(PathView target, PathView link);
 /// Reads a symlink, returning the path it points to. Returns an error if the path is not a symlink.
 Result<Path> readSymlink(PathView path);
 
+namespace _impl {
+    Result<void> copyFile(PathView origin, PathView dest);
+    Result<void> moveManual(PathView oldPath, PathView newPath);
 }
+}
+
+// TODO: impl `move` for directories

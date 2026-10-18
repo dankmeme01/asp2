@@ -215,7 +215,7 @@ Result<Path> Path::tmp() {
 
 // -- file op (asp::fs) implementations -- //
 
-Result<void> copy(PathView origin, PathView dest) {
+Result<void> _impl::copyFile(PathView origin, PathView dest) {
     GEODE_UNWRAP_INTO(auto nativeOrigin, _impl::native(origin));
     GEODE_UNWRAP_INTO(auto nativeDest, _impl::native(dest));
 
@@ -235,6 +235,22 @@ Result<void> rename(PathView oldPath, PathView newPath) {
     }
 
     return Ok();
+}
+
+Result<void> move(PathView oldPath, PathView newPath) {
+    GEODE_UNWRAP_INTO(auto nativeOld, _impl::native(oldPath));
+    GEODE_UNWRAP_INTO(auto nativeNew, _impl::native(newPath));
+
+    if (MoveFileExW(nativeOld.c_str(), nativeNew.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        return Ok();
+    }
+
+    auto err = GetLastError();
+    if (err != ERROR_NOT_SAME_DEVICE) {
+        return Err(formatError(err));
+    }
+
+    return _impl::moveManual(oldPath, newPath);
 }
 
 Result<void> createDir(PathView path) {

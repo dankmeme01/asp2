@@ -191,15 +191,7 @@ public:
     /// The collection must implement the `Collector<C>` trait by specializing it.
     /// When collecting an iterator of pairs, the trait is `Collector2<C>`.
     /// Iterators yielding tuples of 3 or more elements are not supported.
-    /// Default specializations exist for (if <asp/iter/CollectorsImpl.hpp> is included):
-    /// * `std::vector`
-    /// * `std::deque`
-    /// * `std::queue`
-    /// * `std::unordered_set`
-    /// * `std::set`
-    /// * `std::unordered_map` (requires pair)
-    /// * `std::map` (requires pair)
-    /// * `Result<std::vector<T>, E>` from an iterator of `Result<T, E>`
+    /// Default specializations exist in <asp/iter/CollectorsImpl.hpp>.
     template <typename Container = std::vector<ExtractRefWrapper<Item>>>
     auto collect() && {
         using OutItem = ExtractRefWrapper<Item>;

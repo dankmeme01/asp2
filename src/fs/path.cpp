@@ -1,4 +1,4 @@
-#include <asp/fs/Path.hpp>
+#include <asp/fs.hpp>
 #include <asp/iter.hpp>
 #include <vector>
 #include "util.hpp"
@@ -76,6 +76,10 @@ bool _impl::equal(std::string_view lhs, std::string_view rhs) noexcept {
 
 std::strong_ordering _impl::compare(std::string_view lhs, std::string_view rhs) noexcept {
     return lhs <=> rhs;
+}
+
+Result<Path> _impl::readSymlink(std::string_view path) {
+    return fs::readSymlink(path);
 }
 
 Path _impl::lexicallyNormal(std::string_view path) {

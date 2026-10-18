@@ -38,6 +38,7 @@ namespace _impl {
     Path lexicallyNormal(std::string_view path);
     std::optional<Path> lexicallyRelative(std::string_view path, std::string_view base);
     Result<Path> weaklyCanonical(std::string_view path);
+    Result<Path> readSymlink(std::string_view path);
 
     bool equal(std::string_view lhs, std::string_view rhs) noexcept;
     bool equivalent(std::string_view lhs, std::string_view rhs, bool followSymlink) noexcept;
@@ -106,7 +107,7 @@ struct PathInterface {
     }
 
     /// Returns the filename component of this path, or `std::nullopt` if this path has no filename.
-    std::optional<std::string_view> filename(this auto&& self) noexcept;
+    std::optional<PathView> filename(this auto&& self) noexcept;
 
     /// Returns whether the path has a filename. This is equivalent to `filename().has_value()`.
     inline bool hasFilename(this auto&& self) noexcept {
@@ -234,6 +235,9 @@ struct PathInterface {
             return meta.isSymlink();
         }).unwrapOr(false);
     }
+
+    /// Attempts to read the symlink and return the target path, fails if the path is not a symlink.
+    Result<Path> readSymlink(this auto&& self);
 
     // -- iteration -- //
 
@@ -516,7 +520,7 @@ std::optional<PathView> PathInterface<D>::parent(this auto&& self) noexcept {
 }
 
 template <typename D>
-std::optional<std::string_view> PathInterface<D>::filename(this auto&& self) noexcept {
+std::optional<PathView> PathInterface<D>::filename(this auto&& self) noexcept {
     return _impl::filename(self.m_path);
 }
 
@@ -585,6 +589,11 @@ bool PathInterface<D>::equivalent(this const D& self, PathView other) noexcept {
 template <typename D>
 bool PathInterface<D>::symlinkEquivalent(this const D& self, PathView other) noexcept {
     return _impl::equivalent(self.m_path, other.view(), false);
+}
+
+template <typename D>
+Result<Path> PathInterface<D>::readSymlink(this auto&& self) {
+    return _impl::readSymlink(self.m_path);
 }
 
 template <typename D>
