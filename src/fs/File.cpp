@@ -24,33 +24,67 @@ Result<> File::readExact(std::span<uint8_t> buf) {
     return Ok();
 }
 
-Result<std::vector<uint8_t>> File::readToEnd() {
-    std::vector<uint8_t> out;
-    std::array<uint8_t, 4096> buf;
+// reads data from the file into the container without using intermediate scratch buffers
+static Result<> readNoIntermediate(auto& container, File& file, size_t size) {
+    container.resize(size);
+
+    size_t totalRead = 0;
+    while (totalRead < size) {
+        auto dest = std::span{(uint8_t*)container.data() + totalRead, size - totalRead};
+        GEODE_UNWRAP_INTO(auto n, file.read(dest));
+
+        if (n == 0) {
+            return Err("Unexpected EOF");
+        }
+
+        totalRead += n;
+    }
+
+    return Ok();
+}
+
+// reads data into an intermediate buffer and then copies it into the container,
+// used when the size is uncertain
+static Result<> readWithBuffer(auto& container, File& file) {
+    // 256kb buffer
+    std::vector<uint8_t> buffer(1024 * 256);
 
     while (true) {
-        GEODE_UNWRAP_INTO(auto n, this->read(buf));
+        GEODE_UNWRAP_INTO(auto n, file.read(buffer));
         if (n == 0) {
             break;
         }
-        out.insert(out.end(), buf.begin(), buf.begin() + n);
+
+        container.insert(container.end(), buffer.begin(), buffer.begin() + n);
     }
 
+    return Ok();
+}
+
+static Result<> commonRead(auto& container, File& file) {
+    GEODE_UNWRAP_INTO(auto meta, file.metadata());
+
+    // size may be inaccurate on special files in unix, so don't always rely on it
+    std::optional<size_t> size =
+        meta.isFile() && meta.size > 0 ? std::optional{meta.size} : std::nullopt;
+
+    if (size) {
+        // we know the size and we want to trust it
+        return readNoIntermediate(container, file, *size);
+    }
+
+    return readWithBuffer(container, file);
+}
+
+Result<std::vector<uint8_t>> File::readToEnd() {
+    std::vector<uint8_t> out;
+    GEODE_UNWRAP(commonRead(out, *this));
     return Ok(std::move(out));
 }
 
 Result<std::string> File::readToString() {
     std::string out;
-    std::array<uint8_t, 4096> buf;
-
-    while (true) {
-        GEODE_UNWRAP_INTO(auto n, this->read(buf));
-        if (n == 0) {
-            break;
-        }
-        out.insert(out.end(), buf.begin(), buf.begin() + n);
-    }
-
+    GEODE_UNWRAP(commonRead(out, *this));
     return Ok(std::move(out));
 }
 
