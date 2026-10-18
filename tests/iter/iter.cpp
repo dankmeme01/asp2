@@ -87,6 +87,21 @@ TEST(IterTests, FilterComplex) {
     EXPECT_EQ(iter.next(), std::nullopt);
 }
 
+TEST(IterTests, FilterConsume) {
+    // assert that an iterator producing items instead of refs can still be filtered by ref
+    std::vector<std::string> vec = {STRING_1, STRING_2, STRING_3};
+    auto iter = consume(vec)
+        .filter([](std::string& x) { return !x.contains('2'); });
+
+    EXPECT_EQ(iter.next(), STRING_1);
+    EXPECT_EQ(iter.next(), STRING_3);
+    EXPECT_EQ(iter.next(), std::nullopt);
+
+    EXPECT_EQ(vec[0], "");
+    EXPECT_EQ(vec[1], "");
+    EXPECT_EQ(vec[2], "");
+}
+
 TEST(IterTests, FilterMap) {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto iter = from(vec).filterMap([](int x) -> std::optional<int> {

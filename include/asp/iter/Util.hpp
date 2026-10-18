@@ -82,6 +82,15 @@ UnwrapRefWrapper<T> unwrapRefWrapper(Y&& value) {
     }
 }
 
+template <typename Y, typename T = std::decay_t<Y>>
+decltype(auto) unwrapRefWrapperRef(Y&& value) {
+    if constexpr (IsReferenceWrapper<T>) {
+        return value.get();
+    } else {
+        return std::forward<Y>(value);
+    }
+}
+
 template <typename T>
 WrapRefWrapper<T> wrapRefWrapper(T&& value) {
     if constexpr (std::is_lvalue_reference_v<T>) {

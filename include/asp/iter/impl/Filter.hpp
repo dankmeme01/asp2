@@ -12,7 +12,7 @@ public:
 
     std::optional<Item> next() {
         while (auto item = m_iter.next()) {
-            if (std::invoke(m_func, unwrapRefWrapper(*item))) {
+            if (std::invoke(m_func, unwrapRefWrapperRef(*item))) {
                 return item;
             }
         }
