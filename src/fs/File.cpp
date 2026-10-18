@@ -3,6 +3,24 @@
 
 namespace asp::fs {
 
+File::~File() {
+    this->close();
+}
+
+File::File(File&& other) noexcept {
+    m_fd = other.m_fd;
+    other.m_fd = INVALID_FD;
+}
+
+File& File::operator=(File&& other) noexcept {
+    if (this != &other) {
+        this->close();
+        m_fd = other.m_fd;
+        other.m_fd = INVALID_FD;
+    }
+    return *this;
+}
+
 Result<BufferedFile> File::openBuffered(PathView path, const OpenOptions& options, size_t bufSize) {
     GEODE_UNWRAP_INTO(auto file, File::open(path, options));
     return Ok(BufferedFile(std::move(file), bufSize, options.read, options.write));

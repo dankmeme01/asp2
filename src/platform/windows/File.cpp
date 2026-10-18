@@ -4,26 +4,11 @@
 
 namespace asp::fs {
 
-File::~File() {
+void File::close() {
     if (m_fd != INVALID_FD) {
         CloseHandle(m_fd);
+        m_fd = INVALID_FD;
     }
-}
-
-File::File(File&& other) noexcept {
-    m_fd = other.m_fd;
-    other.m_fd = INVALID_FD;
-}
-
-File& File::operator=(File&& other) noexcept {
-    if (this != &other) {
-        if (m_fd != INVALID_FD) {
-            CloseHandle(m_fd);
-        }
-        m_fd = other.m_fd;
-        other.m_fd = INVALID_FD;
-    }
-    return *this;
 }
 
 Result<File> File::open(PathView path, const OpenOptions& options) {

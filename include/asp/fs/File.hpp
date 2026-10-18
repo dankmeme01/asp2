@@ -65,6 +65,10 @@ public:
         return m_fd;
     }
 
+    /// Closes the file. This is automatically called during destruction, and is not necessary to call manually.
+    /// This is only useful if you prefer to explicitly close the file instead of relying on RAII.
+    void close();
+
     /// Attempts to sync the file state to disk.
     /// Note that this is not a generic "flush" operation; `File` is unbuffered so data is immediately flushed to the kernel.
     /// This function tells the kernel to drop its cache and sync the data to disk as soon as possible.
