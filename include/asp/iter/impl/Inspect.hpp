@@ -29,7 +29,7 @@ private:
 };
 
 template <typename Concrete, typename Item_>
-template <typename F>
+template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item_>>
 auto Iter<Concrete, Item_>::inspect(F&& f) && {
     return Inspect<Concrete, std::decay_t<F>>(
         std::move(this->derived()),

@@ -7,6 +7,15 @@
 using namespace asp::iter;
 using namespace asp;
 
+template <typename T>
+struct NoCopy : public T {
+    NoCopy(T&& value) : T(std::move(value)) {}
+    NoCopy(const NoCopy&) = delete;
+    NoCopy& operator=(const NoCopy&) = delete;
+    NoCopy(NoCopy&&) noexcept = default;
+    NoCopy& operator=(NoCopy&&) noexcept = default;
+};
+
 static constexpr auto STRING_1 = "This is a long string 1 to bypass SSO";
 static constexpr auto STRING_2 = "This is a long string 2 to bypass SSO";
 static constexpr auto STRING_3 = "This is a long string 3 to bypass SSO";
@@ -217,12 +226,23 @@ TEST(IterTests, FindStr) {
     EXPECT_EQ(from(vec1).find([](const std::string& x) { return x.size() > 5; }), std::nullopt);
 }
 
-
 TEST(IterTests, Enumerate) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
     auto iter = from(vec1).enumerate().collect<std::vector<std::pair<size_t, int>>>();
 
     EXPECT_EQ(iter, (std::vector<std::pair<size_t, int>>{{0, 1}, {1, 2}, {2, 3}, {3, -4}, {4, 5}}));
+}
+
+TEST(IterTests, EnumerateDoesNotCopy) {
+    std::vector<NoCopy<std::string>> vec1;
+    for (int i = 0; i < 5; ++i) {
+        vec1.emplace_back(fmt::to_string(i));
+    }
+
+    for (auto [idx, str] : from(vec1).enumerate()) {
+        static_assert(std::is_same_v<decltype(str), NoCopy<std::string>&>);
+        EXPECT_EQ(str, fmt::to_string(idx));
+    }
 }
 
 TEST(IterTests, ForEach) {

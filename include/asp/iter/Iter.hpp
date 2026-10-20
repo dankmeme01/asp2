@@ -40,7 +40,7 @@ public:
     using Item = Item_;
 
     /// Returns an iterator that invokes the given function on every item and returns the result, mapping the items.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     auto map(F&& f) &&; // defined in impl/Map.hpp
 
     /// Returns an iterator that copies data from references into owned objects.
@@ -50,7 +50,7 @@ public:
 
     /// Returns the iterator that invokes the given function on every item before yielding that item again.
     /// Note that this is not a terminal operation, so the function will not be eagerly invoked.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     auto inspect(F&& f) &&; // defined in impl/Inspect.hpp
 
     /// Returns an iterator that only yields items for which the given predicate returns true.
@@ -59,7 +59,7 @@ public:
 
     /// Similar to filter, but using `std::optional`: the provided function takes an item and
     /// must return an `std::optional<T>`. If the function returns `std::nullopt`, the item is skipped.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     auto filterMap(F&& f) &&; // defined in impl/FilterMap.hpp
 
     /// Returns a concatenation of this iterator and `it2`.
@@ -117,13 +117,13 @@ public:
 
     /// Shorthand for `map(f).flatten()`, this allows you to map each item to a container or iterator,
     /// and have the resulting iterator produce the underlying items of those containers/iterators.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     auto flatMap(F&& f) && {
         return std::move(*this).map(std::forward<F>(f)).flatten();
     }
 
     /// Returns whether all items in this iterator match the given predicate, or `true` if there are no items.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     bool all(F&& f) && {
         while (auto item = this->derived().next()) {
             if (!std::invoke(f, unwrapRefWrapper(*item))) {
@@ -135,7 +135,7 @@ public:
     }
 
     /// Returns whether any item in this iterator matches the given predicate, or `false` if there are no items.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     bool any(F&& f) && {
         while (auto item = this->derived().next()) {
             if (std::invoke(f, unwrapRefWrapper(*item))) {
@@ -155,7 +155,7 @@ public:
     }
 
     /// Returns the first item that matches the given predicate, or `std::nullopt` if no item matches.
-    template <typename F>
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
     std::optional<Item> find(F&& f) && {
         while (auto item = this->derived().next()) {
             if (std::invoke(f, unwrapRefWrapper(*item))) {
@@ -242,7 +242,7 @@ public:
 
     /// Folds every element into an accumulator by applying an operation, and returns the final result.
     /// A mutable reference to the `init` argument will be passed as the first argument to the operation, together with the item.
-    template <typename B, typename F>
+    template <typename B, typename F> requires std::invocable<F, B&, UnwrapRefWrapper<Item>>
     B fold(B init, F&& f) && {
         while (auto item = this->derived().next()) {
             std::invoke(f, init, unwrapRefWrapper(*item));
@@ -259,7 +259,8 @@ public:
     }
 
     /// Consumes the iterator and invokes the given function on every item.
-    void forEach(auto&& f) && {
+    template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item>>
+    void forEach(F&& f) && {
         while (auto item = this->derived().next()) {
             std::invoke(f, unwrapRefWrapper(*item));
         }

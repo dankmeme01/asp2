@@ -41,7 +41,7 @@ private:
 };
 
 template <typename Concrete, typename Item_>
-template <typename F>
+template <typename F> requires std::invocable<F, UnwrapRefWrapper<Item_>>
 auto Iter<Concrete, Item_>::filterMap(F&& f) && {
     return FilterMap<Concrete, std::decay_t<F>>(
         std::move(this->derived()),
