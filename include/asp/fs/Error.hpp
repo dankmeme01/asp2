@@ -107,6 +107,10 @@ public:
     std::optional<int32_t> rawOsError() const;
     std::string toString() const;
 
+    operator std::string() const {
+        return toString();
+    }
+
     bool operator==(ErrorKind kind) const noexcept;
     friend bool operator==(ErrorKind kind, const Error& error) noexcept;
 
