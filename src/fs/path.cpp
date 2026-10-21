@@ -163,7 +163,7 @@ Result<Path> _impl::weaklyCanonical(std::string_view path) {
     }
 
     if (prefix.empty()) {
-        return Err("no existing ancestor");
+        return Err(Error(ErrorKind::NotFound, fmt::format("Path '{}' does not exist and has no existing ancestor", path)));
     }
 
     GEODE_UNWRAP_INTO(auto canon, prefix.canonicalize());

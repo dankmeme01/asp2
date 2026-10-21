@@ -1,8 +1,7 @@
 #pragma once
 
-#include <asp/detail/Result.hpp>
 #include <asp/iter/Iter.hpp>
-#include <fmt/format.h>
+#include "Error.hpp"
 #include "Metadata.hpp"
 
 namespace asp::fs {

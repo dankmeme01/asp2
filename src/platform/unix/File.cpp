@@ -18,10 +18,10 @@ void File::close() {
 
 Result<File> File::open(PathView path, const OpenOptions& options) {
     if (options.truncate && !options.write) {
-        return Err("Cannot truncate a file without write access");
+        return Err(Error(ErrorKind::InvalidInput, "Cannot truncate a file without write access"));
     }
     if (options.append && options.truncate) {
-        return Err("Cannot append and truncate a file at the same time");
+        return Err(Error(ErrorKind::InvalidInput, "Cannot append and truncate a file at the same time"));
     }
 
     int flags = 0;
@@ -63,7 +63,7 @@ Result<File> File::open(PathView path, const OpenOptions& options) {
     }
 
     if (fd == -1) {
-        return Err(fmt::format("Failed to open file: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("open failed"));
     }
 
     return Ok(File(fd));
@@ -118,7 +118,7 @@ Result<File> File::clone() {
 Result<size_t> File::read(std::span<uint8_t> buf) {
     ssize_t bytesRead = ::read(m_fd, buf.data(), buf.size());
     if (bytesRead < 0) {
-        return Err(fmt::format("read failed: {}", strerror(errno)));
+        return Err(Error::fromLastOsError());
     }
     return Ok((size_t)bytesRead);
 }
@@ -126,7 +126,7 @@ Result<size_t> File::read(std::span<uint8_t> buf) {
 Result<size_t> File::write(std::span<const uint8_t> buf) {
     ssize_t bytesWritten = ::write(m_fd, buf.data(), buf.size());
     if (bytesWritten < 0) {
-        return Err(fmt::format("write failed: {}", strerror(errno)));
+        return Err(Error::fromLastOsError());
     }
     return Ok((size_t)bytesWritten);
 }
@@ -134,7 +134,7 @@ Result<size_t> File::write(std::span<const uint8_t> buf) {
 Result<> File::seek(uint64_t pos) {
     off_t result = lseek(m_fd, pos, SEEK_SET);
     if (result == (off_t)-1) {
-        return Err(fmt::format("lseek failed: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("lseek failed"));
     }
     return Ok();
 }
@@ -142,7 +142,7 @@ Result<> File::seek(uint64_t pos) {
 Result<uint64_t> File::tell() {
     off_t result = lseek(m_fd, 0, SEEK_CUR);
     if (result == (off_t)-1) {
-        return Err(fmt::format("lseek failed: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("lseek failed"));
     }
     return Ok((uint64_t)result);
 }

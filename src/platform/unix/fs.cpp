@@ -52,7 +52,7 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     };
 
     if (!resolved) {
-        return Err(fmt::format("Unable to canonicalize path: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("realpath failed"));
     }
 
     return Ok(Path(resolved.get()));
@@ -95,7 +95,7 @@ Result<Path> Path::cwd() {
     std::array<char, 1024> buf;
     auto p = getcwd(buf.data(), buf.size());
     if (!p) {
-        return Err(fmt::format("getcwd failed: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("getcwd failed"));
     }
     return Ok(Path(buf.data()));
 }
@@ -113,7 +113,7 @@ Result<Path> Path::home() {
         return Ok(Path(pw->pw_dir));
     }
 
-    return Err("Unable to determine home directory");
+    return Err(Error(ErrorKind::Other, "Unable to determine home directory"));
 }
 
 #if defined(__linux__) && !defined(__ANDROID__) // other impls live in their directories
@@ -148,10 +148,10 @@ static Result<> doCopyContents(int inFd, int outFd, size_t size) {
     while (offset < size) {
         auto sent = ::sendfile(outFd, inFd, &offset, size - offset);
         if (sent < 0) {
-            return Err(fmt::format("unable to copy file: {}", strerror(errno)));
+            return Err(Error::fromLastOsError("sendfile failed"));
         } else if (sent == 0) {
             // this shouldn't happen unless the file was spontaneously truncated
-            return Err("unable to copy file: unexpected EOF");
+            return Err(ErrorKind::UnexpectedEof);
         }
     }
 
@@ -164,12 +164,12 @@ Result<void> _impl::copyFile(PathView origin_, PathView dest_) {
 
     ScopeFd inFd = open(origin.c_str(), O_RDONLY);
     if (inFd < 0) {
-        return Err(fmt::format("unable to open source file: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("unable to open source file"));
     }
 
     ScopeFd outFd = open(dest.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (outFd < 0) {
-        return Err(fmt::format("unable to open destination file: {}", strerror(errno)));
+        return Err(Error::fromLastOsError("unable to open destination file"));
     }
 
     struct stat st;
@@ -180,7 +180,7 @@ Result<void> _impl::copyFile(PathView origin_, PathView dest_) {
     // copy ownership if possible
     if (st.st_uid != geteuid() || st.st_gid != getegid()) {
         if (fchown(outFd, st.st_uid, st.st_gid) != 0 && errno != EPERM) {
-            return Err(fmt::format("unable to copy ownership: {}", strerror(errno)));
+            return Err(Error::fromLastOsError("fchown failed"));
         }
     }
 
@@ -206,7 +206,7 @@ Result<void> move(PathView oldPath, PathView newPath) {
 
     int e = errno;
     if (e != EXDEV) {
-        return Err(fmt::format("rename failed: {}", strerror(e)));
+        return Err(Error::fromOsError(e, "rename failed"));
     }
 
     return _impl::moveManual(oldPath, newPath);
@@ -229,7 +229,8 @@ using ScopeDir = std::unique_ptr<DIR, decltype(&closedir)>;
 static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
     auto dir = ScopeDir{opendir(path.string().c_str()), &closedir};
     if (!dir) {
-        return Err(fmt::format("Unable to open directory '{}': {}", path, strerror(errno)));
+        int e = errno;
+        return Err(Error::fromOsError(e, fmt::format("opendir failed: {}", path)));
     }
 
     struct dirent* entry;
@@ -241,7 +242,8 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 
         struct stat st;
         if (lstat(fullPath.c_str(), &st) != 0) {
-            return Err(fmt::format("Unable to stat '{}': {}", fullPath, strerror(errno)));
+            int e = errno;
+            return Err(Error::fromOsError(e, fmt::format("lstat failed: {}", fullPath)));
         }
 
         if (!S_ISDIR(st.st_mode)) {
@@ -257,8 +259,9 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 }
 
 Result<void> removeDirAll(PathView path) {
-    if (!path.isDir()) {
-        return Err(fmt::format("Path '{}' is not a directory", path));
+    GEODE_UNWRAP_INTO(auto meta, path.symlinkMetadata());
+    if (!meta.isDir()) {
+        return Err(ErrorKind::NotADirectory);
     }
 
     std::vector<Path> toDelete;
@@ -292,7 +295,7 @@ Result<Path> readSymlink(PathView path) {
     std::array<char, 1024> buf;
     ssize_t len = ::readlink(path.string().c_str(), buf.data(), buf.size());
     if (len < 0) {
-        return Err(fmt::format("readlink failed: {}", path, strerror(errno)));
+        return Err(Error::fromLastOsError("readlink failed"));
     }
 
     return Ok(Path{std::string{buf.data(), size_t(len)}});

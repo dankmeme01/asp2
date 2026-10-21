@@ -55,7 +55,7 @@ inline Result<uint64_t> fileSize(PathView path) {
         if (meta.isFile()) {
             return Ok(meta.size);
         } else {
-            return Err("not a file");
+            return Err(Error(ErrorKind::InvalidInput, "Path is not a file"));
         }
     });
 }

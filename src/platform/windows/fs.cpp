@@ -48,14 +48,14 @@ Result<Path> _impl::canonicalize(std::string_view path) {
     auto result = File::open(path, opts);
 
     if (!result) {
-        return Err(fmt::format("Unable to open file: {}", result.unwrapErr()));
+        return Err(std::move(result).unwrapErr());
     }
 
     auto file = std::move(result).unwrap();
 
     auto len = GetFinalPathNameByHandleW(file.fd(), nullptr, 0, VOLUME_NAME_DOS);
     if (len == 0) {
-        return Err(fmt::format("Unable to get final path name: {}", formatError()));
+        return Err(Error::fromLastOsError("GetFinalPathNameByHandleW failed"));
     }
 
     std::wstring buf(len, L'\0');
@@ -99,13 +99,13 @@ Result<Path> _impl::absolute(std::string_view path) {
 
     auto len = GetFullPathNameW(wide.c_str(), 0, nullptr, nullptr);
     if (len == 0) {
-        return Err(fmt::format("Unable to get full path name: {}", formatError()));
+        return Err(Error::fromLastOsError("GetFullPathNameW failed"));
     }
 
     std::wstring buf(len, L'\0');
     len = GetFullPathNameW(wide.c_str(), (DWORD)buf.size(), buf.data(), nullptr);
     if (len == 0) {
-        return Err(fmt::format("Unable to get full path name: {}", formatError()));
+        return Err(Error::fromLastOsError("GetFullPathNameW failed"));
     }
     buf.resize(len);
 
@@ -165,7 +165,7 @@ Result<Path> Path::cwd() {
     std::array<wchar_t, 1024> buf;
     auto n = GetCurrentDirectoryW(buf.size(), buf.data());
     if (n == 0 || n > buf.size()) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("GetCurrentDirectoryW failed"));
     }
 
     GEODE_UNWRAP_INTO(auto utf8, wideToUtf8({buf.data(), n}));
@@ -192,21 +192,21 @@ Result<Path> Path::home() {
     if (cnt2 > 1) {
         std::wstring buf2(cnt2, L'\0');
         if (!GetUserProfileDirectoryW(t, buf2.data(), &cnt2)) {
-            return Err(formatError());
+            return Err(Error::fromLastOsError("GetUserProfileDirectoryW failed"));
         }
         GEODE_UNWRAP_INTO(auto utf8, wideToUtf8({buf2.data(), cnt2}));
         return Ok(Path(std::move(utf8)));
     }
 
     // should never happen?
-    return Err("Unable to determine home directory");
+    return Err(Error(ErrorKind::Other, "Unable to determine home directory"));
 }
 
 Result<Path> Path::tmp() {
     std::array<wchar_t, 1024> buf;
     auto n = GetTempPathW(buf.size(), buf.data());
     if (n == 0 || n > buf.size()) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("GetTempPathW failed"));
     }
     GEODE_UNWRAP_INTO(auto utf8, wideToUtf8({buf.data(), n}));
     return Ok(Path(std::move(utf8)));
@@ -220,7 +220,7 @@ Result<void> _impl::copyFile(PathView origin, PathView dest) {
     GEODE_UNWRAP_INTO(auto nativeDest, _impl::native(dest));
 
     if (!CopyFileExW(nativeOrigin.c_str(), nativeDest.c_str(), nullptr, nullptr, nullptr, 0)) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("CopyFileExW failed"));
     }
 
     return Ok();
@@ -231,7 +231,7 @@ Result<void> rename(PathView oldPath, PathView newPath) {
     GEODE_UNWRAP_INTO(auto nativeNew, _impl::native(newPath));
 
     if (!MoveFileExW(nativeOld.c_str(), nativeNew.c_str(), MOVEFILE_REPLACE_EXISTING)) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("MoveFileExW failed"));
     }
 
     return Ok();
@@ -247,7 +247,7 @@ Result<void> move(PathView oldPath, PathView newPath) {
 
     auto err = GetLastError();
     if (err != ERROR_NOT_SAME_DEVICE) {
-        return Err(formatError(err));
+        return Err(Error::fromOsError(err, "MoveFileExW failed"));
     }
 
     return _impl::moveManual(oldPath, newPath);
@@ -257,7 +257,7 @@ Result<void> createDir(PathView path) {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     if (!CreateDirectoryW(native.c_str(), nullptr)) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError());
     }
 
     return Ok();
@@ -284,7 +284,7 @@ Result<void> removeFile(PathView path) {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     if (!DeleteFileW(native.c_str())) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError());
     }
 
     return Ok();
@@ -294,7 +294,7 @@ Result<void> removeDir(PathView path) {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     if (!RemoveDirectoryW(native.c_str())) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError());
     }
 
     return Ok();
@@ -319,7 +319,7 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
     );
 
     if (h == INVALID_HANDLE_VALUE) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("FindFirstFileExW failed"));
     }
 
     do {
@@ -355,8 +355,9 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
 }
 
 Result<void> removeDirAll(PathView path) {
-    if (!path.isDir()) {
-        return Err(fmt::format("Path '{}' is not a directory", path));
+    GEODE_UNWRAP_INTO(auto meta, path.symlinkMetadata());
+    if (!meta.isDir()) {
+        return Err(ErrorKind::NotADirectory);
     }
 
     OpenOptions opts{};
@@ -367,11 +368,11 @@ Result<void> removeDirAll(PathView path) {
 
     FILE_BASIC_INFO info{};
     if (!GetFileInformationByHandleEx(file.fd(), FileBasicInfo, &info, sizeof(info))) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("GetFileInformationByHandleEx failed"));
     }
 
     if ((info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-        return Err("Not a directory");
+        return Err(ErrorKind::NotADirectory);
     }
 
     std::vector<Path> toDelete;
@@ -422,13 +423,13 @@ Result<Path> readSymlink(PathView path) {
 
     DWORD bufSize = GetFinalPathNameByHandleW(file.fd(), nullptr, 0, FILE_NAME_NORMALIZED);
     if (!bufSize) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("GetFinalPathNameByHandleW failed"));
     }
 
     std::wstring buf(bufSize, L'\0');
     bufSize = GetFinalPathNameByHandleW(file.fd(), buf.data(), buf.size(), FILE_NAME_NORMALIZED);
     if (!bufSize) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("GetFinalPathNameByHandleW failed"));
     }
 
     buf.resize(bufSize);

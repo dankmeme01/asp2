@@ -1,46 +1,20 @@
 #pragma once
-#include <asp/detail/Result.hpp>
+#include <asp/fs/Error.hpp>
 #include <asp/time/SystemTime.hpp>
 #include <Windows.h>
 #include <fmt/format.h>
 
-namespace asp {
-
-static std::string formatError(DWORD error = GetLastError()) {
-    LPSTR buffer = nullptr;
-    DWORD size = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        error,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        (LPSTR)&buffer,
-        0,
-        nullptr
-    );
-
-    if (size == 0 || !buffer) {
-        return fmt::format("Win error {}", error);
-    }
-
-    std::string message(buffer, size);
-    LocalFree(buffer);
-
-    while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
-        message.pop_back();
-    }
-
-    return message;
-}
+namespace asp::fs {
 
 template <typename T>
 Result<> wrapCall(T result) {
     if constexpr (std::is_same_v<T, BOOL> || std::is_same_v<T, BOOLEAN>) {
         if (!result) {
-            return Err(formatError());
+            return Err(Error::fromLastOsError());
         }
     } else if constexpr (std::is_same_v<T, HANDLE>) {
         if (result == INVALID_HANDLE_VALUE) {
-            return Err(formatError());
+            return Err(Error::fromLastOsError());
         }
     } else {
         static_assert(std::is_void_v<T>, "wrapCall unsupported type");
@@ -54,7 +28,7 @@ static Result<std::string> wideToUtf8(std::wstring_view wide) {
 
     int size = WideCharToMultiByte(CP_UTF8, 0, wide.data(), (int)wide.size(), nullptr, 0, nullptr, nullptr);
     if (size == 0) {
-        return Err(fmt::format("Unable to convert string: {}", formatError()));
+        return Err(Error::fromLastOsError("Unable to convert to UTF-8"));
     }
 
     std::string utf8(size, '\0');
@@ -68,7 +42,7 @@ static Result<std::wstring> utf8ToWide(std::string_view utf8) {
 
     int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(), (int)utf8.size(), nullptr, 0);
     if (size == 0) {
-        return Err(fmt::format("Unable to convert string: {}", formatError()));
+        return Err(Error::fromLastOsError("Unable to convert to wide string"));
     }
 
     std::wstring wide(size, L'\0');

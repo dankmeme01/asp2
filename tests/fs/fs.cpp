@@ -14,22 +14,23 @@ protected:
     void SetUp() override {
         std::random_device rdev{};
         tempfile = Path::tmp().unwrap() / fmt::format("tempfile_{}", rdev());
-
-        if (tempfile.exists()) {
-            remove(tempfile).unwrap();
-        }
     }
 
     void TearDown() override {
         if (tempfile.exists()) {
-            remove(tempfile).unwrap();
+            if (tempfile.isDir()) {
+                removeDirAll(tempfile).unwrap();
+            } else {
+                remove(tempfile).unwrap();
+            }
         }
     }
 };
 
 TEST_F(FsTest, ReadFailsOnNonexistent) {
     auto result = asp::fs::read(tempfile);
-    EXPECT_FALSE(result.isOk());
+    ASSERT_FALSE(result.isOk());
+    EXPECT_EQ(result.unwrapErr(), ErrorKind::NotFound);
 }
 
 TEST_F(FsTest, WriteAndRead) {
@@ -126,6 +127,14 @@ TEST_F(FsTest, CreateDir) {
     EXPECT_FALSE(tempfile.isSymlink());
 }
 
+TEST_F(FsTest, CreateDirExisting) {
+    ASSERT_TRUE(asp::fs::createDir(tempfile).isOk());
+    auto result = asp::fs::createDir(tempfile);
+
+    ASSERT_FALSE(result.isOk());
+    EXPECT_EQ(result.unwrapErr(), ErrorKind::AlreadyExists);
+}
+
 TEST_F(FsTest, CreateDirAll) {
     Path nestedDir = tempfile / "nested" / "dir";
     ASSERT_TRUE(asp::fs::createDirAll(nestedDir).isOk());
@@ -137,6 +146,15 @@ TEST_F(FsTest, CreateDirAll) {
     asp::fs::removeDirAll(tempfile).unwrap();
 
     EXPECT_FALSE(tempfile.exists());
+}
+
+TEST_F(FsTest, RemoveDirNonEmpty) {
+    ASSERT_TRUE(asp::fs::createDir(tempfile).isOk());
+    asp::fs::write(tempfile / "1.txt", "Hello").unwrap();
+
+    auto result = asp::fs::removeDir(tempfile);
+    ASSERT_FALSE(result.isOk());
+    EXPECT_EQ(result.unwrapErr(), ErrorKind::DirectoryNotEmpty);
 }
 
 TEST_F(FsTest, RemoveDirAll) {
@@ -366,4 +384,17 @@ TEST_F(FsTest, CopyDir) {
 
     asp::fs::removeDirAll(tempfile).unwrap();
     asp::fs::removeDirAll(destDir).unwrap();
+}
+
+TEST_F(FsTest, FileShortRead) {
+    std::string content = "Hello, world!";
+    asp::fs::write(tempfile, content).unwrap();
+
+    // try to read more bytes than available
+    std::array<uint8_t, 1024> arr;
+    auto file = File::open(tempfile).unwrap();
+    auto res = file.readExact(arr);
+
+    ASSERT_FALSE(res.isOk());
+    EXPECT_EQ(res.unwrapErr(), ErrorKind::UnexpectedEof);
 }

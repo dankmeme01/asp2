@@ -15,10 +15,10 @@ Result<File> File::open(PathView path, const OpenOptions& options) {
     GEODE_UNWRAP_INTO(auto native, _impl::native(path));
 
     if (options.truncate && !options.write) {
-        return Err("Cannot truncate a file without write access");
+        return Err(Error(ErrorKind::InvalidInput, "Cannot truncate a file without write access"));
     }
     if (options.append && options.truncate) {
-        return Err("Cannot append and truncate a file at the same time");
+        return Err(Error(ErrorKind::InvalidInput, "Cannot append and truncate a file at the same time"));
     }
 
     DWORD access = options.accessMode;
@@ -60,7 +60,7 @@ Result<File> File::open(PathView path, const OpenOptions& options) {
     );
 
     if (h == INVALID_HANDLE_VALUE) {
-        return Err(fmt::format("Failed to open file: {}", formatError()));
+        return Err(Error::fromLastOsError());
     }
 
     return Ok(File(h));
@@ -154,7 +154,7 @@ Result<File> File::clone() {
 Result<size_t> File::read(std::span<uint8_t> buf) {
     DWORD bytesRead;
     if (!ReadFile(m_fd, buf.data(), (DWORD)buf.size(), &bytesRead, nullptr)) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError());
     }
 
     return Ok((size_t)bytesRead);
@@ -163,7 +163,7 @@ Result<size_t> File::read(std::span<uint8_t> buf) {
 Result<size_t> File::write(std::span<const uint8_t> buf) {
     DWORD bytesWritten;
     if (!WriteFile(m_fd, buf.data(), (DWORD)buf.size(), &bytesWritten, nullptr)) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError());
     }
 
     return Ok((size_t)bytesWritten);

@@ -65,7 +65,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
     );
 
     if (h == INVALID_HANDLE_VALUE) {
-        return Err(formatError());
+        return Err(Error::fromLastOsError("FindFirstFileExW failed"));
     }
 
     DirectoryIterator iter{path.toPath()};
@@ -88,7 +88,7 @@ std::optional<Result<DirectoryEntry>> DirectoryIterator::next() {
             if (e == ERROR_NO_MORE_FILES) {
                 return std::nullopt;
             } else {
-                return Err(formatError(e));
+                return Err(Error::fromLastOsError("FindNextFileW failed"));
             }
         }
 

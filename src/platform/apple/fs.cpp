@@ -16,7 +16,7 @@ Result<Path> Path::tmp() {
 
     char buf[1024];
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, buf, sizeof(buf)) || buf[0] == '\0') {
-        return Err("Unable to determine temporary directory");
+        return Err(Error(ErrorKind::Other, "Unable to determine temporary directory"));
     }
 
     return Ok(Path{buf});
@@ -31,13 +31,13 @@ Result<void> _impl::copyFile(PathView origin_, PathView dest_) {
     } else {
         int e = errno;
         if (e != EXDEV) {
-            return Err(fmt::format("clonefile failed: {}", strerror(e)));
+            return Err(Error::fromOsError(e, "clonefile failed"));
         }
     }
 
     auto result = copyfile(origin.c_str(), dest.c_str(), nullptr, COPYFILE_ALL);
     if (result < 0) {
-        return Err(fmt::format("copyfile failed: {}", strerror(errno)));
+        return Err(Error::fromOsError(errno, "copyfile failed"));
     }
     return Ok();
 }

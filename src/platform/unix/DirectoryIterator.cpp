@@ -35,7 +35,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
     auto h = opendir(path.string().c_str());
 
     if (h == nullptr) {
-        return Err(fmt::format("Unable to open directory '{}': {}", path, strerror(errno)));
+        return Err(Error::fromOsError(errno, "opendir failed"));
     }
 
     DirectoryIterator iter{ path.toPath() };

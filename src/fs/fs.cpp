@@ -48,7 +48,7 @@ static Result<void> copyDir(PathView origin, PathView dest) {
                 case FileType::Directory: pending.push_back({entry.path, child}); break;
                 case FileType::Symlink: GEODE_UNWRAP(copySymlink(entry.path, child)); break;
                 case FileType::RegularFile: GEODE_UNWRAP(_impl::copyFile(entry.path, child)); break;
-                default: return Err(fmt::format("Unsupported file type for '{}'", entry.path));
+                default: return Err(Error::format(ErrorKind::Unsupported, "Unsupported file type for '{}'", entry.path));
             }
         }
     }
@@ -107,7 +107,7 @@ Result<void> createDirAll(PathView path) {
         if (path.isDir()) {
             return Ok();
         } else {
-            return Err(fmt::format("Path '{}' already exists but is not a directory", path));
+            return Err(Error(ErrorKind::NotADirectory, fmt::format("Path '{}' exists but is not a directory", p)));
         }
     }
 

@@ -66,7 +66,7 @@ Result<> BufferedFile::readExact(std::span<uint8_t> buf) {
     while (!buf.empty()) {
         GEODE_UNWRAP_INTO(auto n, this->read(buf));
         if (n == 0) {
-            return Err("Unexpected EOF");
+            return Err(ErrorKind::UnexpectedEof);
         }
         buf = buf.subspan(n);
     }
@@ -140,7 +140,7 @@ Result<> BufferedFile::writeAll(std::span<const uint8_t> buf) {
     while (!buf.empty()) {
         GEODE_UNWRAP_INTO(auto n, this->write(buf));
         if (n == 0) {
-            return Err("failed to write any bytes");
+            return Err(ErrorKind::WriteZero);
         }
         buf = buf.subspan(n);
     }

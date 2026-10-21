@@ -1,5 +1,5 @@
 #pragma once
-#include <asp/detail/Result.hpp>
+#include <asp/fs/Error.hpp>
 #include <asp/fs/Metadata.hpp>
 #include <sys/stat.h>
 #include <fmt/format.h>
@@ -10,7 +10,8 @@ template <typename T>
 Result<> wrapCall(auto what, T result) {
     if constexpr (std::is_same_v<T, int> || std::is_same_v<T, ssize_t>) {
         if (result < 0) {
-            return Err(fmt::format("{} failed: {}", what, strerror(errno)));
+            int e = errno;
+            return Err(Error::fromOsError(e, fmt::format("{} failed", what)));
         }
     } else {
         static_assert(std::is_void_v<T>, "wrapCall unsupported type");
