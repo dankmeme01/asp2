@@ -1,4 +1,5 @@
 #include <asp/fs/BufferedFile.hpp>
+#include <cstring>
 
 namespace asp::fs {
 
