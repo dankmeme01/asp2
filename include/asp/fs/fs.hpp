@@ -71,7 +71,8 @@ Result<void> removeDir(PathView path);
 
 /// Removes a directory by the given path, recursively including all files and directories inside. Fails if it is not a directory (including if it's a symlink).
 /// This will not follow symlinks inside the directory, and will simply delete the symbolic links themselves.
-Result<void> removeDirAll(PathView path);
+/// If `failOnAbsence` is set to `true` (which is the default), will return an error if the directory does not exist.
+Result<void> removeDirAll(PathView path, bool failOnAbsence = true);
 
 /// Returns an iterator over the files and directories in the given directory.
 /// For recursive iteration, use `iterDirRecursive`.

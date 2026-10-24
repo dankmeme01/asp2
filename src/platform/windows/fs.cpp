@@ -354,8 +354,13 @@ static Result<> findAndRemoveAllInside(PathView path, std::vector<Path>& out) {
     return Ok();
 }
 
-Result<void> removeDirAll(PathView path) {
-    GEODE_UNWRAP_INTO(auto meta, path.symlinkMetadata());
+Result<void> removeDirAll(PathView path, bool failOnAbsence) {
+    auto metaResult = path.symlinkMetadata();
+    if (!metaResult && metaResult.unwrapErr() == ErrorKind::NotFound && !failOnAbsence) {
+        return Ok();
+    }
+
+    GEODE_UNWRAP_INTO(auto meta, metaResult);
     if (!meta.isDir()) {
         return Err(ErrorKind::NotADirectory);
     }
