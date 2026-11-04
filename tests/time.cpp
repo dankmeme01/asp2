@@ -220,7 +220,8 @@ i64 utcEpochSeconds(
         std::chrono::day{day}
     };
 
-    return sys_days{date}.time_since_epoch().count() * 86400
+    i64 days = sys_days{date}.time_since_epoch().count();
+    return days * 86400
         + static_cast<i64>(hour) * 3600
         + static_cast<i64>(minute) * 60
         + static_cast<i64>(second);

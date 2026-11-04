@@ -27,7 +27,7 @@ public:
             return;
         }
 
-        seconds += (nanos / time_detail::NANOS_IN_SEC);
+        m_seconds += (nanos / time_detail::NANOS_IN_SEC);
         m_nanos = nanos % time_detail::NANOS_IN_SEC;
     }
 

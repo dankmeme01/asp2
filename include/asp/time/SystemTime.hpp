@@ -23,8 +23,12 @@ namespace asp::inline time {
         constexpr SystemTime(SystemTime&& other) noexcept = default;
         constexpr SystemTime& operator=(SystemTime&& other) noexcept = default;
 
-        // Default constructor initializes the SystemTime to the UNIX epoch.
-        SystemTime() noexcept;
+        constexpr SystemTime(i64 secs, u32 nanos) noexcept : m_secs(secs), m_nanos(nanos) {}
+
+        static const SystemTime UNIX_EPOCH;
+
+        /// Initializes the SystemTime to the UNIX epoch, January 1st, 1970
+        constexpr SystemTime() noexcept : SystemTime(UNIX_EPOCH) {}
 
         static SystemTime now() noexcept;
 
@@ -38,8 +42,6 @@ namespace asp::inline time {
 
         /// Parses an RFC 3339 formatted string and returns a SystemTime object if successful, or std::nullopt if parsing fails.
         static std::optional<SystemTime> parse(std::string_view str, TzPolicy tzPolicy = TzPolicy::Required);
-
-        static SystemTime UNIX_EPOCH;
 
         std::optional<Duration> durationSince(const SystemTime& other) const noexcept;
 
@@ -90,11 +92,9 @@ namespace asp::inline time {
         }
 
     private:
-        constexpr SystemTime(i64 _s, i64 _s2) noexcept : _storage1(_s), _storage2(_s2) {}
-
-        static SystemTime _epoch() noexcept;
-
-        i64 _storage1;
-        i64 _storage2;
+        i64 m_secs;
+        u32 m_nanos;
     };
+
+    inline constexpr SystemTime SystemTime::UNIX_EPOCH {0, 0};
 }

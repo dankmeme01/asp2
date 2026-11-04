@@ -7,36 +7,23 @@
 #include <cstdlib>
 #include <charconv>
 
-#ifdef ASP_IS_WIN
-# include <Windows.h>
-#endif
-
+#ifdef _WIN32
 static std::tm getTm(const asp::time::SystemTime& st) noexcept {
     std::tm tm{};
     auto timet = st.to_time_t();
-#ifdef ASP_IS_WIN
     gmtime_s(&tm, &timet);
-#else
-    gmtime_r(&timet, &tm);
-#endif
     return tm;
 }
+#else
+static std::tm getTm(const asp::time::SystemTime& st) noexcept {
+    std::tm tm{};
+    auto timet = st.to_time_t();
+    gmtime_r(&timet, &tm);
+    return tm;
+}
+#endif
 
 namespace asp::inline time {
-
-std::tm localtime(std::time_t time) noexcept {
-    std::tm tm{};
-#ifdef _WIN32
-    localtime_s(&tm, &time);
-#else
-    localtime_r(&time, &tm);
-#endif
-    return tm;
-}
-
-SystemTime SystemTime::UNIX_EPOCH = _epoch();
-
-SystemTime::SystemTime() noexcept : SystemTime(UNIX_EPOCH) {}
 
 time_t SystemTime::to_time_t() const noexcept {
     return this->timeSinceEpoch().seconds();
@@ -259,91 +246,9 @@ std::optional<SystemTime> SystemTime::parse(std::string_view str, TzPolicy tzPol
     return SystemTime::UNIX_EPOCH + result.unwrap();
 }
 
-#ifdef ASP_IS_WIN
-SystemTime SystemTime::now() noexcept {
-    FILETIME s;
-    GetSystemTimePreciseAsFileTime(&s);
-
-    return SystemTime{s.dwHighDateTime, s.dwLowDateTime};
-}
-
-SystemTime SystemTime::_epoch() noexcept {
-    SYSTEMTIME epoch;
-    epoch.wYear = 1970;
-    epoch.wMonth = 1;
-    epoch.wDay = 1;
-    epoch.wDayOfWeek = 4;
-    epoch.wHour = 0;
-    epoch.wMilliseconds = 0;
-    epoch.wMinute = 0;
-    epoch.wSecond = 0;
-
-    FILETIME ue;
-
-    if (!SystemTimeToFileTime(&epoch, &ue)) [[unlikely]] std::abort();
-
-    return SystemTime{ue.dwHighDateTime, ue.dwLowDateTime};
-}
-
 std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const noexcept {
-    ULARGE_INTEGER lhs;
-    lhs.LowPart = this->_storage2;
-    lhs.HighPart = this->_storage1;
-
-    ULARGE_INTEGER rhs;
-    rhs.LowPart = other._storage2;
-    rhs.HighPart = other._storage1;
-
-    i64 diff = lhs.QuadPart - rhs.QuadPart;
-
-    if (diff < 0) {
-        return std::nullopt;
-    }
-
-    // convert to 100ns intervals
-    return Duration::fromNanos(diff * 100);
-}
-
-SystemTime SystemTime::operator+(const Duration& dur) const noexcept {
-    ULARGE_INTEGER uli;
-    uli.LowPart = this->_storage2;
-    uli.HighPart = this->_storage1;
-
-    // convert to 100ns intervals
-    uli.QuadPart += dur.nanos() / 100;
-
-    return SystemTime{uli.HighPart, uli.LowPart};
-}
-
-std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const noexcept {
-    ULARGE_INTEGER lhs;
-    lhs.LowPart = this->_storage2;
-    lhs.HighPart = this->_storage1;
-
-    ULARGE_INTEGER rhs;
-    rhs.LowPart = other._storage2;
-    rhs.HighPart = other._storage1;
-
-    return lhs.QuadPart <=> rhs.QuadPart;
-}
-
-#else
-SystemTime SystemTime::now() noexcept {
-    timespec tp;
-    int rc = clock_gettime(CLOCK_REALTIME, &tp);
-
-    if (rc != 0) [[unlikely]] std::abort();
-
-    return SystemTime{tp.tv_sec, tp.tv_nsec};
-}
-
-SystemTime SystemTime::_epoch() noexcept {
-    return SystemTime{0, 0};
-}
-
-std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const noexcept {
-    i64 secs = this->_storage1 - other._storage1;
-    i64 nanos = this->_storage2 - other._storage2;
+    i64 secs = this->m_secs - other.m_secs;
+    i64 nanos = (i64)this->m_nanos - (i64)other.m_nanos;
 
     if (nanos < 0) {
         nanos += time_detail::NANOS_IN_SEC;
@@ -358,31 +263,31 @@ std::optional<Duration> SystemTime::durationSince(const SystemTime& other) const
 }
 
 SystemTime SystemTime::operator+(const Duration& dur) const noexcept {
-    i64 secs = this->_storage1 + dur.seconds();
-    i64 nanos = this->_storage2 + dur.subsecNanos();
+    i64 secs = this->m_secs + (i64)dur.seconds();
+    i64 nanos = this->m_nanos + dur.subsecNanos();
 
     if (nanos >= time_detail::NANOS_IN_SEC) {
         nanos -= time_detail::NANOS_IN_SEC;
         secs += 1;
     }
 
-    return SystemTime{secs, nanos};
+    return SystemTime{secs, (u32)nanos};
 }
 
 std::strong_ordering SystemTime::operator<=>(const SystemTime& other) const noexcept {
-    if (this->_storage1 < other._storage1) {
+    if (this->m_secs < other.m_secs) {
         return std::strong_ordering::less;
-    } else if (this->_storage1 > other._storage1) {
+    } else if (this->m_secs > other.m_secs) {
         return std::strong_ordering::greater;
     }
 
-    if (this->_storage2 < other._storage2) {
+    if (this->m_nanos < other.m_nanos) {
         return std::strong_ordering::less;
-    } else if (this->_storage2 > other._storage2) {
+    } else if (this->m_nanos > other.m_nanos) {
         return std::strong_ordering::greater;
     }
 
     return std::strong_ordering::equal;
 }
-#endif
+
 }
