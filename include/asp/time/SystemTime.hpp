@@ -9,6 +9,13 @@
 namespace asp::inline time {
     std::tm localtime(std::time_t time) noexcept;
 
+    enum class TzPolicy {
+        // timezone offset is required in `parse`, and the string is rejected otherwise
+        Required,
+        // timezone offset is optional, and UTC is assumed
+        AssumeUtc,
+    };
+
     class SystemTime {
     public:
         constexpr SystemTime(const SystemTime& other) noexcept = default;
@@ -29,8 +36,8 @@ namespace asp::inline time {
             return UNIX_EPOCH + Duration::fromMillis(ms);
         }
 
-        /// Parses an ISO8601 formatted string and returns a SystemTime object if successful, or std::nullopt if parsing fails.
-        static std::optional<SystemTime> parse(std::string_view str);
+        /// Parses an RFC 3339 formatted string and returns a SystemTime object if successful, or std::nullopt if parsing fails.
+        static std::optional<SystemTime> parse(std::string_view str, TzPolicy tzPolicy = TzPolicy::Required);
 
         static SystemTime UNIX_EPOCH;
 

@@ -78,8 +78,7 @@ struct IsoParser {
     static constexpr size_t npos = (size_t)-1;
 
     std::string_view m_str;
-
-    IsoParser(std::string_view str) : m_str(str) {}
+    TzPolicy m_tzPolicy;
 
     char next() {
         auto out = peek();
@@ -188,6 +187,8 @@ struct IsoParser {
         i64 tzOffset = 0;
         if (peek() == 'Z') {
             next();
+        } else if (m_tzPolicy == TzPolicy::AssumeUtc && m_str.empty()) {
+            // do nothing, assume UTC
         } else {
             GEODE_UNWRAP_INTO(tzOffset, parseTzOffset());
         }
@@ -250,8 +251,8 @@ struct IsoParser {
     }
 };
 
-std::optional<SystemTime> SystemTime::parse(std::string_view str) {
-    IsoParser p{str};
+std::optional<SystemTime> SystemTime::parse(std::string_view str, TzPolicy tzPolicy) {
+    IsoParser p{str, tzPolicy};
     auto result = p.parseIso8601();
     if (!result) return std::nullopt;
 

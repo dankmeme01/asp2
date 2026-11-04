@@ -368,7 +368,6 @@ TEST(SystemTimeTests, ParseRejectsInvalid) {
         "garbage",
         "2024-01-01",                       // date only
         "2024-01-01T00:00",                 // no seconds
-        "2024-01-01T00:00:00",              // no timezone
         "20240101T000000Z",
         "2024-13-01T00:00:00Z",             // month out of range
         "2024-00-01T00:00:00Z",
@@ -402,4 +401,17 @@ TEST(SystemTimeTests, ParseRejectsInvalid) {
     for (auto str : cases) {
         EXPECT_FALSE(SystemTime::parse(str)) << str;
     }
+}
+
+TEST(SystemTimeTests, ParseRequireOffset) {
+    auto parsedRequire = SystemTime::parse("1970-01-01T00:00:00", TzPolicy::Required);
+    auto parsedOptional = SystemTime::parse("1970-01-01T00:00:00", TzPolicy::AssumeUtc);
+
+    ASSERT_FALSE(parsedRequire);
+    ASSERT_TRUE(parsedOptional);
+
+    EXPECT_EQ(
+        parsedOptional->timeSinceEpoch().seconds(),
+        static_cast<u64>(utcEpochSeconds(1970, 1, 1, 0, 0, 0))
+    );
 }
