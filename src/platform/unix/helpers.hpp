@@ -4,6 +4,12 @@
 #include <sys/stat.h>
 #include <fmt/format.h>
 
+// used for fs and time
+static asp::SystemTime toSystemTime(struct timespec ts) {
+    asp::Duration dur(ts.tv_sec, ts.tv_nsec);
+    return asp::SystemTime::UNIX_EPOCH + dur;
+}
+
 namespace asp::fs {
 
 template <typename T>
@@ -18,11 +24,6 @@ Result<> wrapCall(auto what, T result) {
     }
 
     return Ok();
-}
-
-static asp::SystemTime toSystemTime(struct timespec ts) {
-    asp::Duration dur(ts.tv_sec, ts.tv_nsec);
-    return asp::SystemTime::UNIX_EPOCH + dur;
 }
 
 static Metadata metadataFromStat(const struct stat& st) {
