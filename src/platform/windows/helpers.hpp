@@ -4,6 +4,31 @@
 #include <Windows.h>
 #include <fmt/format.h>
 
+namespace asp {
+
+static SystemTime toSystemTime(FILETIME ft) noexcept {
+    // 100ns ticks between 1601-01-01 and 1970-01-01
+    static constexpr i64 FILETIME_UNIX_DIFF = 116'444'736'000'000'000;
+
+    ULARGE_INTEGER ticks;
+    ticks.LowPart = ft.dwLowDateTime;
+    ticks.HighPart = ft.dwHighDateTime;
+
+    i64 unixTicks = (i64)ticks.QuadPart - FILETIME_UNIX_DIFF;
+    if (unixTicks < 0) return SystemTime{0, 0};
+
+    i64 secs = unixTicks / 10'000'000;
+    i64 rem = unixTicks % 10'000'000;
+    if (rem < 0) {
+        rem += 10'000'000;
+        secs -= 1;
+    }
+
+    return SystemTime{secs, (u32)rem * 100};
+}
+
+}
+
 namespace asp::fs {
 
 template <typename T>
@@ -50,27 +75,5 @@ static Result<std::wstring> utf8ToWide(std::string_view utf8) {
 
     return Ok(std::move(wide));
 }
-
-static SystemTime toSystemTime(FILETIME ft) noexcept {
-    // 100ns ticks between 1601-01-01 and 1970-01-01
-    static constexpr i64 FILETIME_UNIX_DIFF = 116'444'736'000'000'000;
-
-    ULARGE_INTEGER ticks;
-    ticks.LowPart = ft.dwLowDateTime;
-    ticks.HighPart = ft.dwHighDateTime;
-
-    i64 unixTicks = (i64)ticks.QuadPart - FILETIME_UNIX_DIFF;
-    if (unixTicks < 0) return SystemTime{0, 0};
-
-    i64 secs = unixTicks / 10'000'000;
-    i64 rem = unixTicks % 10'000'000;
-    if (rem < 0) {
-        rem += 10'000'000;
-        secs -= 1;
-    }
-
-    return SystemTime{secs, (u32)rem * 100};
-}
-
 
 }
