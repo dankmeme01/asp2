@@ -29,6 +29,9 @@ namespace asp::inline time {
             return UNIX_EPOCH + Duration::fromMillis(ms);
         }
 
+        /// Parses an ISO8601 formatted string and returns a SystemTime object if successful, or std::nullopt if parsing fails.
+        static std::optional<SystemTime> parse(std::string_view str);
+
         static SystemTime UNIX_EPOCH;
 
         std::optional<Duration> durationSince(const SystemTime& other) const noexcept;
