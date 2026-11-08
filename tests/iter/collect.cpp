@@ -19,6 +19,38 @@ TEST(IterTests, CollectVector) {
     EXPECT_EQ(output, (std::vector<int>{2, 4, 6, 10}));
 }
 
+TEST(IterTests, CollectStringChar) {
+    std::vector<char> vec1 = {'a', 'b', 'c', 'd', 'e'};
+    auto output = from(vec1).collect<std::string>();
+
+    EXPECT_EQ(output, "abcde");
+}
+
+TEST(IterTests, CollectStringUChar) {
+    std::vector<char> vec1 = {'a', 'b', 'c', 'd', 'e'};
+    auto output = from(vec1)
+        .mapCast<unsigned char>()
+        .collect<std::string>();
+
+    EXPECT_EQ(output, "abcde");
+}
+
+TEST(IterTests, CollectStringStringView) {
+    std::vector<std::string_view> vec1 = {"a", "b", "c", "d", "e"};
+    auto output = from(vec1)
+        .collect<std::string>();
+
+    EXPECT_EQ(output, "abcde");
+}
+
+TEST(IterTests, CollectStringStdString) {
+    std::vector<std::string> vec1 = {"a", "b", "c", "d", "e"};
+    auto output = from(vec1)
+        .collect<std::string>();
+
+    EXPECT_EQ(output, "abcde");
+}
+
 TEST(IterTests, CollectDeque) {
     std::vector<int> vec1 = {1, 2, 3, -4, 5};
     auto output = from(vec1)

@@ -31,6 +31,34 @@ private:
     std::vector<T> m_container;
 };
 
+template <>
+struct Collector<std::string> {
+    Collector(std::optional<size_t> sizeHint) {
+        if (sizeHint) {
+            m_container.reserve(*sizeHint);
+        }
+    }
+
+    template <typename Y>
+    void push(Y&& item) {
+        using X = std::decay_t<Y>;
+        if constexpr (std::is_same_v<X, char>) {
+            m_container.push_back(item);
+        } else if constexpr (std::is_same_v<X, unsigned char>) {
+            m_container.push_back(static_cast<char>(item));
+        } else {
+            m_container.append(item);
+        }
+    }
+
+    auto finish() {
+        return std::move(m_container);
+    }
+
+private:
+    std::string m_container;
+};
+
 template <typename T>
 struct Collector<std::deque<T>> {
     Collector(std::optional<size_t> sizeHint) {}
@@ -102,6 +130,8 @@ struct Collector<std::set<T>> {
 private:
     std::set<T> m_container;
 };
+
+// Map collectors
 
 template <typename T, typename Y>
 struct Collector2<std::unordered_map<T, Y>> {
