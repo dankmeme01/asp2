@@ -191,6 +191,7 @@ auto elements = StringConverter{range(1, 10)}
 
 By default the following collections support `collect` automatically:
 * `std::vector`
+* `std::string` (requires char, uchar, string_view or string)
 * `std::deque`
 * `std::queue`
 * `std::unordered_set`
