@@ -21,6 +21,12 @@ struct DirectoryEntry {
     }
 };
 
+struct DirectoryIteratorOptions {
+    /// Uses the `FIND_FIRST_EX_LARGE_FETCH` flag on Windows, recommended for enumerating large directories.
+    /// Does nothing on other platforms.
+    bool m_largeBuffer = false;
+};
+
 struct DirectoryIterator : public iter::Iter<DirectoryIterator, Result<DirectoryEntry>> {
     ~DirectoryIterator();
     DirectoryIterator(const DirectoryIterator&) = delete;
@@ -30,7 +36,7 @@ struct DirectoryIterator : public iter::Iter<DirectoryIterator, Result<Directory
 
     std::optional<Item> next();
 
-    static Result<DirectoryIterator> create(PathView path);
+    static Result<DirectoryIterator> create(PathView path, DirectoryIteratorOptions options = {});
 
 private:
     DirectoryIterator(Path path) : m_path(std::move(path)) {}
@@ -38,20 +44,22 @@ private:
     void* m_handle = nullptr;
     Path m_path;
     std::optional<DirectoryEntry> m_nextItem;
+    DirectoryIteratorOptions m_options;
 };
 
 struct RecursiveDirectoryIterator : public iter::Iter<RecursiveDirectoryIterator, Result<DirectoryEntry>> {
     std::optional<Item> next();
 
-    static Result<RecursiveDirectoryIterator> create(PathView path);
+    static Result<RecursiveDirectoryIterator> create(PathView path, DirectoryIteratorOptions options = {});
 
 private:
-    RecursiveDirectoryIterator(Path path, DirectoryIterator first) : m_path(std::move(path)) {
+    RecursiveDirectoryIterator(Path path, DirectoryIterator first, DirectoryIteratorOptions options) : m_path(std::move(path)), m_options(options) {
         m_stack.push_back(std::move(first));
     }
 
     Path m_path;
     std::vector<DirectoryIterator> m_stack;
+    DirectoryIteratorOptions m_options;
 };
 
 }

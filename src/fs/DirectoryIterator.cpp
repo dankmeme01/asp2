@@ -20,7 +20,7 @@ std::optional<Result<DirectoryEntry>> RecursiveDirectoryIterator::next() {
         auto entry = std::move(*opt).unwrap();
         if (entry.isDir()) {
             // push the new directory onto the stack
-            GEODE_UNWRAP_INTO(auto newIter, DirectoryIterator::create(entry.path));
+            GEODE_UNWRAP_INTO(auto newIter, DirectoryIterator::create(entry.path, m_options));
             m_stack.emplace_back(std::move(newIter));
 
             // and yield it
@@ -34,12 +34,13 @@ std::optional<Result<DirectoryEntry>> RecursiveDirectoryIterator::next() {
     return std::nullopt;
 }
 
-Result<RecursiveDirectoryIterator> RecursiveDirectoryIterator::create(PathView path) {
-    GEODE_UNWRAP_INTO(auto it, DirectoryIterator::create(path));
+Result<RecursiveDirectoryIterator> RecursiveDirectoryIterator::create(PathView path, DirectoryIteratorOptions options) {
+    GEODE_UNWRAP_INTO(auto it, DirectoryIterator::create(path, options));
 
     return Ok(RecursiveDirectoryIterator {
         path.toPath(),
-        std::move(it)
+        std::move(it),
+        options
     });
 }
 

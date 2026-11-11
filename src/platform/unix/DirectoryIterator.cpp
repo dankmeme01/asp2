@@ -31,7 +31,7 @@ DirectoryIterator& DirectoryIterator::operator=(DirectoryIterator&& other) noexc
     return *this;
 }
 
-Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
+Result<DirectoryIterator> DirectoryIterator::create(PathView path, DirectoryIteratorOptions options) {
     auto h = opendir(path.string().c_str());
 
     if (h == nullptr) {
@@ -40,6 +40,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
 
     DirectoryIterator iter{ path.toPath() };
     iter.m_handle = h;
+    iter.m_options = options;
 
     return Ok(std::move(iter));
 }

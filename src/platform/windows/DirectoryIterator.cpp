@@ -47,12 +47,17 @@ static DirectoryEntry makeEntry(WIN32_FIND_DATAW& ent, PathView rootPath, PathVi
     };
 }
 
-Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
+Result<DirectoryIterator> DirectoryIterator::create(PathView path, DirectoryIteratorOptions options) {
     auto native = path.native();
     if (native.back() != L'\\') {
         native += L'\\';
     }
     native += L'*';
+
+    DWORD flags = 0;
+    if (options.m_largeBuffer) {
+        flags |= FIND_FIRST_EX_LARGE_FETCH;
+    }
 
     WIN32_FIND_DATAW findData;
     auto h = FindFirstFileExW(
@@ -61,7 +66,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
         &findData,
         FindExSearchNameMatch,
         nullptr,
-        0
+        flags
     );
 
     if (h == INVALID_HANDLE_VALUE) {
@@ -70,6 +75,7 @@ Result<DirectoryIterator> DirectoryIterator::create(PathView path) {
 
     DirectoryIterator iter{path.toPath()};
     iter.m_handle = h;
+    iter.m_options = options;
 
     std::wstring_view name(findData.cFileName);
     if (name != L"." && name != L"..") {
