@@ -23,10 +23,24 @@ class File {
 public:
     ~File();
 
+    /// Constructs an invalid `File` instance. All operations except `operator bool` and `valid()` are undefined,
+    /// until a valid instance of `File` is moved into this object.
+    File() = default;
+
     File(const File&) = delete;
     File& operator=(const File&) = delete;
     File(File&& other) noexcept;
     File& operator=(File&& other) noexcept;
+
+    /// Checks if this `File` instance is valid and can be used for operations.
+    explicit operator bool() const {
+        return m_fd != INVALID_FD;
+    }
+
+    /// Checks if this `File` instance is valid and can be used for operations.
+    bool valid() const {
+        return m_fd != INVALID_FD;
+    }
 
     /// Opens a file with the given options. By default, opens it in a binary read-only mode.
     static Result<File> open(PathView path, const OpenOptions& options = {});
