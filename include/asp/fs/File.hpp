@@ -60,6 +60,19 @@ public:
         return File::open(path, opts);
     }
 
+    /// Returns a `File` instance using the provided file descriptor.
+    /// If the provided file descriptor does not represent a valid, open file, the behavior is undefined.
+    /// This takes ownership of the descriptor, and will close it when destroyed.
+    static File fromFd(NativeFd fd) {
+        return File(fd);
+    }
+
+    /// Takes the ownership of the underlying file descriptor and returns it.
+    /// After this, the `File` instance is no longer valid and should not be used.
+    NativeFd intoFd() {
+        return std::exchange(m_fd, INVALID_FD);
+    }
+
     /// Returns the underlying file descriptor
     inline NativeFd fd() const {
         return m_fd;
