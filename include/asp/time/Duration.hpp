@@ -318,8 +318,19 @@ std::pair<std::string_view, DurationUnit> formatDurationNum(
     std::array<char, 32>& buf, const asp::Duration& dur, int precision
 );
 
+inline std::string to_string(const Duration& dur) {
+    return dur.toString();
+}
+
 } // namespace asp::time
 
+namespace std {
+    template <> struct hash<asp::time::Duration> {
+        std::size_t operator()(const asp::time::Duration& dur) const noexcept {
+            return std::hash<asp::u64>{}(dur.nanos());
+        }
+    };
+}
 
 template <>
 struct fmt::formatter<asp::Duration> {

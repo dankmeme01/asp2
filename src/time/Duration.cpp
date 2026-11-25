@@ -91,16 +91,4 @@ namespace asp::inline time {
         }
         return out;
     }
-
-    std::string to_string(const Duration& dur) {
-        return dur.toString();
-    }
-}
-
-namespace std {
-    template <> struct hash<asp::time::Duration> {
-        std::size_t operator()(const asp::time::Duration& dur) const noexcept {
-            return std::hash<asp::u64>{}(dur.nanos());
-        }
-    };
 }
