@@ -40,6 +40,9 @@ inline Result<Metadata> metadata(PathView path) {
     return path.metadata();
 }
 
+/// Sets the permissions of the file or directory at this path.
+Result<void> setPermissions(PathView path, Permissions perms);
+
 /// Obtains the metadata of the file or symlink at this path. If the final component is a symlink, unlike `metadata`,
 /// this does NOT follow the symlink and instead returns metadata of the actual final symlink.
 /// Returns an error in the following situations (but not limited to):

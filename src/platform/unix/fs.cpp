@@ -306,4 +306,9 @@ Result<Path> readSymlink(PathView path) {
     return Ok(Path{std::string{buf.data(), size_t(len)}});
 }
 
+Result<void> setPermissions(PathView path, Permissions perms) {
+    auto bits = toBits(perms);
+    return wrapCall("chmod", ::chmod(path.string().c_str(), bits));
+}
+
 }

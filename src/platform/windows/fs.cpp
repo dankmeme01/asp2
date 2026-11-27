@@ -443,4 +443,26 @@ Result<Path> readSymlink(PathView path) {
     return Path::fromWideResult(buf);
 }
 
+static DWORD applyMode(DWORD attrs, Permissions perms) {
+    attrs = attrs & ~(FILE_ATTRIBUTE_NORMAL);
+    if (!hasPermission(perms, Permissions::OwnerWrite)) {
+        attrs |= FILE_ATTRIBUTE_READONLY;
+    } else {
+        attrs &= ~FILE_ATTRIBUTE_READONLY;
+    }
+
+    return attrs == 0 ? FILE_ATTRIBUTE_NORMAL : attrs;
+}
+
+Result<void> setPermissions(PathView path, Permissions perms) {
+    GEODE_UNWRAP_INTO(auto native, _impl::native(path));
+    auto attrs = GetFileAttributesW(native.c_str());
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        return Err(Error::fromLastOsError("GetFileAttributesW failed"));
+    }
+
+    auto mode = applyMode(attrs, perms);
+    return wrapCall(::SetFileAttributesW(native.c_str(), mode));
+}
+
 }
