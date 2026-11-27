@@ -398,3 +398,20 @@ TEST_F(FsTest, FileShortRead) {
     ASSERT_FALSE(res.isOk());
     EXPECT_EQ(res.unwrapErr(), ErrorKind::UnexpectedEof);
 }
+
+TEST_F(FsTest, SetPermissions) {
+    std::string content = "test";
+    asp::fs::write(tempfile, content).unwrap();
+
+    auto oldPerms = tempfile.metadata().unwrap().permissions;
+    EXPECT_TRUE(hasPermission(oldPerms, Permissions::OwnerWrite));
+    EXPECT_TRUE(hasPermission(oldPerms, Permissions::OwnerRead));
+
+    // change to read-only
+    auto newPerms = Permissions::OwnerRead;
+    EXPECT_TRUE(asp::fs::setPermissions(tempfile, newPerms).isOk());
+
+    auto newPermsCheck = tempfile.metadata().unwrap().permissions;
+    EXPECT_FALSE(hasPermission(newPermsCheck, Permissions::OwnerWrite));
+    EXPECT_TRUE(hasPermission(newPermsCheck, Permissions::OwnerRead));
+}
