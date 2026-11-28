@@ -414,4 +414,7 @@ TEST_F(FsTest, SetPermissions) {
     auto newPermsCheck = tempfile.metadata().unwrap().permissions;
     EXPECT_FALSE(hasPermission(newPermsCheck, Permissions::OwnerWrite));
     EXPECT_TRUE(hasPermission(newPermsCheck, Permissions::OwnerRead));
+
+    // set back to original so it can be removed
+    EXPECT_TRUE(asp::fs::setPermissions(tempfile, oldPerms).isOk());
 }
